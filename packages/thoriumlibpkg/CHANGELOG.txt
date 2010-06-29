@@ -1,0 +1,6 @@
+26/12/09   horazont <j.wielicki@sotecware.net>
+* Adapted the TThoriumFileStream implementation to use the new
+  TThoriumReferenceImplementation class.
+
+24/08/09   horazont <j.wielicki@sotecware.net>
+* Adapted the TThoriumFileStream to match the new interface definitions.

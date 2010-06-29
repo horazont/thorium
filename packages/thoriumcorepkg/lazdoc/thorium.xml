@@ -1,0 +1,1138 @@
+<?xml version="1.0"?>
+<fpdoc-descriptions>
+  <package name="thoriumcorepkg">
+    <module name="Thorium">
+      <element name="TThoriumHashableObject">
+        <short>Base class for some classes which need hashing.</short>
+        <descr>This class is used in Thorium as a base class to implement hashing which is used to compare different runtimes while loading modules.</descr>
+      </element>
+      <element name="TThoriumIntList">
+        <short>Class for internal use - to be described later.</short>
+      </element>
+      <element name="TThoriumHashableObject.Create">
+        <short>Initialize the class.</short>
+        <descr>Creates the instance and prepares hashing.</descr>
+      </element>
+      <element name="TThoriumHashableObject.CalcHash">
+        <short>Calculate the hash.</short>
+        <descr>This method must be overriden by descendant classes. It should generate a 16 byte hash which is "unique" to the contents of the class and save it to FHash.</descr>
+        <seealso>
+          <link id="TThoriumHashableObject.GetHash"/>
+          <link id="TThoriumHashableObject.InvalidateHash"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHashableObject.GetHash">
+        <short>Returns the hash of the object.</short>
+        <descr>This function returns the hash of the object. If an hash has been generated before, it will be reused.</descr>
+        <seealso>
+          <link id="TThoriumHashableObject.CalcHash"/>
+          <link id="TThoriumHashableObject.InvalidateHash"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHashableObject.InvalidateHash">
+        <short>Invalidate any generated hash.</short>
+        <descr>If an hash has been generated, it is invaildated. This wants to say, if an hash is requested after invalidation, it will be regenerated and stored after that.</descr>
+        <seealso>
+          <link id="TThoriumHashableObject.GetHash"/>
+          <link id="TThoriumHashableObject.CalcHash"/>
+        </seealso>
+      </element>
+      <element name="TThoriumIntStack">
+        <short>Class for internal use - to be described later.</short>
+      </element>
+      <element name="TThoriumJumpList">
+        <short>Class for internal use - to be described later.</short>
+      </element>
+      <element name="TThoriumParameters">
+        <short>Container for a parameter list of a Thorium function.</short>
+        <descr>This class is a container class to hold a list of Thorium types. It is used as parameter list in function specifications of Thorium functions. For host environment functions there is a separate class.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPublicValue">
+        <short>Baseclass for identifiers in Thorium.</short>
+        <descr>This is an abstract baseclass to describe identifiers (mostly public) like variables and functions which are declared in a Thorium script.</descr>
+        <errors>Never create an instance of TThoriumPublicValue directly since it is an abstract class.</errors>
+        <seealso>
+          <link id="TThoriumFunction"/>
+          <link id="TThoriumVariable"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPublicValue.Create.AModule">
+        <short>Create class instance.</short>
+        <descr>Initializes the instance. Never call this directly since this is an abstract class.</descr>
+      </element>
+      <element name="TThoriumModule">
+        <short>Thorium module class</short>
+        <descr>TThoriumModule represents one Thorium module. This class is capable of compiling a module from source and loading/saving it from/to a binary stream. It manages dependencies on other modules and libraries as well as the functions and variables published by the module.</descr>
+      </element>
+      <element name="TThoriumPublicValue.Module">
+        <short>Owning module.</short>
+        <descr>The module which owns this identifier.</descr>
+      </element>
+      <element name="TThoriumPublicValue.Name">
+        <short>Identifier name.</short>
+        <descr>The name of this identifier.</descr>
+      </element>
+      <element name="TThoriumPublicValue.LoadFromStream">
+        <short>Load specification from stream.</short>
+        <descr>Loads the specification of this identifier from a given stream.</descr>
+        <seealso>
+          <link id="TThoriumPublicValue.SaveToStream"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPublicValue.SaveToStream">
+        <short>Save specification to stream.</short>
+        <descr>Saves the specification of this identifier to a stream. References to other identifiers are declared by using their name and their hash to identify them uniquely.</descr>
+        <seealso>
+          <link id="TThoriumPublicValue.LoadFromStream"/>
+        </seealso>
+      </element>
+      <element name="TThoriumFunction">
+        <short>Representation of a script function.</short>
+        <descr>This class represents a function declared in a Thorium script, probably published by a module. It is also used as a temporary object by the compiler to store information about the current function.</descr>
+        <seealso>
+          <link id="TThoriumVariable"/>
+        </seealso>
+      </element>
+      <element name="TThoriumFunction.Create">
+        <short>Create an instance.</short>
+        <descr>This function creates a new function specification. It expects the module which owns this declaration as the first and only parameter.
+Normally there is no need for you to create an instance of this class, since the compiler does it for you.</descr>
+        <seealso>
+          <link id="TThoriumFunction.Duplicate"/>
+        </seealso>
+      </element>
+      <element name="TThoriumFunction.EntryPoint">
+        <short>Entry point address.</short>
+        <descr>Address in the script byte code where the function begins. This information is crucial to call the method in the virtual machine.</descr>
+      </element>
+      <element name="TThoriumFunction.NestingLevel">
+        <short>Deprecated.</short>
+      </element>
+      <element name="TThoriumFunction.Parameters">
+        <short>Parameter specification.</short>
+        <descr>Pointer to an instance of <link id="TThoriumParameters">TThoriumParameters</link> representing the parameter list of the function. The names of the parameters are not saved.</descr>
+        <seealso>
+          <link id="TThoriumFunction.ReturnValue">ReturnValue</link>
+        </seealso>
+      </element>
+      <element name="TThoriumFunction.Prototyped">
+        <short>Whether the function is still prototyped.</short>
+        <descr>This is true when the function has not been implemented, only prototyped. You must not call a function which is only prototyped and normally the compiler should post errors about any function being only prototyped after the compilation has been finished.</descr>
+      </element>
+      <element name="TThoriumFunction.ReturnValues">
+        <short>Return value specification.</short>
+        <descr>Originally planned as list, now only the first element of the <link id="TThoriumParameters">TThoriumParameters</link> structure is used. This represents the type(s) of the return value the function gives. If this is empty, the function does not have any return value.</descr>
+        <seealso>
+          <link id="TThoriumFunction.Parameters"/>
+        </seealso>
+      </element>
+      <element name="TThoriumFunction.VisibilityLevel">
+        <short>The level of visibility.</short>
+        <descr>This property represents the visibility of the function. Normally you will only find functions which have this set to vsPublic, since private functions are not shown.</descr>
+      </element>
+      <element name="TThoriumFunction.Call">
+        <short>Call the function</short>
+        <descr>Calls the function using the virtual machine assigned to the Thorium engine which owns the module owning this function.
+The contents of the array of <link id="TThoriumValue"/> being the first parameter are passed as parameters to the function when calling it. There are no checks made whether the type or amount of parameters is correct for this function. If you need this, use <link id="TThoriumFunction.SafeCall">SafeCall</link> instead.
+This method returns the value which has been returned by the function. If the function does not supply any return value, the result is unspecified.</descr>
+        <errors>Throws an exception if no module is assigned, the assigned module does not have a Thorium engine assigned or the virtual machine has not been initialized.</errors>
+        <seealso>
+          <link id="TThoriumFunction.SafeCall"/>
+        </seealso>
+      </element>
+      <element name="TThoriumFunction.Duplicate">
+        <short>Duplicate this instance.</short>
+        <descr>Creates a new instance of TThoriumFunction and fills it with the same data this instance has and returns it. This is mostly used by the compiler when publishing functions.</descr>
+      </element>
+      <element name="TThoriumFunction.AsEvent">
+        <short>Not implemented yet.</short>
+      </element>
+      <element name="TThoriumFunction.LoadFromStream">
+        <short>Load specification from stream.</short>
+        <descr>Loads the specification of a function from the given stream and assigns it to this instance. There are not many checks made for valid values, so you should make sure the data is not corrupted. Hashes and identifier names are used to check for the validity of identifier references.</descr>
+        <seealso>
+          <link id="TThoriumFunction.SaveToStream"/>
+        </seealso>
+      </element>
+      <element name="TThoriumFunction.SafeCall">
+        <short>Call the function with additional checks</short>
+        <descr>Other than the <link id="TThoriumFunction.Call">Call</link> method this checks whether the types of the passed parameters and the parameter count matches those specified in this instance. If this is not the case, an exception is thrown. After that the default <link id="TThoriumFunction.Call">Call</link> method is called.</descr>
+        <errors>Throws an exception when the types or count of parameters do not match.</errors>
+        <seealso>
+          <link id="TThoriumFunction.Call"/>
+        </seealso>
+      </element>
+      <element name="TThoriumFunction.SaveToStream">
+        <short>Saves the specification to stream.</short>
+        <descr>Saves the specification of this instance to a stream. References to identifiers are encoded as their name and a hash to make sure they can be validated on loading.</descr>
+        <seealso>
+          <link id="TThoriumFunction.LoadFromStream"/>
+        </seealso>
+      </element>
+      <element name="TThoriumFunctionCallbackCapsule">
+        <short>For future use.</short>
+      </element>
+      <element name="TThoriumVariable">
+        <short>Represents a Thorium variable.</short>
+        <descr>This class represents a (probably public) variable declared in a Thorium script.</descr>
+        <seealso>
+          <link id="TThoriumFunction"/>
+        </seealso>
+      </element>
+      <element name="TThoriumVariable.Create">
+        <short>Creates an instance.</short>
+      </element>
+      <element name="TThoriumVariable.IsStatic">
+        <short>Whether the value is static.</short>
+        <descr>If this is true, no changes can be made to the value of this variable. It has been declared as static and most references have been replaced by the compiler with the actual value to optimize the code.</descr>
+      </element>
+      <element name="TThoriumVariable.StackPosition">
+        <short>Position of the variable on the stack.</short>
+        <descr>This property tells where on the module local part of the stack the variable can be found.</descr>
+      </element>
+      <element name="TThoriumVariable.TypeSpec">
+        <short>Type of the variable.</short>
+        <descr>The type specification of the variable. </descr>
+      </element>
+      <element name="TThoriumVariable.LoadFromStream">
+        <short>Loads specification from stream.</short>
+      </element>
+      <element name="TThoriumVariable.SaveToStream">
+        <short>Saves specification to stream.</short>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec">
+        <short>Store parameters of a host function.</short>
+        <descr>This class is able to store and represent the parameter list of a function of the host environment. Types are represented by either a <link id="TThoriumHostType"/> or an <link id="TThoriumHostObjectType"/>, if it is an object/class type.</descr>
+        <seealso>
+          <link id="TThoriumParameters"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.Expand">
+        <short>Enlarge the buffer.</short>
+        <descr>The list is optimized for best performance. So each time the list grows, multiple elements are allocated. This function automatically grows the list, depending on the already present count of elements.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.SetCapacity"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.GetCompleteType">
+        <short>Get a complete type representation.</short>
+        <descr>Returns a pointer to the complete type representation containing both <link id="TThoriumHostType">host type</link> and <link id="TThoriumHostObjectType">object type</link> at the location in the list specified by AIndex. This can also used to modify the specification.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.GetExtendedType"/>
+          <link id="TThoriumHostFunctionParameterSpec.GetParamType"/>
+          <link id="TThoriumHostFunctionParameterSpec.CompleteTypes"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.GetExtendedType">
+        <short>Get host object type</short>
+        <descr>Returns the <link id="TThoriumHostObjectType">host object type</link> of the parameter at AIndex or nil, if it is not an extended type parameter.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.GetCompleteType"/>
+          <link id="TThoriumHostFunctionParameterSpec.SetExtendedType"/>
+          <link id="TThoriumHostFunctionParameterSpec.GetParamType"/>
+          <link id="TThoriumHostFunctionParameterSpec.ExtendedTypes"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.GetParamType">
+        <short>Get host type</short>
+        <descr>Returns the <link id="TThoriumHostType">host type</link> of the parameter at AIndex. </descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.GetCompleteType"/>
+          <link id="TThoriumHostFunctionParameterSpec.GetExtendedType"/>
+          <link id="TThoriumHostFunctionParameterSpec.Types"/>
+          <link id="TThoriumHostFunctionParameterSpec.SetParamType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.SetCapacity">
+        <short>Set the capacity of the list.</short>
+        <descr>Sets the capacity to the list to the given value. This does not work if the value is smaller than the amount of elements already in the list. Used to preallocate entries if you add many to the list.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.Expand"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.SetExtendedType">
+        <short>Set the host object type of an entry.</short>
+        <descr>Sets the <link id="TThoriumHostObjectType">host object type</link> of the parameter at index AIndex.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.SetParamType"/>
+          <link id="TThoriumHostFunctionParameterSpec.ExtendedTypes"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.SetParamType">
+        <short>Set the host type of an entry</short>
+        <descr>Sets the <link id="TThoriumHostType">host type</link> of the parameter at index AIndex. Make sure you set an <link id="TThoriumHostObjectType">host object type</link> too if you set it as an extended type.</descr>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.Types">
+        <short>Access to the host types.</short>
+        <descr>Provides access to the <link id="TThoriumHostType">host type</link> part of a parameter.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.GetParamType"/>
+          <link id="TThoriumHostFunctionParameterSpec.SetParamType"/>
+          <link id="TThoriumHostFunctionParameterSpec.ExtendedTypes"/>
+          <link id="TThoriumHostFunctionParameterSpec.CompleteTypes"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.ExtendedTypes">
+        <short>Access to host object type.</short>
+        <descr>Provides access to the <link id="TThoriumHostObjectType">host object type</link> part of a parameter.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.GetExtendedType"/>
+          <link id="TThoriumHostFunctionParameterSpec.SetExtendedType"/>
+          <link id="TThoriumHostFunctionParameterSpec.Types"/>
+          <link id="TThoriumHostFunctionParameterSpec.CompleteTypes"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.CompleteTypes">
+        <short>Access to complete specifications.</short>
+        <descr>Provides access to the complete specification of a parameter.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.GetCompleteType"/>
+          <link id="TThoriumHostFunctionParameterSpec.Types"/>
+          <link id="TThoriumHostFunctionParameterSpec.ExtendedTypes"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.Capacity">
+        <short>Access the capacity of the list.</short>
+        <descr>Provides read-write access to the capacity of the list. The constraints of the <link id="TThoriumHostFunctionParameterSpec.SetCapacity">SetCapacity</link> method apply here too.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.SetCapacity"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.Count">
+        <short>Access the amount of items.</short>
+        <descr>Provides read access to the amount of items placed in the list.</descr>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.AddType">
+        <short>Adds a new basic entry.</short>
+        <descr>Adds a new parameter to the list as a non-extended type specified by <i>AType</i> and returns the index where the new entry is placed.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.AddExtendedType"/>
+          <link id="TThoriumHostFunctionParameterSpec.InsetType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.AddExtendedType">
+        <short>Adds an host object type to the list.</short>
+        <descr>Adds a new entry which contains an extended type (i.e. host object type) specified by <i>AType</i> and returns the index at which the entry is placed.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.AddType"/>
+          <link id="TThoriumHostFunctionParameterSpec.InsertExtendedType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.AllTypes">
+        <short>Access to all elements through a pointer.</short>
+        <descr>Returns a pointer to the first element in the list. This allows faster access of any element in the list.</descr>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.IndexOfType">
+        <short>Find an occurence of the given type.</short>
+        <descr>Looks for the given type in the list and returns the index of the Nth occurence.</descr>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.InsertType">
+        <short>Insert a type.</short>
+        <descr>Inserts the given type in the list so that it has the given index afterwards.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.InsertExtendedType"/>
+          <link id="TThoriumHostFunctionParameterSpec.AddType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.InsertExtendedType">
+        <short>Insert an host object type.</short>
+        <descr>Inserts the given host objec type into the list so that it has the specified index afterwards.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.InsertType"/>
+          <link id="TThoriumHostFunctionParameterSpec.AddExtendedType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.DeleteType">
+        <short>Delete a type from the list.</short>
+        <descr>Deletes the type at the specified location from the list.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.Clear"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionParameterSpec.Clear">
+        <short>Clears the whole list.</short>
+        <descr>Deletes all entries from the list.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionParameterSpec.DeleteType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostCallableBase">
+        <short>Baseclass for callable entities in the host environment.</short>
+        <descr>This class is an abstract class whose descendants are used to represent a callable entity placed in the host environment (i.e. functions and methods).
+This class implements the hashing functionallity and declares some shared properties.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionNativeCall"/>
+          <link id="TThoriumHostFunctionAsMethodNativeCall"/>
+          <link id="TThoriumHostFunctionSimple"/>
+          <link id="TThoriumHostMethodNativeCall"/>
+          <link id="TThoriumHostMethodSimple"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostCallableBase.CalcHash">
+        <short>Calculate callable hash.</short>
+        <descr>Calculates the hash of this callable instance. It includes the function signature like parameters, name and return value type.</descr>
+        <seealso>
+          <link id="TThoriumHashableObject"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostCallableBase.Parameters">
+        <short>Parameter specification.</short>
+        <descr>Pointing to a <link id="TThoriumHostFunctionParameterSpec"/> instance representing the parameters of the callable.</descr>
+      </element>
+      <element name="TThoriumHostCallableBase.ReturnType">
+        <short>Return type of the callable.</short>
+        <descr>Specifies the return type of the callable.</descr>
+      </element>
+      <element name="TThoriumHostCallableBase.Name">
+        <short>Identifier of the callable.</short>
+        <descr>Name identifier of the callable.</descr>
+      </element>
+      <element name="TThoriumHostFunctionSimpleMethod">
+        <short>Simple implementation of a host call.</short>
+        <descr>This class implements a simple call to a function of the host environment. Parameters are passed to a specific signatured function, as well as a pointer where to put the return value, all in <link id="TThoriumValue"/> format.
+For more info see <link id="TThoriumSimpleMethod"/>.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionNativeCall"/>
+          <link id="TThoriumHostMethodAsFunctionNativeCall"/>
+          <link id="TThoriumHostMethodSimpleMethod"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionSimpleMethod.Method">
+        <short>Method pointer to be called.</short>
+        <descr>The pointer to the method which will be called.</descr>
+      </element>
+      <element name="TThoriumHostFunctionNativeCall">
+        <short>Native call implementation of a host call.</short>
+        <descr>Implements a host call as native call, meaning that you do not need a wrapper to get the parameters in the format you want. They will be converted and passed in computer native formats to your function, without having you to change anything.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionSimpleMethod"/>
+          <link id="TThoriumHostMethodAsFunctionNativeCall"/>
+          <link id="TThoriumHostMethodNativeCall"/>
+          <link id="TThoriumHostMethodSimpleMethod"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionNativeCall.CallingConvention">
+        <short>Calling convention to be used.</short>
+        <descr>This must describe the calling convention the function has you want to be called. The default calling convention of FreePascal is <i>register</i>, so you probably want to use ncRegister.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionSimpleMethod"/>
+          <link id="TThoriumHostFunctionNativeCall"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostFunctionNativeCall.CodePointer">
+        <short>Pointer to the function.</short>
+        <descr>This must point to the function you want to call.</descr>
+      </element>
+      <element name="TThoriumHostFunctionNativeCall.Precompile">
+        <short>Precompile the native call subscript.</short>
+        <descr>This method performs precompilation of the NativeCall subscript which is needed to perform the call. You must call this before the first attempt of a native call but after you have configured the parameters.</descr>
+      </element>
+      <element name="TThoriumHostMethodAsFunctionNativeCall">
+        <short>NativeCall implementation calling a method as function.</short>
+        <descr>Works like <link id="TThoriumHostFunctionNativeCall"/>, except that a constant is passed as the first parameter, which is assumed to be a Pointer and which must not be specified in the parameter array. If the function is a method, the constant parameter will come out as Self in the method and does not need to be declared in the function signature.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionNativeCall"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostMethodBase">
+        <short>Host method base class</short>
+        <descr>Abstract base class to call methods of the host environment.</descr>
+      </element>
+      <element name="TThoriumHostMethodSimple">
+        <short>Simple implementation of a method call.</short>
+        <descr>Similar to <link id="TThoriumHostFunctionSimpleMethod"/>, except that the Self pointer of the function is modified to whatever matches the context (i.e. which host object type variable the method belongs to - gets dereferred up to the pointer so that you can use it like a normal method).</descr>
+        <seealso>
+          <link id="TThoriumHostMethodNativeCall"/>
+          <link id="TThoriumHostFunctionSimpleMethod"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostMethodNativeCall">
+        <short>Implementation of a method call as NativeCall.</short>
+        <descr>Similar to <link id="TThoriumHostFunctionNativeCall"/>, except that the Self pointer is adjusted according to the calling context like in <link id="TThoriumHostMethodSimple"/>.</descr>
+        <seealso>
+          <link id="TThoriumHostFunctionNativeCall"/>
+          <link id="TThoriumHostMethodAsFunctionNativeCall"/>
+          <link id="TThoriumHostMethodSimple"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostMethodNativeCall.CallingConvention">
+        <short>Calling convention</short>
+        <descr>Describes the calling convention of the method. See <link id="TThoriumHostFunctionNativeCall.CallingConvention"/> for more information.</descr>
+      </element>
+      <element name="TThoriumHostMethodNativeCall.CodePointer">
+        <short>Pointer to the method.</short>
+        <descr>This must be the pointer to the method to be called.</descr>
+      </element>
+      <element name="TThoriumHostMethodNativeCall.Precompile">
+        <short>Precompile NativeCall subscript.</short>
+        <descr>This method performs precompilation of the NativeCall subscript which is needed to perform the call. You must call this before the first attempt of a native call but after you have configured the parameters.</descr>
+      </element>
+      <element name="TThoriumHostObjectType">
+        <short>Base class for class-alike types.</short>
+        <descr>This class is the base class to publish any class-alike type to Thorium. You will need to override the virtual methods to make it represent the type you want.</descr>
+        <seealso>
+          <link id="TThoriumRTTIObjectType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumHostObjectType.Create.ALibrary">
+        <short>Virtual constructor.</short>
+        <descr>Does some basic initializing. Due to the way the engine instanciates these types, make sure you override it when you derive your class.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.GetNeededMemoryAmount">
+        <short>Get the memory amount needed for one instance.</short>
+        <descr>This function must return the amount of memory needed for one instance of this type. If you do not need to allocate any memory but you want to assign the value yourself, you should return 0. This will leave the pointer field uninitialized so you can assign anything you want.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.DuplicateValue">
+        <short>Duplicate the given value</short>
+        <descr>This function is supposed to duplicate the Value which is passed as a parameter and return it. This means, that this value should be able to be independently freed by Thorium without destroying the other instance. If you use reference counting, it will be enough to copy the value given and increase the reference by one.
+It is guaranteed that the input value is of the type this class reflects.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.AssignValue">
+        <short>Perform assignment - deprecated?</short>
+        <descr>Deprecated?</descr>
+      </element>
+      <element name="TThoriumHostObjectType.PerformOperation">
+        <short>Perform the given operation on a value.</short>
+        <descr>This should perform the given operation on the given values and return the result (if any). There is no need to override this method if your type does not support this.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.PerformEvaluation">
+        <short>Evaluate as integer.</short>
+        <descr>Evaluate the value given as integer (i.e. for boolean evaluations, 0 for false, anything else for true). It is guaranteed that the input value is of the type this class represents.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.PerformNegation">
+        <short>Negate the value</short>
+        <descr>Negate the value given (if possible at all) and return the result. There is no need to override this method if your type does not support this.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.PerformNot">
+        <short>Invert the value.</short>
+        <descr>This is called to execute the not-operator. There is no need to override this method if your type does not support this.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.DisposeValue">
+        <short>Release an instance</short>
+        <descr>Release the given instance of your type. If you use reference counting, it will be sufficient if you just decrease the reference by one (and free if no references are left).</descr>
+      </element>
+      <element name="TThoriumHostObjectType.IsTypeCompatible">
+        <short>Determine whether a two-operand operation is possible.</short>
+        <descr>This method is supposed to return whether the given operation is possible. In explicit, this determines which operations the compiler will translate into code and where it will throw an error. Make sure you set <i>ResultType</i> to notify the compiler about any type changes (e.g., multiplication of float and integer produce a float).</descr>
+      </element>
+      <element name="TThoriumHostObjectType.HasFields">
+        <short>Determine whether a type has any fields.</short>
+        <descr>Tell the compiler whether your type has any fields. Fields are what properties are in FreePascal, i.e. they are accessed without any parameter handling just like public variables. However, fields may be of an method- or function-type (and in that case of course read-only) so that they can be called. In fact, that is the way to publish methods to Thorium.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.IsTypeOperationAvailable">
+        <short>Determine whether an unary operation is possible.</short>
+        <descr>Return whether the given operation is possible on any value of your type. Make sure to set <i>ResultType</i> accordingly to any change in the type.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.HasStaticFields">
+        <short>Determine whether your type has any static fields.</short>
+        <descr>Return true if your type has any static fields. Static fields are, other than normal fields, accessed like static methods are in FreePascal, using the type instead of the instance. So if your type is published as "TTestType" to Thorium, a static field will be accessed via "TTestType.staticFieldName", assuming you have a static field called "staticFieldName".</descr>
+      </element>
+      <element name="TThoriumHostObjectType.HasIndicies">
+        <short>Determine whether your type can be accessed via indicies.</short>
+        <descr>If your type supports array-like access (i.e. "Instance[10]" or alike), you must return true.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.Name">
+        <short>Published name</short>
+        <descr>This is the name which can be used in Thorium to access this type.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.FieldID">
+        <short>Get the ID of a field.</short>
+        <descr>This method is supposed to return an ID which is unique to the field identified by <i>FieldIdent</i>. If that field does not exist, you must return false instead of an invalid ID. There is no need to implement this method if your implementation of <link id="TThoriumHostObjectType.HasFields">HasFields</link> returns false.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.StaticFieldID">
+        <short>Get a static field ID.</short>
+        <descr>Similar to <link id="TThoriumHostObjectType.FieldID"/>, but for static fields. There is no need to override this method if your implementation of <link id="TThoriumHostObjectType.HasStaticFields">HasStaticFields</link> returns false.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.IndexType">
+        <short>Get the type of value returned at indexed access.</short>
+        <descr>Implement this if your type supports indicies. If your type supports the given <i>InputType</i> as index type, you must return true and write the type the result of the index operation will have to <i>ResultType</i>. Otherwise return false.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.StaticFieldType">
+        <short>Get the type of a static field.</short>
+        <descr>This method must return the type of the static field identified by <i>ID</i> in <i>ResultType</i>. It is guaranteed that the ID has been fetched using <link id="TThoriumHostObjectType.StaticFieldID">StaticFieldID</link>. If the type is for some reason not able to return a valid type (e.g. invalid ID or something), the method must return false. The compiler will throw an error about that.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.FieldType">
+        <short>Get the type of a field.</short>
+        <descr>This method must return the type of the field identified by <i>ID</i> in <i>ResultType</i>. It is guaranteed that the ID has been fetched using <link id="TThoriumHostObjectType.FieldID">FieldID</link>. If the type is for some reason not able to return a valid type (e.g. invalid ID or something), the method must return false. The compiler will throw an error about that.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.GetIndex">
+        <short>Perform read access using an index.</short>
+        <descr>This method is called by the virtual machine whenever an instance of the type is read-accessed via indicies. The instance as well as the used index are passed as parameters and the method must return the value at that location or may throw an exception (although this is discouraged). The returned value must have the type which has been announced to the compiler before using <link id="TThoriumHostObjectType.IndexType">IndexType</link>.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.SetIndex">
+        <short>Perform write access using an index.</short>
+        <descr>This method is called by the virtual machine whenever an instance of the type is write-accessed via indicies. The instance, the index used to access as well as the value assigned are passed as parameters. If anything is wrong, the method may throw an exception.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.GetField">
+        <short>Perform read-access to a field.</short>
+        <descr>This gets called by the virtual machine whenever a field of your type is read-accessed. This does not match for methods and functions since these references are considered to be static and thus solved at compile time. The instance which is subject to the access as well as the ID of the field are passed as parameters and the function is expected to return the current value of the field.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.GetStaticField">
+        <short>Perform read access to a static field.</short>
+        <descr>This is similar to <link id="TThoriumHostObjectType.GetField">GetField</link>, but for static fields. Note that static fields are not solved at compile time and thus the value is allowed to change during the runtime of the script.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.SetField">
+        <short>Perform write access to a field.</short>
+        <descr>The virtual machine calls this method whenever a field of the type is write accessed. This is only called, when the <link id="TThoriumHostObjectType.FieldType">FieldType</link> call subject to this field ID has not set the Static bit in the type. The method is expected to change the value of the field identified by the given ID in the given instance to the given value.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.SetStaticField">
+        <short>Perform write access to a static field.</short>
+        <descr>The virtual machine calls this method whenever a static field of the type is write accessed. This is only called, when the <link id="TThoriumHostObjectType.FieldType">FieldType</link> call subject to this field ID has not set the Static bit in the type. The method is expected to change the value of the static field identified by the given ID to the given value.</descr>
+      </element>
+      <element name="TThoriumHostObjectType.GetPropertyStoring">
+        <short>Determine whether a field is storing.</short>
+        <descr>Return true if the property is "storing".
+
+Storing has only relevancy when a RTTI based host object value is passed to a property or a parameter. If the storing bit is set, the object will be marked as "host controlled" (i.e., the according method is called) and will not be freed by reference counting unless the countermethod is called afterwards.</descr>
+      </element>
+      <element name="TThoriumRTTIObjectType">
+        <short>RTTI implementation of a host object type.</short>
+        <descr>This uses <link id="TThoriumHostObjectType"/> as ancestor class and implements a generic host object type which is used to represent Pascal classes using all available RTTI information.
+This speciality of the class is hard coded and there are many places in Thorium where special code is used for type instances of this class to assure you do not need to derive a class from this one for each type you want to publish to Thorium.</descr>
+        <seealso>
+          <link id="TThoriumHostObjectType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumRTTIObjectType.Create">
+        <short>Create an instance.</short>
+        <descr>You must not use the constructor inherited from the parent class type to create an instance of this class.
+
+To publish a class type to Thorium, you may either derive it from <link id="TThoriumPersistent"/> or implement <link id="IThoriumPersistent"/> interface in it. Depending on which method you choose, you have to choose a different constructor. If you use TThoriumPersistent directly, you should use the first variant of the constructor which expects the class type as its second parameter.
+Otherwise you must use the second variant and specify the wanted methods accordingly. The first constructor internally calls the second one.
+
+To specify a base class which is unable to be ever instanciated (e.g. when you publish the TStream-class tree, you cannot alter TStream to implement IThoriumPersistent. You would derive a class from those streams you want to have published to Thorium implementing IThoriumPersistent and specify TStream as an abstract class).</descr>
+      </element>
+      <element name="TThoriumRTTIObjectType.BaseClass">
+        <short>Class represented by this type.</short>
+        <descr>This is the class which is represented by this type.</descr>
+      </element>
+      <element name="TThoriumRTTIObjectType.GetPropertyStoring.PropertyName">
+        <short>Get whether a property is storing.</short>
+        <descr>Using this you read out the customized storing bit of the given property.</descr>
+      </element>
+      <element name="TThoriumRTTIObjectType.SetPropertyStoring">
+        <short>Set whether a property is storing.</short>
+        <descr>Using these methods you can set the storing bit of any property of the class represented by this type implementation. For more infos about the storing bit see <link id="TThoriumHostObjectType.GetPropertyStoring"/>.</descr>
+      </element>
+      <element name="TThoriumRTTIObjectType.NewNativeCallMethod">
+        <short>Helper function.</short>
+        <descr>This is an helper function which creates a new instance of a native call method. The instance is returned, but not registered with the type. This is to be used in the callbacks given to the constructor or in the methods which determine the methods published by a type in <link id="TThoriumPersistent"/>.</descr>
+      </element>
+      <element name="TThoriumRTTIObjectType.NewNativeCallStaticMethod">
+        <short>Helper function.</short>
+        <descr>This is an helper function which creates a new instance of a native call static (= class) method. The instance is returned, but not registered with the type. This is to be used in the callbacks given to the constructor or in the methods which determine the methods published by a type in <link id="TThoriumPersistent"/>.</descr>
+      </element>
+      <element name="TThoriumRTTIObjectType.NewNativeCallStaticFunction">
+        <short>Helper function.</short>
+        <descr>This is an helper function which creates a new instance of a native call function. The instance is returned, but not registered with the type. This is to be used in the callbacks given to the constructor or in the methods which determine the methods published by a type in <link id="TThoriumPersistent"/>.</descr>
+      </element>
+      <element name="IThoriumPersistent">
+        <short>Interface to publish classes to Thorium.</short>
+        <descr>Any class which is to be published to Thorium using <link id="TThoriumRTTIObjectType"/> must implement this interface. It is used to notify the class about copies on the stack and in the registers of Thorium to avoid it from being freed. </descr>
+        <seealso>
+          <link id="TThoriumPersistent"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPersistent">
+        <short>Base class to publish a class to Thorium.</short>
+        <descr>The easiest way to publish a class to Thorium is deriving it from TThoriumPersistent. This keeps you from building your own implementation of the methods specified in the <link id="IThoriumPersistent"/> interface. </descr>
+      </element>
+      <element name="TThoriumPersistent._AddRef">
+        <short>Increase reference count.</short>
+        <descr>IUnknown implementation to increase the reference counter of the instance.</descr>
+        <seealso>
+          <link id="TThoriumPersistent.GetReference"/>
+          <link id="TThoriumPersistent._Release"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPersistent._Release">
+        <short>Decrease reference count.</short>
+        <descr>IUnknown implementation to decrease the reference counter.</descr>
+        <seealso>
+          <link id="TThoriumPersistent.FreeReference"/>
+          <link id="TThoriumPersistent._AddRef"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPersistent.QueryInterface">
+        <short>Query for an interface.</short>
+        <descr>Default implementation of QueryInterface from IUnknown.</descr>
+      </element>
+      <element name="TThoriumPersistent.GetStaticMethodList">
+        <short>Determine the list of static methods.</short>
+        <descr>This is called by the constructor of an <link id="TThoriumRTTIObjectType"/> instance to fetch the list of static methods a class type supports. You should pass the entries in the array given.</descr>
+        <seealso>
+          <link id="TThoriumPersistent.GetMethodList"/>
+          <link id="TThoriumRTTIObjectType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPersistent.GetMethodList">
+        <short>Determine method list.</short>
+        <descr>This method is called by the constructor of a <link id="TThoriumRTTIObjectType"/> instance to determine which methods are to be published by the class. The methods are to be written to the dynamic array passed.</descr>
+        <seealso>
+          <link id="TThoriumPersistent.GetStaticMethodList"/>
+          <link id="TThoriumRTTIObjectType"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPersistent.EnableHostControl">
+        <short>Set the host controlled flag</short>
+        <descr>Sets the instance to be host controlled. This wants to say that it will never be freed when the reference counter reaches zero. This is for example called when the instance is assigned to a parameter or property which has been flagged as storing.</descr>
+        <seealso>
+          <link id="TThoriumPersistent.DisableHostControl"/>
+          <link id="TThoriumHostObjectType.GetPropertyStoring"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPersistent.DisableHostControl">
+        <short>Unset the host controlled flag.</short>
+        <descr>Removes the host controlled flag from the instance and thus let it free if the reference counter reaches zero.</descr>
+        <seealso>
+          <link id="TThoriumPersistent.EnableHostControl"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPersistent.GetReference">
+        <short>Increase the reference counter and return the instance.</short>
+        <descr>The method increases the reference counter for this instance and returns the instance too.</descr>
+        <seealso>
+          <link id="TThoriumPersistent._Add"/>
+        </seealso>
+      </element>
+      <element name="TThoriumPersistent.GetReferenceCount">
+        <short>Get the amount of references.</short>
+        <descr>Return the amount of known references to this instance. The virtual reference created by the host controlled flag is not counted.</descr>
+      </element>
+      <element name="TThoriumPersistent.FreeReference">
+        <short>Release a reference.</short>
+        <descr>Decreases the reference counter by one and, if applicable, frees the instance.</descr>
+        <seealso>
+          <link id="TThoriumPersistent.GetReference"/>
+          <link id="TThoriumPersistent._Release"/>
+        </seealso>
+      </element>
+      <element name="TThoriumLibraryConstant">
+        <short>A constant exported by a library.</short>
+        <descr>This class implements a constant to be exported by a library.</descr>
+      </element>
+      <element name="TThoriumLibraryProperty">
+        <short>A dynamic property of a library.</short>
+        <descr>Like a public variable in a Thorium module, a library can export properties which may even be changed by modules.</descr>
+      </element>
+      <element name="TThoriumLibraryProperty.GetValue">
+        <short>Get the value of the property.</short>
+        <descr>This function is supposed to write the value of the property to value pointed to by <i>AThoriumValue</i>.</descr>
+      </element>
+      <element name="TThoriumLibraryProperty.GetStatic">
+        <short>Determine whether the property is readonly.</short>
+        <descr>Must return true when the value is read only.</descr>
+      </element>
+      <element name="TThoriumLibraryProperty.GetType">
+        <short>Get the type of the value.</short>
+        <descr>Return the type of the value. This must not change during the whole program runtime.</descr>
+      </element>
+      <element name="TThoriumLibraryProperty.SetValue">
+        <short>Set the value of the property.</short>
+        <descr>This method should read the given value and assign it to the property.</descr>
+      </element>
+      <element name="TThoriumLibraryPropertyDirect">
+        <short>Property implementation using private variable.</short>
+        <descr>This class implements a library property using a private variable as storage without any control over the values assigned to it.</descr>
+      </element>
+      <element name="TThoriumLibraryPropertyDirectSetCallback">
+        <short>Property implementation using private variable and callback.</short>
+        <descr>This class implements a library property using a private variable but providing also a callback which is called when a value is assigned to the property with the possibility to abort the assignment.</descr>
+      </element>
+      <element name="TThoriumLibraryPropertyCallback">
+        <short>Property implementation based on callbacks</short>
+        <descr>This implementation is a virtual property. Any read or write from or to the property is redirected to callbacks allowing the owner to get the value from elsewhere.</descr>
+      </element>
+      <element name="TThoriumLibrary">
+        <short>Host environment library class</short>
+        <descr>The base class for any library the host environment may want to publish to Thorium. To build a library, you need to override the GetName and InitializeLibrary methods. For an example see the thoriumlibpkg and the customlib example.</descr>
+      </element>
+      <element name="TThoriumLibrary.GetConstant"/>
+      <element name="TThoriumLibrary.PrecompileFunctions">
+        <short>Precompile all known NativeCall functions.</short>
+        <descr>This will precompile any function which derives from <link id="TThoriumFunctionNativeCall"/> or <link id="TThoriumMethodNativeCall"/> and which is in the host function list of the library.
+This method is automatically called by the constructor after calling <link id="TThoriumLibrary.InitializeLibrary">InitializeLibrary</link>.</descr>
+      </element>
+      <element name="TThoriumLibrary.AddDependency">
+        <short>Add a dependency</short>
+        <descr>This method adds a dependency to the library and throws an exception if the dependency cannot be fulfilled.</descr>
+      </element>
+      <element name="TThoriumLibrary.ClearAll">
+        <short>Clear the whole library</short>
+        <descr>Deletes anything related to this library. Properties, functions, types, anything I said, did you hear me? Anything!!</descr>
+      </element>
+      <element name="TThoriumLibrary.ClearFunctions">
+        <short>Clear all functions</short>
+        <descr>Delete any functions registered with this library.</descr>
+      </element>
+      <element name="TThoriumLibrary.ClearTypes">
+        <short>Clear all types</short>
+        <descr>Deletes all types associated with this library.</descr>
+      </element>
+      <element name="TThoriumLibrary.DeleteHostFunction">
+        <short>Delete a function</short>
+        <descr>This removes the function at index <i>AIndex</i> from the library.</descr>
+      </element>
+      <element name="TThoriumLibrary.DeleteHostType">
+        <short>Delete a type</short>
+        <descr>This removes the type at index <i>AIndex</i> from the library.</descr>
+      </element>
+      <element name="TThoriumLibrary.GetName">
+        <short>Get the library name</short>
+        <descr>This class method must return the name of the library, that is the one under which the library should be able to be loaded in Thorium.</descr>
+      </element>
+      <element name="TThoriumLibrary.InitializeLibrary">
+        <short>Initialize the library</short>
+        <descr>This function should probably be overriden by any descendant class. It is called by the constructor to let the library initialize itself. That is adding host functions and types as well as library properties.</descr>
+      </element>
+      <element name="TThoriumIdentifierTable">
+        <short>Class for internal use - to be described later.</short>
+      </element>
+      <element name="TThoriumScanner">
+        <short>Class for internal use - to be described later.</short>
+      </element>
+      <element name="TThoriumInstructions">
+        <short>Container for Thorium instructions.</short>
+        <descr>Class for internal use - to be fully described later.
+
+This class is a container for Thorium instructions with some extra methods for easier handling, such as keeping track in address lists of inserted instructions (and thus changed indicies) and more.</descr>
+      </element>
+      <element name="TThoriumModule.Compiled">
+        <short>Whether the module is ready for use.</short>
+        <descr>This property shows whether the module is ready for use - i.e. has been compiled or loaded from a binary.</descr>
+      </element>
+      <element name="TThoriumModule.Compress">
+        <short>Whether to compress the data.</short>
+        <descr>This switch defines whether the module will be compressed when it gets saved to a stream. Since the Thorium instructions are optimized for speed rather than size they contain a lot of unused space and zeros, which can be very good compressed by the zlib algorithm.</descr>
+      </element>
+      <element name="TThoriumModule.InstructionCount">
+        <short>Amount of instructions.</short>
+        <descr>The amount of instructions in this module.</descr>
+      </element>
+      <element name="TThoriumModule.LastCompilerError">
+        <short>Last compiler error.</short>
+        <descr>This is the last error thrown by the compiler. Only set to anything else than an empty string if compilation failed at least once.</descr>
+      </element>
+      <element name="TThoriumModule.LibraryString">
+        <short>Access to library strings.</short>
+        <descr>Constant strings which occur in the source code of Thorium scripts are saved in a so called library. Access to those from the instructions is then only handled by indicies to speed things up. You can access the strings stored in the library using this property.</descr>
+      </element>
+      <element name="TThoriumModule.LibraryStringCount">
+        <short>Amount of library'd strings</short>
+        <descr>This is the amount of strings contained in the module library. See <link id="TThoriumModule.LibraryString"/>LibraryString</descr>
+      </element>
+      <element name="TThoriumModule.Name">
+        <short>Name of the module.</short>
+        <descr>The name of the module under which it can also be referenced in other modules.</descr>
+      </element>
+      <element name="TThoriumModule.OptimizedInstructions">
+        <short>Amount of removed instructions.</short>
+        <descr>This is the amount of instructions which have been removed by the internal optimizer of Thorium. The optimizer makes patterns which are known to be created by the compiler or certain code phrases more performant (and sometimes, it even breaks the whole code :) ).</descr>
+      </element>
+      <element name="TThoriumModule.PublicFunction">
+        <short>Access to public functions.</short>
+        <descr>Using this property one can access the public functions declared in the module. The amount of published functions can be queried using <link id="TThoriumModule.PublicFunctionCount"/>PublicFunctionCount</descr>
+      </element>
+      <element name="TThoriumModule.PublicFunctionCount">
+        <short>Amount of public functions.</short>
+        <descr>This is the amount of public functions declared in this module.</descr>
+      </element>
+      <element name="TThoriumModule.PublicVariable">
+        <short>Access to public variables</short>
+        <descr>This property provides access to variables made public by the module.</descr>
+      </element>
+      <element name="TThoriumModule.PublicVariableCount">
+        <short>Amount of public variables.</short>
+        <descr>This property reflects the amount of variables which have been made public by the module.</descr>
+      </element>
+      <element name="TThoriumModule.Thorium">
+        <short>Owning thorium engine.</short>
+        <descr>The Thorium engine which owns the module.</descr>
+      </element>
+      <element name="TThoriumModule.CompileFromStream">
+        <short>Compile Thorium script source code.</short>
+        <descr>This method clears the whole module and tries to compile the code delivered with SourceStream using the Flags passed as second parameter. It returns whether the compilation was successful or not. In the latter case, the module is cleared again to bring it in a stable state. </descr>
+      </element>
+      <element name="TThoriumModule.Dump">
+        <short>Dump information to console</short>
+        <descr>This dumps a lot of information about the module to stdout, like the whole instruction array, exports and dependencies.</descr>
+      </element>
+      <element name="TThoriumModule.DumpCodeStr">
+        <short>Format instructions and return string.</short>
+        <descr>This puts the instructions of the module in a more or less human readable form and returns them as a string predestined to be printed to a console.</descr>
+      </element>
+      <element name="TThoriumModule.DumpLibStr">
+        <short>Format library and return string.</short>
+        <descr>This formats the string library in a human readable format and returns it as a string.</descr>
+      </element>
+      <element name="TThoriumModule.ExecuteMain">
+        <short>Deprecated?</short>
+      </element>
+      <element name="TThoriumModule.FindPublicFunction">
+        <short>Return public function.</short>
+        <descr>Searches for a public function with the given name in the module and returns it if found or nil if not.</descr>
+      </element>
+      <element name="TThoriumModule.IndexOfPublicFunction">
+        <short>Return index of public function.</short>
+        <descr>Searches for a public function with the given name in the module and returns its index if found or -1 if not.</descr>
+      </element>
+      <element name="TThoriumModule.IsTypeCompatible">
+        <short>Move to private?</short>
+      </element>
+      <element name="TThoriumModule.IsTypeOperationAvailable">
+        <short>Move to private?</short>
+      </element>
+      <element name="TThoriumModule.LoadFromStream">
+        <short>Load module from stream</short>
+        <descr>This method loads a whole module from a stream. It is assumed that the module is in the binary format SaveToStream generates. References to other modules, libraries, types, methods or functions have been encoded and are decoded by this method and verified. If any verification fails, this method throws an exception and leaves the module in an empty state.</descr>
+      </element>
+      <element name="TThoriumModule.SaveToStream">
+        <short>Save module in a binary format.</short>
+        <descr>This method saves the complete module in a binary format. References to other modules, libraries, functions and types are encoded so that they can be verifiered when loading the module again. If compression is enabled and supported, the module instructions will be compressed using the zlib library.</descr>
+      </element>
+      <element name="TThoriumStack">
+        <short>Class for internal use - to be described later.</short>
+      </element>
+      <element name="TThoriumVirtualMachine">
+        <short>Thorium virtual machine.</short>
+        <descr>This class is responsible to execute the bytecode generated by the Thorium compiler. It also keeps track of the stack. While a virtual machine is attached to a Thorium engine, no changes should be made to ensure the consistency of the virtual machine state.</descr>
+      </element>
+      <element name="TThoriumVirtualMachine.DumpStack">
+        <short>Dump stack to stdout.</short>
+        <descr>Dumps the whole stack to stdout. Be aware that it also tries to read values and thus may crash if the stack is in an inconsistent state (which should of course not occur normally).</descr>
+      </element>
+      <element name="TThoriumVirtualMachine.GetStack">
+        <short>Return the stack of the virtual machine.</short>
+        <descr>Returns the stack which is being used by this virtual machine. Handle with care. You should not attempt to make any changes to the stack by yourself.</descr>
+      </element>
+      <element name="TThoriumVirtualMachine.Execute">
+        <short>Execute instructions.</short>
+        <descr>This function starts the execution of Thorium bytecode instructions. The execution begins at the instruction index supplied via <i>StartInstruction</i> in the module which can be found at the index given with <i>StartModuleIndex</i>. The execution stops only when a jump to <link id="THORIUM_JMP_EXIT"/> occurs.
+If <i>CreateDefaultStackframe</i> is true, a stack frame is generated whose return value points to THORIUM_JMP_EXIT so that a <i>ret</i> instruction will finish the execution.
+
+You would normally only set CreateDefaultStackframe to False if you would want to initialize a module since that is the only situation where jmp-instructions to THORIUM_JMP_EXIT are placed. If you want to call a function, you set CreateDefaultStackframe to True, although you should call functions always using their <link id="TThoriumFunction.Call">Call</link> or even <link id="TThoriumFunction.SafeCall">SafeCall</link> method since these take care of the stack for you.</descr>
+      </element>
+      <element name="TThoriumDebuggingVirtualMachine">
+        <short>To be implemented and thus to be described later.</short>
+      </element>
+      <element name="TThorium">
+        <short>Core class of Thorium.</short>
+        <descr>This class manages all the modules, libraries and the virtual machine and thus is the class you probably want to use first. It represents a whole Thorium context. There may even exist several instances of this class representing different Thorium contexts.
+
+Please note that this class is not threadsafe and each instance should only be used by exactly one thread or the usage must be carefully synchronized since accessing modules or even the virtual machine at the same time from two different threads, maybe while an execution is running in a third thread will cause at least interesting errors.</descr>
+      </element>
+      <element name="TThorium.ClearLibraries">
+        <short>Unload all loaded libraries.</short>
+        <descr>Unloads all libraries loaded in the current context. Since modules may depend on these libraries they are cleared too.</descr>
+      </element>
+      <element name="TThorium.ClearModules">
+        <short>Delete all loaded modules.</short>
+        <descr>Deletes all modules which are currently loaded in the context. Libraries stay unchanged though.</descr>
+      </element>
+      <element name="TThorium.FindLibrary">
+        <short>Return a library by name.</short>
+        <descr>Looks up the instance of a library whose name is equal to the one passed in <i>Name</i> and returns it if any is found. Otherwise returns nil.</descr>
+      </element>
+      <element name="TThorium.FindModule">
+        <short>Look up a module by name.</short>
+        <descr>This method searches for a module in the context which is called like <i>Name</i>. If no module is found and <i>AllowLoad</i> is true, an attempt to load the module using the <link id="TThorium.LoadModuleFromFile">LoadModuleFromFile</link> method is started and the loaded module is returned if it is successful. Otherwise nil is returned.</descr>
+      </element>
+      <element name="TThorium.InitializeVirtualMachine">
+        <short>Attach and initialize a virtual machine.</short>
+        <descr>Makes sure a virtual machine is initialized and attached to the context. This also brings the context in a locked state which disallows loading of modules and libraries to keep the virtual machine in a consistent state.</descr>
+      </element>
+      <element name="TThorium.LoadLibrary">
+        <short>Load a host library.</short>
+        <descr>Creates an instance of the library class <i>ALibrary</i>, loads it into the context and returns it.</descr>
+      </element>
+      <element name="TThorium.LoadModuleFromFile">
+        <short>Load a module from file.</short>
+        <descr>This method tries to load a module from file using any callbacks assigned to the context. If <i>NeededHash</i> is not nil, the hash of the module is compared against it and if they do not match, an <link id="EThoriumVerificationException"/> exception is thrown.</descr>
+      </element>
+      <element name="TThorium.LoadModuleFromStream">
+        <short>Load a module from stream.</short>
+        <descr>This method will attempt to load a module from the stream given. If no name is passed via <i>AName</i>, the module will be assigned a generated anonymous name. If a hash is supplied via <i>NeededHash</i>, the hash of the loaded module is compared against it and, in case of a mismatch, an <link id="EThoriumVerificationException"/> is thrown.</descr>
+      </element>
+      <element name="TThorium.NewModule">
+        <short>Create a new empty module.</short>
+        <descr>This method creates a new empty module, registers it with the context and returns it. If <i>AName</i> is empty, a anonymous name is generated and assigned to the module.</descr>
+      </element>
+      <element name="TThorium.ReleaseVirtualMachine">
+        <short>Free the virtual machine.</short>
+        <descr>If a virtual machine is attached to the Thorium context, it will get freed by this call. This also reverts the locked state of the context.</descr>
+      </element>
+      <element name="TThorium.HostLibrary">
+        <short>Access to loaded libraries</short>
+        <descr>This property provides access to the host libraries loaded in the current context.</descr>
+      </element>
+      <element name="TThorium.HostLibraryCount">
+        <short>Amount of loaded libraries</short>
+        <descr>Property which reflects the amount of libraries loaded into the context.</descr>
+      </element>
+      <element name="TThorium.Locked">
+        <short>Whether the context is locked.</short>
+        <descr>Reflects whether the context is locked (i.e. a virtual machine is attached).</descr>
+      </element>
+      <element name="TThorium.Module">
+        <short>Access to modules in the context.</short>
+        <descr>This property provides access to the modules loaded into the current context.</descr>
+      </element>
+      <element name="TThorium.ModuleCount">
+        <short>Count of loaded modules.</short>
+        <descr>This property reflects the amount of loaded modules.</descr>
+      </element>
+      <element name="TThorium.OnCompilerOutput">
+        <short>Event for compiler output.</short>
+        <descr>This event is called whenever a module which gets compiled in the context produces compiler output. Useful for logging and keeping track of compilations.</descr>
+      </element>
+      <element name="TThorium.OnOpenModule">
+        <short>Event when a file needs to be opened.</short>
+        <descr>This event gets called when the context needs to open a file. If this event is not assigned, the default TFileStream mechanism will be used. Otherwise it is possible to redirect file request into other directories or a virtual file system.</descr>
+      </element>
+      <element name="TThorium.OnRequireModule">
+        <short>Event before a module is loaded from file.</short>
+        <descr>This event is called before a module is loaded from a file. You may hook it and replace it with a module of your choice (which may be already loaded, but which must not be in any context).</descr>
+      </element>
+      <element name="TThorium.VirtualMachine">
+        <short>Access to the attached virtual machine.</short>
+        <descr>If a virtual machine is attached, this property provides access. Otherwise it is nil.</descr>
+      </element>
+      <element name="EThoriumException">
+        <short>Exception baseclass.</short>
+        <descr>An exception of this class is only thrown when no other of the specialized exceptions matches the situation. Useful to catch any exception thrown by Thorium.</descr>
+      </element>
+      <element name="EThoriumCompilerException">
+        <short>Thrown when the compiler enters an unexpected state.</short>
+        <descr>This exception is thrown whenever the compiler enters a state which was not expected to happen by the author. You should inform the author of Thorium about any exception of this kind you catch and provide a sample script to produce it.</descr>
+      </element>
+      <element name="EThoriumVerificationException">
+        <short>Thrown when verification fails.</short>
+        <descr>During the various LoadFromStream methods a lot of effort is done to ensure that any reference to anything is resolved correctly and does not result in some weird errors. If anything cannot be resolved for sure, an exception of this class or a descendant is thrown.</descr>
+      </element>
+      <element name="EThoriumDependencyException">
+        <short>Thrown when a dependency is missing.</short>
+        <descr>This exception gets thrown for example by the <link id="TThorium.LoadModuleFromStream">LoadModuleFromStream</link> method when a required module or library cannot be found.</descr>
+      </element>
+      <element name="EThoriumHashException">
+        <short>Thrown on hash mismatch.</short>
+        <descr>This kind of exception is thrown when a hash check for a module, library, function, property or class type fails.</descr>
+      </element>
+      <element name="EThoriumRuntimeException">
+        <short>Thrown when a runtime error occurs.</short>
+        <descr>The virtual machine and other runtime parts of Thorium throw this kind of exception when anything is wrong. This includes mismatched parameter types or counts.</descr>
+      </element>
+      <element name="EThoriumRuntimeExecutionException">
+        <short>Thrown on instruction exceptions.</short>
+        <descr>The virtual machine catches any exception thrown by any instruction and encapsulates it in a new exception of this class. It contains additional information like the module in which the exception occured, the line, the instruction address and which exact instruction caused the exception. A reference to the original exception is supplied too.</descr>
+      </element>
+      <element name="TThoriumBuiltInValue">
+        <short>Representation of a built in value.</short>
+        <descr>An instance of this record represents a built-in type value in Thorium. This includes integers (Int64-based), floats (Double-based) and strings (UTF8String-based).</descr>
+      </element>
+      <element name="TThoriumHostObjectTypeValue">
+        <short>Representation of host object type value.</short>
+        <descr>An instance of this record reflects a host object type value in Thorium. It contains the value, a pointer to the type and the size of the data allocated in the pointer if it should be automatically handled by Thorium.</descr>
+      </element>
+      <element name="TThoriumValue">
+        <short>Thorium value</short>
+        <descr>A value which can be processed by Thorium. This can either be a host object based or a built-in value. Functions are not supported during runtime.</descr>
+      </element>
+      <element name="TThoriumRegisters">
+        <short>Whole set of registers.</short>
+        <descr>An array which reflects the whole set of registers a Thorium virtual machine contains.</descr>
+      </element>
+      <element name="TThoriumType">
+        <short>Type processable by Thorium</short>
+        <descr>This record reflects a type which can be processed by Thorium.</descr>
+      </element>
+      <element name="TThoriumStackEntry">
+        <short>Thorium stack entry.</short>
+        <descr>Each stack entry is represented by an instance of this record. It can contain either a value, a stack frame or a varargs-container.</descr>
+      </element>
+      <element name="TThoriumTableEntry">
+        <short>Identifier table entry.</short>
+        <descr>Each entry in an identifier table of Thorium is represented by an instance of this record. It contains information about the name, which type of object it is and where and how to access it.</descr>
+      </element>
+      <element name="TThoriumQualifiedIdentifier">
+        <short>Representation of a fully qualified identifier.</short>
+        <descr>This record represents a fully qualified identifier, which means that enough parsing has been done to find out what kind of identifier it is and how to access it (both read and write). It also keeps track about which types and library properties are accessed.</descr>
+      </element>
+      <element name="TThoriumRelocation">
+        <short>Relocation information</short>
+        <descr>Information about a relocation which has to be done when loading a module.</descr>
+      </element>
+      <element name="TThoriumRTTIStaticMethods">
+        <short>Array of static methods</short>
+        <descr>An array of static methods for RTTI based host object types.</descr>
+      </element>
+      <element name="TThoriumRTTIMethods">
+        <short>Array of host methods.</short>
+        <descr>An array of host methods for RTTI based host object types.</descr>
+      </element>
+      <element name="TThoriumExternalFunctionVarType">
+        <short>Definition of a host type.</short>
+        <descr>This fully defines a type from the host environment, including a reference to an host object type object if it is a class type. It also tells whether it is Storing. For more information about the storing-flag see <link id="TThoriumHostObjectType.GetPropertyStoring"/>.</descr>
+      </element>
+      <element name="TThoriumSimpleVarargs">
+        <short>Simple varargs implementation.</short>
+        <descr>This record is used in simple (i.e. not NativeCall based) calls to host environment functions to represent an array passed to the function.</descr>
+      </element>
+      <element name="TThoriumOnPropertyGet">
+        <short>Event when reading a library property.</short>
+        <descr>An event of this kind is needed when an event based library property is read.</descr>
+      </element>
+      <element name="TThoriumOnPropertySet">
+        <short>Event when writing a library property.</short>
+        <descr>An event of this kind is called when an event based library property is written.</descr>
+      </element>
+      <element name="TThoriumOnPropertySetCallback">
+        <short>Event when writing a library property.</short>
+        <descr>This kind of event gets called when a non-event based library with write-hook gets written.</descr>
+      </element>
+      <element name="TThoriumOnRequireModule">
+        <short>See TThorium.OnRequireModule.</short>
+        <descr>See <link id="TThorium.OnRequireModule"/>.</descr>
+      </element>
+      <element name="TThoriumOnCompilerOutput">
+        <short>See TThorium.OnCompilerOutput.</short>
+        <descr>See <link id="TThorium.OnCompilerOutput"/>.</descr>
+      </element>
+      <element name="TThoriumOnOpenModule">
+        <short>See TThorium.OnOpenModule</short>
+        <descr>See <link id="TThorium.OnOpenModule"/>
+        </descr>
+      </element>
+      <element name="TThoriumSimpleMethod">
+        <short>Simple host function</short>
+        <descr>This is the only kind of function which can be called without NativeCall.</descr>
+      </element>
+      <element name="TThoriumClassMethod">
+        <short>Simple host method.</short>
+        <descr>This is the only kind of method which can be called without NativeCall.</descr>
+      </element>
+      <element name="IThoriumPersistent.EnableHostControl">
+        <short>Disable free by reference counting.</short>
+        <descr>An implementation of this method is expected to set a flag which disables freeing the object when it runs out of references.</descr>
+      </element>
+      <element name="IThoriumPersistent.DisableHostControl">
+        <short>Enable freeing by reference count.</short>
+        <descr>An implementation of this method is expected to set a flag which enables freeing the object when it runs out of references. It should also immediately free the object if the reference counter is already at zero.</descr>
+      </element>
+      <element name="IThoriumPersistent.FreeReference">
+        <short>Release a reference.</short>
+        <descr>An implementation of this method is expected to decrease the reference counter of the instance by one and, if applicable, free the instance.</descr>
+      </element>
+      <element name="IThoriumPersistent.GetReference">
+        <short>Increase reference counter and return reference.</short>
+        <descr>An implementation of this method is expected to increase the reference counter of the object by one and return the object itself too.</descr>
+      </element>
+      <element name="EThoriumRuntimeExecutionException.OriginalException">
+        <short>Access the original exception.</short>
+        <descr>This property provides access to the original exception thrown by the instruction.</descr>
+      </element>
+    </module>
+  </package>
+</fpdoc-descriptions>

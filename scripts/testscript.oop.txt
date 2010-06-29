@@ -1,0 +1,10 @@
+require "stdlib";
+                     
+public void main(TTestClass2 obj)
+{
+  TTestClass2 test;
+  TTestClass.teststaticmethod();
+  obj.testobj.teststr = "hallo welt";
+  obj.testobj.testmethod();
+  obj.testmethod();
+}

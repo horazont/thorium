@@ -1,0 +1,8147 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<fpdoc-descriptions>
+<package name="thoriumcore">
+
+<!--
+  ====================================================================
+    Thorium_Globals
+  ====================================================================
+-->
+
+<module name="Thorium_Globals">
+<short></short>
+<descr>
+</descr>
+
+<!-- alias type Visibility: default -->
+<element name="TThoriumInstructionAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- pointer type Visibility: default -->
+<element name="PThoriumInstructionAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration type Visibility: default -->
+<element name="TThoriumInstructionCode">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINT_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINT">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINTB">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiFLT_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiFLT">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiSTR_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiSTRL_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiSTR">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiSTRL">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiEXT_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiEXT">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiFNC">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiFNCE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCOPYR_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCOPYR_ST">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCOPYR_FS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCOPYS_ST">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCOPYFS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCOPYS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCOPYR">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiMOVES_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiMOVER_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiMOVER_ST">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiMOVER">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiMOVES">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiPOP_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCLR">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCASTIF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCASTIE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCASTFE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCASTSE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCASTEI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCASTEF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCASTES">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCASTE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPIF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPIE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPFI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPFE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPSE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPEI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPEF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCMPES">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiADDI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiADDF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiADDS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiSUBI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiSUBF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiMULI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiMULF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiDIVI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiDIVF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiNEGI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiNEGF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiNOT">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiBNOT">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiMOD">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiAND">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiOR">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXOR">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiSHL">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiSHR">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINCI_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINCF_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINCI_FS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINCF_FS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINCI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiINCF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiDECI_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiDECF_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiDECI_FS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiDECF_FS">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiDECI">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiDECF">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXPGET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXPSET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXFGET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXFSET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXSFGET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXSFSET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXIGET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXISET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVASTART">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_I8">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_I16">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_I32">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_I64">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_I8S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_I16S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_I32S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_I64S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_F32">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_F64">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_F80">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVA_X">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVASTART_T">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVAT_F">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVAT_I">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVAT_S">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVAT_X">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiVAFINISH">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiJMP">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiJE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiJNE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiJGT">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiJGE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiJLT">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiJLE">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCALL">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiCALL_D">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiFCALL">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXCALL">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiXCALL_M">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiRET">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumInstructionCode.tiNOOP">
+<short></short>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINT_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT_S.Value">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT.Value">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINT.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINTB">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINTB.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINTB.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINTB.Kind">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINTB.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINTB.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionFLT_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT_S.Value">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionFLT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT.Value">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFLT.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionSTR_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTR_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTR_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTR_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionSTRL_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL_S.Index">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionSTR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTR.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTR.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTR.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTR.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionSTRL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL.Index">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSTRL.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionEXT_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT_S.ExtendedType">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionEXT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT.ExtendedType">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionEXT.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionFNC">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNC.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNC.FunctionRef">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNC.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNC.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNC.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionFNCE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNCE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNCE.FunctionRef">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNCE.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNCE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFNCE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCOPYR_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_S.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_S.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_S.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCOPYR_ST">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_ST.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_ST.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_ST.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_ST.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCOPYR_FS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_FS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_FS.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_FS.ModuleIndex">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_FS.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_FS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR_FS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCOPYS_ST">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS_ST.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS_ST.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS_ST.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS_ST.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS_ST.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCOPYFS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYFS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYFS.ModuleIndex">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYFS.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYFS.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYFS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYFS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCOPYR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYR.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCOPYS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCOPYS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionMOVES_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES_S.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES_S.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionMOVER_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_S.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_S.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_S.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionMOVER_ST">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_ST.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_ST.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_ST.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER_ST.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionMOVER">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVER.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionMOVES">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOVES.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionPOP_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionPOP_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionPOP_S.Amount">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionPOP_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionPOP_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCLR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCLR.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCLR.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCLR.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCLR.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCASTIF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIF.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIF.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCASTIE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIE.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIE.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIE.ExtendedType">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTIE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCASTFE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTFE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTFE.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTFE.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTFE.ExtendedType">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTFE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTFE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCASTSE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTSE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTSE.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTSE.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTSE.ExtendedType">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTSE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTSE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCASTEI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEI.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEI.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCASTEF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEF.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEF.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTEF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCASTES">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTES.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTES.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTES.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTES.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTES.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCASTE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTE.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTE.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTE.ExtendedType">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCASTE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionOperator">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOperator.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOperator.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOperator.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOperator.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOperator.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPI.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPI.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPIF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIF.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIF.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPIE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIE.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIE.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPIE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPF.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPF.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPFI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFI.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFI.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPFE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFE.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFE.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPFE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPS.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPS.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPSE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPSE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPSE.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPSE.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPSE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPSE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPE.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPE.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPEI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEI.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEI.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPEF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEF.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEF.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPEF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCMPES">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPES.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPES.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPES.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPES.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCMPES.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionADDI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDI.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDI.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDI.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionADDF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDF.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDF.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDF.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionADDS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDS.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDS.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDS.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionADDS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionSUBI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBI.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBI.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBI.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionSUBF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBF.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBF.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBF.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSUBF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionMULI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULI.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULI.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULI.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionMULF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULF.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULF.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULF.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMULF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionDIVI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVI.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVI.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVI.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionDIVF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVF.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVF.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVF.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDIVF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionNEGI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNEGI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNEGI.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNEGI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNEGI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionNEGF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNEGF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNEGF.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNEGF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNEGF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionNOT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOT.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOT.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOT.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOT.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionBNOT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionBNOT.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionBNOT.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionBNOT.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionBNOT.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionMOD">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOD.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOD.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOD.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOD.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOD.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionMOD.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionAND">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionAND.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionAND.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionAND.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionAND.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionAND.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionAND.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionOR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOR.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOR.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOR.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOR.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOR.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionOR.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXOR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXOR.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXOR.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXOR.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXOR.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXOR.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXOR.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionSHL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHL.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHL.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHL.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHL.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHL.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHL.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionSHR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHR.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHR.Op1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHR.Op2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHR.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHR.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionSHR.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINCI_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_S.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_S.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINCF_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_S.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_S.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINCI_FS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_FS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_FS.ModuleIndex">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_FS.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_FS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI_FS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINCF_FS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_FS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_FS.ModuleIndex">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_FS.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_FS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF_FS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINCI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionINCF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionINCF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionDECI_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_S.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_S.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionDECF_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_S.Scope">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_S.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionDECI_FS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_FS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_FS.ModuleIndex">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_FS.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_FS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI_FS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionDECF_FS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_FS.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_FS.ModuleIndex">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_FS.Offset">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_FS.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF_FS.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionDECI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECI.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionDECF">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionDECF.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXPGET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPGET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPGET.Prop">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPGET.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPGET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPGET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXPSET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPSET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPSET.Prop">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPSET.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPSET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXPSET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXFGET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFGET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFGET.ID">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFGET.ERI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFGET.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFGET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFGET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXFSET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFSET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFSET.ID">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFSET.ERI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFSET.VRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFSET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXFSET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXSFGET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFGET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFGET.ID">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFGET.ExtendedType">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFGET.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFGET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFGET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXSFSET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFSET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFSET.ID">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFSET.ExtendedType">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFSET.VRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFSET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXSFSET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXIGET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXIGET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXIGET.IRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXIGET.ERI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXIGET.TRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXIGET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXIGET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXISET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXISET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXISET.IRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXISET.ERI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXISET.VRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXISET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXISET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVASTART">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART.Length">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART.Pointers">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_I8">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I8.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I8.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I8.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I8.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_I16">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I16.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I16.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I16.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I16.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_I32">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I32.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I32.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I32.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I32.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_I64">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I64.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I64.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I64.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I64.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_I8S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I8S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I8S.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I8S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I8S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_I16S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I16S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I16S.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I16S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I16S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_I32S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I32S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I32S.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I32S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I32S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_I64S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I64S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I64S.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I64S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_I64S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_F32">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F32.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F32.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F32.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F32.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_F64">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F64.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F64.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F64.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F64.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_F80">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F80.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F80.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F80.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_F80.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_S.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVA_X">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_X.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_X.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_X.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVA_X.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVASTART_T">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART_T.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART_T.Length">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART_T.Floats">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART_T.ToClear">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART_T.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVASTART_T.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVAT_F">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_F.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_F.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_F.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_F.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVAT_I">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_I.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_I.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_I.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_I.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVAT_S">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_S.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_S.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_S.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_S.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVAT_X">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_X.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_X.SRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_X.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAT_X.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionVAFINISH">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAFINISH.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAFINISH.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionVAFINISH.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionJMP">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJMP.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJMP.NewAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJMP.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJMP.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionJE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJE.NewAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionJNE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJNE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJNE.NewAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJNE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJNE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionJGT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJGT.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJGT.NewAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJGT.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJGT.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionJGE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJGE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJGE.NewAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJGE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJGE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionJLT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJLT.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJLT.NewAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJLT.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJLT.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionJLE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJLE.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJLE.NewAddress">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJLE.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionJLE.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCALL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL.EntryPoint">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL.HRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL.RetVal">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL.Parameters">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionCALL_D">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.EntryPoint">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.HRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.RetVal">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.Parameters">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.KeepResult">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.Pops">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionCALL_D.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionFCALL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFCALL.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFCALL.EntryPoint">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFCALL.ModuleIndex">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFCALL.HRI">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFCALL.RetVal">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFCALL.Parameters">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFCALL.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionFCALL.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXCALL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL.FunctionRef">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionXCALL_M">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL_M.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL_M.MethodRef">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL_M.RTTIValueRegister">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL_M.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionXCALL_M.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionRET">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionRET.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionRET.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionRET.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstructionNOOP">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOOP.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOOP.Kind">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOOP.Parameter1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOOP.Parameter2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOOP.Parameter3">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOOP.Reserved">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstructionNOOP.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumInstruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstruction.Instruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstruction.Parameter1">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstruction.Parameter2">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstruction.Parameter3">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumInstruction.CodeLine">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- pointer type Visibility: default -->
+<element name="PThoriumInstruction">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- pointer type Visibility: default -->
+<element name="PThoriumInstructionNOOP">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- array type Visibility: default -->
+<element name="TThoriumInstructionArray">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- pointer type Visibility: default -->
+<element name="PThoriumInstructionArray">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- array type Visibility: default -->
+<element name="TThoriumIntArray">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration type Visibility: default -->
+<element name="TThoriumSymbol">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsUnknown">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsIntegerValue">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsFloatValue">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsStringValue">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsIdentifier">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsOpenCurlyBracket">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsCloseCurlyBracket">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsOpenBracket">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsCloseBracket">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsSemicolon">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsComma">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsDot">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsOpenSquareBracket">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsCloseSquareBracket">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsBoolNot">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsColon">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsLesser">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsGreater">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsPlus">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsMinus">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsMultiply">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsDivide">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsAssign">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsEqual">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsGreaterEqual">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsLesserEqual">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsNotEqual">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsAdditiveAssign">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsSubtractiveAssign">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsMultiplicativeAssign">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsDivideAssign">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsPlusPlus">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsMinusMinus">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsShl">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsShr">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsNot">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsOr">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsXor">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsDiv">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsAnd">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsMod">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsIf">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsElseIf">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsElse">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsWhile">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsDo">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsFor">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsCase">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsExit">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsNil">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsPublic">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsPrivate">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsStatic">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsSwitch">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsTrue">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsFalse">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsDefault">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsBreak">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsReturn">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsLoadLibrary">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsLoadModule">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsError">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumSymbol.tsNone">
+<short></short>
+</element>
+
+<!-- set type Visibility: default -->
+<element name="TThoriumSymbols">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration type Visibility: default -->
+<element name="TThoriumStatementKind">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskFor">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskWhile">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskDoWhile">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskIf">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskBlock">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskAssignment">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskDeclaration">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskCall">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskSwitch">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumStatementKind.tskBreak">
+<short></short>
+</element>
+
+<!-- set type Visibility: default -->
+<element name="TThoriumStatementKinds">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration type Visibility: default -->
+<element name="TThoriumOperation">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toAssign">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toAdd">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toSubtract">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toMultiply">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toDivide">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toDiv">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toMod">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toAnd">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toOr">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toXor">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toShr">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toShl">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toNegate">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toNot">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toBoolNot">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toCompare">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperation.toINC_DEC">
+<short></short>
+</element>
+
+<!-- set type Visibility: default -->
+<element name="TThoriumOperations">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration type Visibility: default -->
+<element name="TThoriumOperator">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpAdd">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpSubtract">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpMultiply">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpDivide">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpDiv">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpMod">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpAnd">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpOr">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpXor">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpShr">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpShl">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpEqual">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpGreater">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpLess">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpGreaterEqual">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpLessEqual">
+<short></short>
+</element>
+
+<!-- enumeration value Visibility: default -->
+<element name="TThoriumOperator.tpNotEqual">
+<short></short>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_ALL_STATEMENTS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_FACTOR_INITIATOR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_RELATIONAL_OPERATOR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_MULTIPLICATIVE_OPERATOR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_ADDITIVE_OPERATOR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OPERATION_NAME">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_MULTIPLY">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_DIVIDE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_INTDIVIDE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_AND">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_MOD">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_NOT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_ADD">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_SUBTRACT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_OR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_XOR">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_EQUAL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_NOTEQUAL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_LESS">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_GREATER">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_LESSEQUAL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_OP_GREATEREQUAL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_NOOPMARK_CALL">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_INSTRUCTION_CODE_NAME">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_FIRST_SINGLECHAROP">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_LAST_SINGLECHAROP">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_FIRST_MULTICHAROP">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_LAST_MULTICHAROP">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_FIRST_KEYWORD">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_LAST_KEYWORD">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_SYMBOL_CODE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_SYMBOL_NAMES">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_ORDINAL_VALUE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_VALUE">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_LETTER">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_DIGIT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- constant Visibility: default -->
+<element name="THORIUM_HEXDIGIT">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+</module> <!-- Thorium_Globals -->
+
+</package>
+</fpdoc-descriptions>

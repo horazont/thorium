@@ -1,0 +1,10 @@
+loadlibrary "scripttest"
+loadlibrary "core.std.io"
+
+public void main()
+{
+  TStringRecord rec;
+  rec.a = 100;
+  rec.s = "hello world";
+  RecordTest2(rec);
+}

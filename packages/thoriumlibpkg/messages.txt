@@ -1,0 +1,1027 @@
+Hint: Start of reading config file /etc/fpc.cfg
+Hint: End of reading config file /etc/fpc.cfg
+Free Pascal Compiler version 2.2.4 [2009/07/04] for x86_64
+Copyright (c) 1993-2008 by Florian Klaempfl
+Target OS: Linux for x86-64
+Compiling thoriumlibpkg.pas
+(PROGRAM)  Loading interface units from THORIUMLIBPKG
+(thoriumlibpkg) Registering new unit SYSTEM
+(thoriumlibpkg) Load from THORIUMLIBPKG (interface) unit SYSTEM
+(SYSTEM)   Loading unit SYSTEM
+(SYSTEM)   PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/system.ppu
+(SYSTEM)   PPU Time: 2009/07/04 05:16:25
+(SYSTEM)   PPU Flags: 159937
+(SYSTEM)   PPU Crc: E8D79D38
+(SYSTEM)   PPU Crc: 86E47773 (intfc)
+(SYSTEM)   Number of definitions: 3305
+(SYSTEM)   Number of symbols: 8723
+(SYSTEM)   Finished loading unit SYSTEM
+(THORIUMLIBPKG) Add dependency of THORIUMLIBPKG to SYSTEM
+(THORIUMLIBPKG) Registering new unit OBJPAS
+(THORIUMLIBPKG) Load from THORIUMLIBPKG (interface) unit OBJPAS
+(OBJPAS)   Loading unit OBJPAS
+(OBJPAS)   PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/objpas.ppu
+(OBJPAS)   PPU Time: 2009/07/04 05:16:25
+(OBJPAS)   PPU Flags: 159939
+(OBJPAS)   PPU Crc: A3BEE271
+(OBJPAS)   PPU Crc: E47C8596 (intfc)
+(OBJPAS)   Number of definitions: 68
+(OBJPAS)   Number of symbols: 129
+(OBJPAS)   Load from OBJPAS (interface) unit SYSTEM
+(OBJPAS)   Add dependency of OBJPAS to SYSTEM
+(OBJPAS)   Finished loading unit OBJPAS
+(THORIUMLIBPKG) Add dependency of THORIUMLIBPKG to OBJPAS
+(THORIUMLIBPKG) Registering new unit THORIUMLIBSTD
+(THORIUMLIBPKG) Registering new unit THORIUMLIBSTDIO
+(THORIUMLIBPKG) Registering new unit THORIUMLIBSTREAMS
+(THORIUMLIBPKG) Registering new unit THORIUMLIBSTRING
+(THORIUMLIBPKG) Load from THORIUMLIBPKG (interface) unit THORIUMLIBSTD
+(THORIUMLIBSTD) Loading unit THORIUMLIBSTD
+Compiling thoriumlibstd.pas
+(THORIUMLIBSTD) Loading interface units from THORIUMLIBSTD
+(ThoriumLibStd) Load from THORIUMLIBSTD (interface) unit SYSTEM
+(ThoriumLibStd) Add dependency of THORIUMLIBSTD to SYSTEM
+(ThoriumLibStd) Load from THORIUMLIBSTD (interface) unit OBJPAS
+(ThoriumLibStd) Add dependency of THORIUMLIBSTD to OBJPAS
+(ThoriumLibStd) Registering new unit CLASSES
+(ThoriumLibStd) Registering new unit SYSUTILS
+(ThoriumLibStd) Registering new unit THORIUM_LIBRARY
+(ThoriumLibStd) Registering new unit DATEUTILS
+(ThoriumLibStd) Registering new unit THORIUM_GLOBALS
+(ThoriumLibStd) Load from THORIUMLIBSTD (interface) unit CLASSES
+(CLASSES)  Loading unit CLASSES
+(CLASSES)  PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/classes.ppu
+(CLASSES)  PPU Time: 2009/07/04 05:16:25
+(CLASSES)  PPU Flags: 159939
+(CLASSES)  PPU Crc: C056033C
+(CLASSES)  PPU Crc: 320DAC49 (intfc)
+(CLASSES)  Number of definitions: 2939
+(CLASSES)  Number of symbols: 6208
+(CLASSES)  Registering new unit TYPES
+(CLASSES)  Registering new unit TYPINFO
+(CLASSES)  Registering new unit RTLCONSTS
+(CLASSES)  Load from CLASSES (interface) unit SYSTEM
+(CLASSES)  Add dependency of CLASSES to SYSTEM
+(CLASSES)  Load from CLASSES (interface) unit OBJPAS
+(CLASSES)  Add dependency of CLASSES to OBJPAS
+(CLASSES)  Load from CLASSES (interface) unit SYSUTILS
+(SYSUTILS) Loading unit SYSUTILS
+(SYSUTILS) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/sysutils.ppu
+(SYSUTILS) PPU Time: 2009/07/04 05:16:25
+(SYSUTILS) PPU Flags: 159939
+(SYSUTILS) PPU Crc: 7EA501AC
+(SYSUTILS) PPU Crc: CB155A12 (intfc)
+(SYSUTILS) Number of definitions: 1666
+(SYSUTILS) Number of symbols: 3861
+(SYSUTILS) Registering new unit UNIX
+(SYSUTILS) Registering new unit ERRORS
+(SYSUTILS) Registering new unit SYSCONST
+(SYSUTILS) Registering new unit UNIXTYPE
+(SYSUTILS) Load from SYSUTILS (interface) unit SYSTEM
+(SYSUTILS) Add dependency of SYSUTILS to SYSTEM
+(SYSUTILS) Load from SYSUTILS (interface) unit OBJPAS
+(SYSUTILS) Add dependency of SYSUTILS to OBJPAS
+(SYSUTILS) Load from SYSUTILS (interface) unit UNIX
+(UNIX)     Loading unit UNIX
+(UNIX)     PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/unix.ppu
+(UNIX)     PPU Time: 2009/07/04 05:16:25
+(UNIX)     PPU Flags: 159939
+(UNIX)     PPU Crc: DC2A8823
+(UNIX)     PPU Crc: E9BF35C7 (intfc)
+(UNIX)     Number of definitions: 297
+(UNIX)     Number of symbols: 762
+(UNIX)     Registering new unit BASEUNIX
+(UNIX)     Load from UNIX (interface) unit SYSTEM
+(UNIX)     Add dependency of UNIX to SYSTEM
+(UNIX)     Load from UNIX (interface) unit BASEUNIX
+(BASEUNIX) Loading unit BASEUNIX
+(BASEUNIX) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/baseunix.ppu
+(BASEUNIX) PPU Time: 2009/07/04 05:16:25
+(BASEUNIX) PPU Flags: 159936
+(BASEUNIX) PPU Crc: 76C69BAD
+(BASEUNIX) PPU Crc: 30C87633 (intfc)
+(BASEUNIX) Number of definitions: 446
+(BASEUNIX) Number of symbols: 1810
+(BASEUNIX) Load from BASEUNIX (interface) unit SYSTEM
+(BASEUNIX) Add dependency of BASEUNIX to SYSTEM
+(BASEUNIX) Load from BASEUNIX (interface) unit UNIXTYPE
+(UNIXTYPE) Loading unit UNIXTYPE
+(UNIXTYPE) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/unixtype.ppu
+(UNIXTYPE) PPU Time: 2009/07/04 05:16:25
+(UNIXTYPE) PPU Flags: 159936
+(UNIXTYPE) PPU Crc: C4706CAE
+(UNIXTYPE) PPU Crc: C4706CAE (intfc)
+(UNIXTYPE) Number of definitions: 71
+(UNIXTYPE) Number of symbols: 208
+(UNIXTYPE) Load from UNIXTYPE (interface) unit SYSTEM
+(UNIXTYPE) Add dependency of UNIXTYPE to SYSTEM
+(UNIXTYPE) Finished loading unit UNIXTYPE
+(BASEUNIX) Add dependency of BASEUNIX to UNIXTYPE
+(BASEUNIX) Finished loading unit BASEUNIX
+(UNIX)     Add dependency of UNIX to BASEUNIX
+(UNIX)     Load from UNIX (interface) unit UNIXTYPE
+(UNIX)     Add dependency of UNIX to UNIXTYPE
+(UNIX)     Registering new unit UNIXUTIL
+(UNIX)     Registering new unit SYSCALL
+(UNIX)     Load from UNIX (implementation) unit UNIXUTIL
+(UNIXUTIL) Loading unit UNIXUTIL
+(UNIXUTIL) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/unixutil.ppu
+(UNIXUTIL) PPU Time: 2009/07/04 05:16:25
+(UNIXUTIL) PPU Flags: 159936
+(UNIXUTIL) PPU Crc: A50B3AB0
+(UNIXUTIL) PPU Crc: D3B94D59 (intfc)
+(UNIXUTIL) Number of definitions: 63
+(UNIXUTIL) Number of symbols: 190
+(UNIXUTIL) Load from UNIXUTIL (interface) unit SYSTEM
+(UNIXUTIL) Add dependency of UNIXUTIL to SYSTEM
+(UNIXUTIL) Finished loading unit UNIXUTIL
+(UNIX)     Add dependency of UNIX to UNIXUTIL
+(UNIX)     Load from UNIX (implementation) unit SYSCALL
+(SYSCALL)  Loading unit SYSCALL
+(SYSCALL)  PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/syscall.ppu
+(SYSCALL)  PPU Time: 2009/07/04 05:16:25
+(SYSCALL)  PPU Flags: 159936
+(SYSCALL)  PPU Crc: B6AA08B7
+(SYSCALL)  PPU Crc: 330B3A99 (intfc)
+(SYSCALL)  Number of definitions: 15
+(SYSCALL)  Number of symbols: 317
+(SYSCALL)  Load from SYSCALL (interface) unit SYSTEM
+(SYSCALL)  Add dependency of SYSCALL to SYSTEM
+(SYSCALL)  Finished loading unit SYSCALL
+(UNIX)     Add dependency of UNIX to SYSCALL
+(UNIX)     Finished loading unit UNIX
+(SYSUTILS) Add dependency of SYSUTILS to UNIX
+(SYSUTILS) Load from SYSUTILS (interface) unit ERRORS
+(ERRORS)   Loading unit ERRORS
+(ERRORS)   PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/errors.ppu
+(ERRORS)   PPU Time: 2009/07/04 05:16:25
+(ERRORS)   PPU Flags: 159936
+(ERRORS)   PPU Crc: BEB73C13
+(ERRORS)   PPU Crc: E7809446 (intfc)
+(ERRORS)   Number of definitions: 137
+(ERRORS)   Number of symbols: 20
+(ERRORS)   Load from ERRORS (interface) unit SYSTEM
+(ERRORS)   Add dependency of ERRORS to SYSTEM
+(ERRORS)   Load from ERRORS (interface) unit UNIXTYPE
+(ERRORS)   Add dependency of ERRORS to UNIXTYPE
+(ERRORS)   Finished loading unit ERRORS
+(SYSUTILS) Add dependency of SYSUTILS to ERRORS
+(SYSUTILS) Load from SYSUTILS (interface) unit SYSCONST
+(SYSCONST) Loading unit SYSCONST
+(SYSCONST) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/sysconst.ppu
+(SYSCONST) PPU Time: 2009/07/04 05:16:25
+(SYSCONST) PPU Flags: 161984
+(SYSCONST) PPU Crc: 6E1E5161
+(SYSCONST) PPU Crc: A648BE48 (intfc)
+(SYSCONST) Number of definitions: 142
+(SYSCONST) Number of symbols: 146
+(SYSCONST) Load from SYSCONST (interface) unit SYSTEM
+(SYSCONST) Add dependency of SYSCONST to SYSTEM
+(SYSCONST) Load from SYSCONST (interface) unit OBJPAS
+(SYSCONST) Add dependency of SYSCONST to OBJPAS
+(SYSCONST) Finished loading unit SYSCONST
+(SYSUTILS) Add dependency of SYSUTILS to SYSCONST
+(SYSUTILS) Load from SYSUTILS (interface) unit UNIXTYPE
+(SYSUTILS) Add dependency of SYSUTILS to UNIXTYPE
+(SYSUTILS) Load from SYSUTILS (implementation) unit SYSCALL
+(SYSUTILS) Add dependency of SYSUTILS to SYSCALL
+(SYSUTILS) Load from SYSUTILS (implementation) unit BASEUNIX
+(SYSUTILS) Add dependency of SYSUTILS to BASEUNIX
+(SYSUTILS) Load from SYSUTILS (implementation) unit UNIXUTIL
+(SYSUTILS) Add dependency of SYSUTILS to UNIXUTIL
+(SYSUTILS) Finished loading unit SYSUTILS
+(CLASSES)  Add dependency of CLASSES to SYSUTILS
+(CLASSES)  Load from CLASSES (interface) unit TYPES
+(TYPES)    Loading unit TYPES
+(TYPES)    PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/types.ppu
+(TYPES)    PPU Time: 2009/07/04 05:16:25
+(TYPES)    PPU Flags: 159936
+(TYPES)    PPU Crc: 0803B80A
+(TYPES)    PPU Crc: 1AF9E86A (intfc)
+(TYPES)    Number of definitions: 84
+(TYPES)    Number of symbols: 332
+(TYPES)    Load from TYPES (interface) unit SYSTEM
+(TYPES)    Add dependency of TYPES to SYSTEM
+(TYPES)    Load from TYPES (interface) unit OBJPAS
+(TYPES)    Add dependency of TYPES to OBJPAS
+(TYPES)    Finished loading unit TYPES
+(CLASSES)  Add dependency of CLASSES to TYPES
+(CLASSES)  Load from CLASSES (interface) unit TYPINFO
+(TYPINFO)  Loading unit TYPINFO
+(TYPINFO)  PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/typinfo.ppu
+(TYPINFO)  PPU Time: 2009/07/04 05:16:25
+(TYPINFO)  PPU Flags: 159939
+(TYPINFO)  PPU Crc: 8BBAE879
+(TYPINFO)  PPU Crc: 568C902C (intfc)
+(TYPINFO)  Number of definitions: 322
+(TYPINFO)  Number of symbols: 991
+(TYPINFO)  Load from TYPINFO (interface) unit SYSTEM
+(TYPINFO)  Add dependency of TYPINFO to SYSTEM
+(TYPINFO)  Load from TYPINFO (interface) unit OBJPAS
+(TYPINFO)  Add dependency of TYPINFO to OBJPAS
+(TYPINFO)  Load from TYPINFO (interface) unit SYSUTILS
+(TYPINFO)  Add dependency of TYPINFO to SYSUTILS
+(TYPINFO)  Load from TYPINFO (implementation) unit RTLCONSTS
+(RTLCONSTS) Loading unit RTLCONSTS
+(RTLCONSTS) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/rtl/rtlconsts.ppu
+(RTLCONSTS) PPU Time: 2009/07/04 05:16:25
+(RTLCONSTS) PPU Flags: 161984
+(RTLCONSTS) PPU Crc: A9675D10
+(RTLCONSTS) PPU Crc: A9675D10 (intfc)
+(RTLCONSTS) Number of definitions: 454
+(RTLCONSTS) Number of symbols: 461
+(RTLCONSTS) Load from RTLCONSTS (interface) unit SYSTEM
+(RTLCONSTS) Add dependency of RTLCONSTS to SYSTEM
+(RTLCONSTS) Load from RTLCONSTS (interface) unit OBJPAS
+(RTLCONSTS) Add dependency of RTLCONSTS to OBJPAS
+(RTLCONSTS) Finished loading unit RTLCONSTS
+(TYPINFO)  Add dependency of TYPINFO to RTLCONSTS
+(TYPINFO)  Finished loading unit TYPINFO
+(CLASSES)  Add dependency of CLASSES to TYPINFO
+(CLASSES)  Load from CLASSES (interface) unit RTLCONSTS
+(CLASSES)  Add dependency of CLASSES to RTLCONSTS
+(CLASSES)  Load from CLASSES (implementation) unit BASEUNIX
+(CLASSES)  Add dependency of CLASSES to BASEUNIX
+(CLASSES)  Load from CLASSES (implementation) unit UNIX
+(CLASSES)  Add dependency of CLASSES to UNIX
+(CLASSES)  Finished loading unit CLASSES
+(THORIUMLIBSTD) Add dependency of THORIUMLIBSTD to CLASSES
+(THORIUMLIBSTD) Load from THORIUMLIBSTD (interface) unit SYSUTILS
+(THORIUMLIBSTD) Add dependency of THORIUMLIBSTD to SYSUTILS
+(THORIUMLIBSTD) Load from THORIUMLIBSTD (interface) unit THORIUM_LIBRARY
+(THORIUM_LIBRARY) Loading unit THORIUM_LIBRARY
+(THORIUM_LIBRARY) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_library.ppu
+(THORIUM_LIBRARY) PPU Time: 2009/10/03 19:47:49
+(THORIUM_LIBRARY) PPU Flags: 151680
+(THORIUM_LIBRARY) PPU Crc: C1878756
+(THORIUM_LIBRARY) PPU Crc: A731FA7B (intfc)
+(THORIUM_LIBRARY) Number of definitions: 93
+(THORIUM_LIBRARY) Number of symbols: 193
+(THORIUM_LIBRARY) PPU Source: thorium_library.pas not found
+(THORIUM_LIBRARY) PPU Source: thorium.inc not found
+(THORIUM_LIBRARY) Registering new unit THORIUM_VALUES
+(THORIUM_LIBRARY) Registering new unit THORIUM_BASE
+(THORIUM_LIBRARY) Registering new unit THORIUM_HOSTCALLS
+(THORIUM_LIBRARY) Registering new unit THORIUM_HOSTTYPE
+(THORIUM_LIBRARY) Registering new unit THORIUM_HOSTTYPERTTI
+(THORIUM_LIBRARY) Registering new unit THORIUM_LIBRARYBASE
+(THORIUM_LIBRARY) Registering new unit THORIUM_NATIVECALL
+(THORIUM_LIBRARY) Registering new unit THORIUM_HOSTCALLSSIMPLE
+(THORIUM_LIBRARY) Load from THORIUM_LIBRARY (interface) unit SYSTEM
+(THORIUM_LIBRARY) Add dependency of THORIUM_LIBRARY to SYSTEM
+(THORIUM_LIBRARY) Load from THORIUM_LIBRARY (interface) unit OBJPAS
+(THORIUM_LIBRARY) Add dependency of THORIUM_LIBRARY to OBJPAS
+(THORIUM_LIBRARY) Load from THORIUM_LIBRARY (interface) unit CLASSES
+(THORIUM_LIBRARY) Add dependency of THORIUM_LIBRARY to CLASSES
+(THORIUM_LIBRARY) Load from THORIUM_LIBRARY (interface) unit SYSUTILS
+(THORIUM_LIBRARY) Add dependency of THORIUM_LIBRARY to SYSUTILS
+(THORIUM_LIBRARY) Load from THORIUM_LIBRARY (interface) unit THORIUM_VALUES
+(THORIUM_VALUES) Loading unit THORIUM_VALUES
+(THORIUM_VALUES) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_values.ppu
+(THORIUM_VALUES) PPU Time: 2009/10/03 19:47:46
+(THORIUM_VALUES) PPU Flags: 151680
+(THORIUM_VALUES) PPU Crc: 12D4CF63
+(THORIUM_VALUES) PPU Crc: 3EBB2777 (intfc)
+(THORIUM_VALUES) Number of definitions: 20
+(THORIUM_VALUES) Number of symbols: 58
+(THORIUM_VALUES) PPU Source: thorium_values.pas not found
+(THORIUM_VALUES) PPU Source: thorium.inc not found
+(THORIUM_VALUES) Load from THORIUM_VALUES (interface) unit SYSTEM
+(THORIUM_VALUES) Add dependency of THORIUM_VALUES to SYSTEM
+(THORIUM_VALUES) Load from THORIUM_VALUES (interface) unit OBJPAS
+(THORIUM_VALUES) Add dependency of THORIUM_VALUES to OBJPAS
+(THORIUM_VALUES) Load from THORIUM_VALUES (interface) unit CLASSES
+(THORIUM_VALUES) Add dependency of THORIUM_VALUES to CLASSES
+(THORIUM_VALUES) Load from THORIUM_VALUES (interface) unit SYSUTILS
+(THORIUM_VALUES) Add dependency of THORIUM_VALUES to SYSUTILS
+(THORIUM_VALUES) Load from THORIUM_VALUES (interface) unit THORIUM_GLOBALS
+(THORIUM_GLOBALS) Loading unit THORIUM_GLOBALS
+(THORIUM_GLOBALS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_globals.ppu
+(THORIUM_GLOBALS) PPU Time: 2009/10/03 19:47:46
+(THORIUM_GLOBALS) PPU Flags: 151683
+(THORIUM_GLOBALS) PPU Crc: 23507118
+(THORIUM_GLOBALS) PPU Crc: 23507118 (intfc)
+(THORIUM_GLOBALS) Number of definitions: 146
+(THORIUM_GLOBALS) Number of symbols: 283
+(THORIUM_GLOBALS) PPU Source: thorium_globals.pas not found
+(THORIUM_GLOBALS) PPU Source: thorium.inc not found
+(THORIUM_GLOBALS) Load from THORIUM_GLOBALS (interface) unit SYSTEM
+(THORIUM_GLOBALS) Add dependency of THORIUM_GLOBALS to SYSTEM
+(THORIUM_GLOBALS) Load from THORIUM_GLOBALS (interface) unit OBJPAS
+(THORIUM_GLOBALS) Add dependency of THORIUM_GLOBALS to OBJPAS
+(THORIUM_GLOBALS) Load from THORIUM_GLOBALS (interface) unit CLASSES
+(THORIUM_GLOBALS) Add dependency of THORIUM_GLOBALS to CLASSES
+(THORIUM_GLOBALS) Load from THORIUM_GLOBALS (interface) unit SYSUTILS
+(THORIUM_GLOBALS) Add dependency of THORIUM_GLOBALS to SYSUTILS
+(THORIUM_GLOBALS) Finished loading unit THORIUM_GLOBALS
+(THORIUM_VALUES) Add dependency of THORIUM_VALUES to THORIUM_GLOBALS
+(THORIUM_VALUES) Finished loading unit THORIUM_VALUES
+(THORIUM_LIBRARY) Add dependency of THORIUM_LIBRARY to THORIUM_VALUES
+(THORIUM_LIBRARY) Load from THORIUM_LIBRARY (interface) unit THORIUM_BASE
+(THORIUM_BASE) Loading unit THORIUM_BASE
+(THORIUM_BASE) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_base.ppu
+(THORIUM_BASE) PPU Time: 2009/10/03 19:47:46
+(THORIUM_BASE) PPU Flags: 151680
+(THORIUM_BASE) PPU Crc: BBF75505
+(THORIUM_BASE) PPU Crc: 564FC1C8 (intfc)
+(THORIUM_BASE) Number of definitions: 69
+(THORIUM_BASE) Number of symbols: 115
+(THORIUM_BASE) PPU Source: thorium_base.pas not found
+(THORIUM_BASE) PPU Source: thorium.inc not found
+(THORIUM_BASE) Load from THORIUM_BASE (interface) unit SYSTEM
+(THORIUM_BASE) Add dependency of THORIUM_BASE to SYSTEM
+(THORIUM_BASE) Load from THORIUM_BASE (interface) unit OBJPAS
+(THORIUM_BASE) Add dependency of THORIUM_BASE to OBJPAS
+(THORIUM_BASE) Load from THORIUM_BASE (interface) unit CLASSES
+(THORIUM_BASE) Add dependency of THORIUM_BASE to CLASSES
+(THORIUM_BASE) Load from THORIUM_BASE (interface) unit SYSUTILS
+(THORIUM_BASE) Add dependency of THORIUM_BASE to SYSUTILS
+(THORIUM_BASE) Load from THORIUM_BASE (interface) unit THORIUM_GLOBALS
+(THORIUM_BASE) Add dependency of THORIUM_BASE to THORIUM_GLOBALS
+(THORIUM_BASE) Finished loading unit THORIUM_BASE
+(THORIUM_LIBRARY) Add dependency of THORIUM_LIBRARY to THORIUM_BASE
+(THORIUM_LIBRARY) Load from THORIUM_LIBRARY (interface) unit THORIUM_HOSTCALLS
+(THORIUM_HOSTCALLS) Loading unit THORIUM_HOSTCALLS
+(THORIUM_HOSTCALLS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_hostcalls.ppu
+(THORIUM_HOSTCALLS) PPU Time: 2009/10/03 19:51:12
+(THORIUM_HOSTCALLS) PPU Flags: 151680
+(THORIUM_HOSTCALLS) PPU Crc: B8EE5EC3
+(THORIUM_HOSTCALLS) PPU Crc: 7F38EBDD (intfc)
+(THORIUM_HOSTCALLS) Number of definitions: 120
+(THORIUM_HOSTCALLS) Number of symbols: 188
+(THORIUM_HOSTCALLS) PPU Source: thorium_hostcalls.pas not found
+(THORIUM_HOSTCALLS) PPU Source: thorium.inc not found
+(THORIUM_HOSTCALLS) Registering new unit THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_HOSTCALLS) Registering new unit MD5
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit SYSTEM
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to SYSTEM
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit OBJPAS
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to OBJPAS
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit CLASSES
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to CLASSES
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit SYSUTILS
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to SYSUTILS
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit THORIUM_GLOBALS
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to THORIUM_GLOBALS
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit THORIUM_BASE
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to THORIUM_BASE
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_VIRTUALMACHINEUTILS) Loading unit THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_VIRTUALMACHINEUTILS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_virtualmachineutils.ppu
+(THORIUM_VIRTUALMACHINEUTILS) PPU Time: 2009/10/03 19:47:47
+(THORIUM_VIRTUALMACHINEUTILS) PPU Flags: 151680
+(THORIUM_VIRTUALMACHINEUTILS) PPU Crc: C8C2D6FE
+(THORIUM_VIRTUALMACHINEUTILS) PPU Crc: A2FEC5D1 (intfc)
+(THORIUM_VIRTUALMACHINEUTILS) Number of definitions: 79
+(THORIUM_VIRTUALMACHINEUTILS) Number of symbols: 200
+(THORIUM_VIRTUALMACHINEUTILS) PPU Source: thorium_virtualmachineutils.pas not found
+(THORIUM_VIRTUALMACHINEUTILS) PPU Source: thorium.inc not found
+(THORIUM_VIRTUALMACHINEUTILS) Load from THORIUM_VIRTUALMACHINEUTILS (interface) unit SYSTEM
+(THORIUM_VIRTUALMACHINEUTILS) Add dependency of THORIUM_VIRTUALMACHINEUTILS to SYSTEM
+(THORIUM_VIRTUALMACHINEUTILS) Load from THORIUM_VIRTUALMACHINEUTILS (interface) unit OBJPAS
+(THORIUM_VIRTUALMACHINEUTILS) Add dependency of THORIUM_VIRTUALMACHINEUTILS to OBJPAS
+(THORIUM_VIRTUALMACHINEUTILS) Load from THORIUM_VIRTUALMACHINEUTILS (interface) unit CLASSES
+(THORIUM_VIRTUALMACHINEUTILS) Add dependency of THORIUM_VIRTUALMACHINEUTILS to CLASSES
+(THORIUM_VIRTUALMACHINEUTILS) Load from THORIUM_VIRTUALMACHINEUTILS (interface) unit SYSUTILS
+(THORIUM_VIRTUALMACHINEUTILS) Add dependency of THORIUM_VIRTUALMACHINEUTILS to SYSUTILS
+(THORIUM_VIRTUALMACHINEUTILS) Load from THORIUM_VIRTUALMACHINEUTILS (interface) unit THORIUM_VALUES
+(THORIUM_VIRTUALMACHINEUTILS) Add dependency of THORIUM_VIRTUALMACHINEUTILS to THORIUM_VALUES
+(THORIUM_VIRTUALMACHINEUTILS) Load from THORIUM_VIRTUALMACHINEUTILS (interface) unit THORIUM_GLOBALS
+(THORIUM_VIRTUALMACHINEUTILS) Add dependency of THORIUM_VIRTUALMACHINEUTILS to THORIUM_GLOBALS
+(THORIUM_VIRTUALMACHINEUTILS) Registering new unit THORIUM_COMPILERUTILS
+(THORIUM_VIRTUALMACHINEUTILS) Load from THORIUM_VIRTUALMACHINEUTILS (implementation) unit THORIUM_HOSTTYPE
+(THORIUM_HOSTTYPE) Loading unit THORIUM_HOSTTYPE
+(THORIUM_HOSTTYPE) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_hosttype.ppu
+(THORIUM_HOSTTYPE) PPU Time: 2009/10/03 19:51:12
+(THORIUM_HOSTTYPE) PPU Flags: 151680
+(THORIUM_HOSTTYPE) PPU Crc: E777E94D
+(THORIUM_HOSTTYPE) PPU Crc: 71772748 (intfc)
+(THORIUM_HOSTTYPE) Number of definitions: 58
+(THORIUM_HOSTTYPE) Number of symbols: 168
+(THORIUM_HOSTTYPE) PPU Source: thorium_hosttype.pas not found
+(THORIUM_HOSTTYPE) PPU Source: thorium.inc not found
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit SYSTEM
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to SYSTEM
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit OBJPAS
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to OBJPAS
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit CLASSES
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to CLASSES
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit SYSUTILS
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to SYSUTILS
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_BASE
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to THORIUM_BASE
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_VALUES
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to THORIUM_VALUES
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_GLOBALS
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to THORIUM_GLOBALS
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_HOSTCALLS
+(THORIUM_HOSTCALLS) Second load for unit THORIUM_HOSTCALLS
+(THORIUM_HOSTCALLS) Previous state of THORIUM_HOSTCALLS: Load
+(THORIUM_HOSTCALLS) Loading unit THORIUM_HOSTCALLS
+(THORIUM_HOSTCALLS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_hostcalls.ppu
+(THORIUM_HOSTCALLS) PPU Time: 2009/10/03 19:51:12
+(THORIUM_HOSTCALLS) PPU Flags: 151680
+(THORIUM_HOSTCALLS) PPU Crc: B8EE5EC3
+(THORIUM_HOSTCALLS) PPU Crc: 7F38EBDD (intfc)
+(THORIUM_HOSTCALLS) Number of definitions: 120
+(THORIUM_HOSTCALLS) Number of symbols: 188
+(THORIUM_HOSTCALLS) PPU Source: thorium_hostcalls.pas not found
+(THORIUM_HOSTCALLS) PPU Source: thorium.inc not found
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit SYSTEM
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to SYSTEM
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit OBJPAS
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to OBJPAS
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit CLASSES
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to CLASSES
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit SYSUTILS
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to SYSUTILS
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit THORIUM_GLOBALS
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to THORIUM_GLOBALS
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit THORIUM_BASE
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to THORIUM_BASE
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (interface) unit MD5
+(MD5)      Loading unit MD5
+(MD5)      PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/hash/md5.ppu
+(MD5)      PPU Time: 2009/07/04 05:16:25
+(MD5)      PPU Flags: 159936
+(MD5)      PPU Crc: 400F3541
+(MD5)      PPU Crc: FC06079F (intfc)
+(MD5)      Number of definitions: 257
+(MD5)      Number of symbols: 378
+(MD5)      Load from MD5 (interface) unit SYSTEM
+(MD5)      Add dependency of MD5 to SYSTEM
+(MD5)      Load from MD5 (interface) unit OBJPAS
+(MD5)      Add dependency of MD5 to OBJPAS
+(MD5)      Finished loading unit MD5
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to MD5
+(THORIUM_HOSTCALLS) Load from THORIUM_HOSTCALLS (implementation) unit THORIUM_HOSTTYPE
+(THORIUM_HOSTTYPE) Second load for unit THORIUM_HOSTTYPE
+(THORIUM_HOSTTYPE) Previous state of THORIUM_HOSTTYPE: Load
+(THORIUM_HOSTTYPE) Loading unit THORIUM_HOSTTYPE
+(THORIUM_HOSTTYPE) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_hosttype.ppu
+(THORIUM_HOSTTYPE) PPU Time: 2009/10/03 19:51:12
+(THORIUM_HOSTTYPE) PPU Flags: 151680
+(THORIUM_HOSTTYPE) PPU Crc: E777E94D
+(THORIUM_HOSTTYPE) PPU Crc: 71772748 (intfc)
+(THORIUM_HOSTTYPE) Number of definitions: 58
+(THORIUM_HOSTTYPE) Number of symbols: 168
+(THORIUM_HOSTTYPE) PPU Source: thorium_hosttype.pas not found
+(THORIUM_HOSTTYPE) PPU Source: thorium.inc not found
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit SYSTEM
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to SYSTEM
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit OBJPAS
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to OBJPAS
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit CLASSES
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to CLASSES
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit SYSUTILS
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to SYSUTILS
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_BASE
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to THORIUM_BASE
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_VALUES
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to THORIUM_VALUES
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_GLOBALS
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to THORIUM_GLOBALS
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_HOSTCALLS
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to THORIUM_HOSTCALLS
+(THORIUM_HOSTTYPE) Load from THORIUM_HOSTTYPE (interface) unit THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_HOSTTYPE) Add dependency of THORIUM_HOSTTYPE to THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_HOSTTYPE) Finished loading unit THORIUM_HOSTTYPE
+(THORIUM_HOSTCALLS) Add dependency of THORIUM_HOSTCALLS to THORIUM_HOSTTYPE
+(THORIUM_HOSTCALLS) Finished loading unit THORIUM_HOSTCALLS
+(THORIUM_HOSTTYPE) Finished loading unit THORIUM_HOSTTYPE
+(THORIUM_VIRTUALMACHINEUTILS) Add dependency of THORIUM_VIRTUALMACHINEUTILS to THORIUM_HOSTTYPE
+(THORIUM_VIRTUALMACHINEUTILS) Load from THORIUM_VIRTUALMACHINEUTILS (implementation) unit THORIUM_COMPILERUTILS
+(THORIUM_COMPILERUTILS) Loading unit THORIUM_COMPILERUTILS
+(THORIUM_COMPILERUTILS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_compilerutils.ppu
+(THORIUM_COMPILERUTILS) PPU Time: 2009/10/03 19:47:47
+(THORIUM_COMPILERUTILS) PPU Flags: 151680
+(THORIUM_COMPILERUTILS) PPU Crc: 42BE38C7
+(THORIUM_COMPILERUTILS) PPU Crc: 81DD89C1 (intfc)
+(THORIUM_COMPILERUTILS) Number of definitions: 430
+(THORIUM_COMPILERUTILS) Number of symbols: 463
+(THORIUM_COMPILERUTILS) PPU Source: thorium_compilerutils.pas not found
+(THORIUM_COMPILERUTILS) PPU Source: thorium.inc not found
+(THORIUM_COMPILERUTILS) Registering new unit THORIUM_UTILS
+(THORIUM_COMPILERUTILS) Registering new unit THORIUM_INSTRUCTIONS
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit SYSTEM
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to SYSTEM
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit OBJPAS
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to OBJPAS
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit CLASSES
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to CLASSES
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit SYSUTILS
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to SYSUTILS
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit THORIUM_GLOBALS
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_GLOBALS
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit THORIUM_HOSTTYPE
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_HOSTTYPE
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit THORIUM_LIBRARYBASE
+(THORIUM_LIBRARYBASE) Loading unit THORIUM_LIBRARYBASE
+(THORIUM_LIBRARYBASE) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_librarybase.ppu
+(THORIUM_LIBRARYBASE) PPU Time: 2009/10/03 19:47:46
+(THORIUM_LIBRARYBASE) PPU Flags: 151680
+(THORIUM_LIBRARYBASE) PPU Crc: 9B75743E
+(THORIUM_LIBRARYBASE) PPU Crc: 005239A2 (intfc)
+(THORIUM_LIBRARYBASE) Number of definitions: 212
+(THORIUM_LIBRARYBASE) Number of symbols: 412
+(THORIUM_LIBRARYBASE) PPU Source: thorium_librarybase.pas not found
+(THORIUM_LIBRARYBASE) PPU Source: thorium.inc not found
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit SYSTEM
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to SYSTEM
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit OBJPAS
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to OBJPAS
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit CLASSES
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to CLASSES
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit SYSUTILS
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to SYSUTILS
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit THORIUM_BASE
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to THORIUM_BASE
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit THORIUM_VALUES
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to THORIUM_VALUES
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit THORIUM_HOSTCALLS
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to THORIUM_HOSTCALLS
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit THORIUM_HOSTTYPE
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to THORIUM_HOSTTYPE
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit THORIUM_GLOBALS
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to THORIUM_GLOBALS
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit THORIUM_NATIVECALL
+(THORIUM_NATIVECALL) Loading unit THORIUM_NATIVECALL
+(THORIUM_NATIVECALL) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_nativecall.ppu
+(THORIUM_NATIVECALL) PPU Time: 2009/10/03 19:51:12
+(THORIUM_NATIVECALL) PPU Flags: 151681
+(THORIUM_NATIVECALL) PPU Crc: F17817DA
+(THORIUM_NATIVECALL) PPU Crc: 3529E96D (intfc)
+(THORIUM_NATIVECALL) Number of definitions: 83
+(THORIUM_NATIVECALL) Number of symbols: 233
+(THORIUM_NATIVECALL) PPU Source: thorium_nativecall.pas not found
+(THORIUM_NATIVECALL) PPU Source: thorium.inc not found
+(THORIUM_NATIVECALL) Load from THORIUM_NATIVECALL (interface) unit SYSTEM
+(THORIUM_NATIVECALL) Add dependency of THORIUM_NATIVECALL to SYSTEM
+(THORIUM_NATIVECALL) Load from THORIUM_NATIVECALL (interface) unit OBJPAS
+(THORIUM_NATIVECALL) Add dependency of THORIUM_NATIVECALL to OBJPAS
+(THORIUM_NATIVECALL) Load from THORIUM_NATIVECALL (interface) unit CLASSES
+(THORIUM_NATIVECALL) Add dependency of THORIUM_NATIVECALL to CLASSES
+(THORIUM_NATIVECALL) Load from THORIUM_NATIVECALL (interface) unit SYSUTILS
+(THORIUM_NATIVECALL) Add dependency of THORIUM_NATIVECALL to SYSUTILS
+(THORIUM_NATIVECALL) Load from THORIUM_NATIVECALL (interface) unit THORIUM_HOSTCALLS
+(THORIUM_NATIVECALL) Add dependency of THORIUM_NATIVECALL to THORIUM_HOSTCALLS
+(THORIUM_NATIVECALL) Load from THORIUM_NATIVECALL (interface) unit THORIUM_GLOBALS
+(THORIUM_NATIVECALL) Add dependency of THORIUM_NATIVECALL to THORIUM_GLOBALS
+(THORIUM_NATIVECALL) Load from THORIUM_NATIVECALL (interface) unit THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_NATIVECALL) Add dependency of THORIUM_NATIVECALL to THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_NATIVECALL) Load from THORIUM_NATIVECALL (interface) unit THORIUM_HOSTTYPE
+(THORIUM_NATIVECALL) Add dependency of THORIUM_NATIVECALL to THORIUM_HOSTTYPE
+(THORIUM_NATIVECALL) Finished loading unit THORIUM_NATIVECALL
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to THORIUM_NATIVECALL
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (interface) unit MD5
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to MD5
+(THORIUM_LIBRARYBASE) Load from THORIUM_LIBRARYBASE (implementation) unit THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_LIBRARYBASE) Add dependency of THORIUM_LIBRARYBASE to THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_LIBRARYBASE) Finished loading unit THORIUM_LIBRARYBASE
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_LIBRARYBASE
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit THORIUM_VALUES
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_VALUES
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit THORIUM_BASE
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_BASE
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit MD5
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to MD5
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit THORIUM_UTILS
+(THORIUM_UTILS) Loading unit THORIUM_UTILS
+(THORIUM_UTILS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_utils.ppu
+(THORIUM_UTILS) PPU Time: 2009/10/03 19:47:46
+(THORIUM_UTILS) PPU Flags: 151680
+(THORIUM_UTILS) PPU Crc: EE110B60
+(THORIUM_UTILS) PPU Crc: 1B0AEF66 (intfc)
+(THORIUM_UTILS) Number of definitions: 10
+(THORIUM_UTILS) Number of symbols: 20
+(THORIUM_UTILS) PPU Source: thorium_utils.pas not found
+(THORIUM_UTILS) PPU Source: thorium.inc not found
+(THORIUM_UTILS) Load from THORIUM_UTILS (interface) unit SYSTEM
+(THORIUM_UTILS) Add dependency of THORIUM_UTILS to SYSTEM
+(THORIUM_UTILS) Load from THORIUM_UTILS (interface) unit OBJPAS
+(THORIUM_UTILS) Add dependency of THORIUM_UTILS to OBJPAS
+(THORIUM_UTILS) Load from THORIUM_UTILS (interface) unit CLASSES
+(THORIUM_UTILS) Add dependency of THORIUM_UTILS to CLASSES
+(THORIUM_UTILS) Load from THORIUM_UTILS (interface) unit SYSUTILS
+(THORIUM_UTILS) Add dependency of THORIUM_UTILS to SYSUTILS
+(THORIUM_UTILS) Finished loading unit THORIUM_UTILS
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_UTILS
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit THORIUM_INSTRUCTIONS
+(THORIUM_INSTRUCTIONS) Loading unit THORIUM_INSTRUCTIONS
+(THORIUM_INSTRUCTIONS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_instructions.ppu
+(THORIUM_INSTRUCTIONS) PPU Time: 2009/10/03 19:47:46
+(THORIUM_INSTRUCTIONS) PPU Flags: 151683
+(THORIUM_INSTRUCTIONS) PPU Crc: 9E96986B
+(THORIUM_INSTRUCTIONS) PPU Crc: D5ECF09D (intfc)
+(THORIUM_INSTRUCTIONS) Number of definitions: 624
+(THORIUM_INSTRUCTIONS) Number of symbols: 1983
+(THORIUM_INSTRUCTIONS) PPU Source: thorium_instructions.pas not found
+(THORIUM_INSTRUCTIONS) PPU Source: thorium.inc not found
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit SYSTEM
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to SYSTEM
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit OBJPAS
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to OBJPAS
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit CLASSES
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to CLASSES
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit SYSUTILS
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to SYSUTILS
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit THORIUM_GLOBALS
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to THORIUM_GLOBALS
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit THORIUM_HOSTTYPE
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to THORIUM_HOSTTYPE
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit THORIUM_HOSTCALLS
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to THORIUM_HOSTCALLS
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit THORIUM_VALUES
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to THORIUM_VALUES
+(THORIUM_INSTRUCTIONS) Load from THORIUM_INSTRUCTIONS (interface) unit THORIUM_BASE
+(THORIUM_INSTRUCTIONS) Add dependency of THORIUM_INSTRUCTIONS to THORIUM_BASE
+(THORIUM_INSTRUCTIONS) Finished loading unit THORIUM_INSTRUCTIONS
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_INSTRUCTIONS
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (interface) unit THORIUM_HOSTCALLS
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_HOSTCALLS
+(THORIUM_COMPILERUTILS) Registering new unit THORIUM_EXPORTS
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (implementation) unit THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_COMPILERUTILS) Add dependency of THORIUM_COMPILERUTILS to THORIUM_VIRTUALMACHINEUTILS
+(THORIUM_COMPILERUTILS) Load from THORIUM_COMPILERUTILS (implementation) unit THORIUM_EXPORTS
+(THORIUM_EXPORTS) Loading unit THORIUM_EXPORTS
+(THORIUM_EXPORTS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_exports.ppu
+(THORIUM_EXPORTS) PPU Time: 2009/10/03 19:47:46
+(THORIUM_EXPORTS) PPU Flags: 151680
+(THORIUM_EXPORTS) PPU Crc: 9B2431F2
+(THORIUM_EXPORTS) PPU Crc: F04EEF7A (intfc)
+(THORIUM_EXPORTS) Number of definitions: 131
+(THORIUM_EXPORTS) Number of symbols: 205
+(THORIUM_EXPORTS) PPU Source: thorium_exports.pas not found
+(THORIUM_EXPORTS) PPU Source: thorium.inc not found
+(THORIUM_EXPORTS) Registering new unit CONTNRS
+(THORIUM_EXPORTS) Registering new unit THORIUM_COMPILER
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit SYSTEM
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to SYSTEM
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit OBJPAS
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to OBJPAS
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit CLASSES
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to CLASSES
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit SYSUTILS
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to SYSUTILS
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit THORIUM_GLOBALS
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to THORIUM_GLOBALS
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit THORIUM_VALUES
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to THORIUM_VALUES
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit CONTNRS
+(CONTNRS)  Loading unit CONTNRS
+(CONTNRS)  PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/fcl-base/contnrs.ppu
+(CONTNRS)  PPU Time: 2009/07/04 05:16:26
+(CONTNRS)  PPU Flags: 161984
+(CONTNRS)  PPU Crc: 018BE9E9
+(CONTNRS)  PPU Crc: 20C0A8E2 (intfc)
+(CONTNRS)  Number of definitions: 802
+(CONTNRS)  Number of symbols: 1893
+(CONTNRS)  Load from CONTNRS (interface) unit SYSTEM
+(CONTNRS)  Add dependency of CONTNRS to SYSTEM
+(CONTNRS)  Load from CONTNRS (interface) unit OBJPAS
+(CONTNRS)  Add dependency of CONTNRS to OBJPAS
+(CONTNRS)  Load from CONTNRS (interface) unit SYSUTILS
+(CONTNRS)  Add dependency of CONTNRS to SYSUTILS
+(CONTNRS)  Load from CONTNRS (interface) unit CLASSES
+(CONTNRS)  Add dependency of CONTNRS to CLASSES
+(CONTNRS)  Load from CONTNRS (implementation) unit RTLCONSTS
+(CONTNRS)  Add dependency of CONTNRS to RTLCONSTS
+(CONTNRS)  Finished loading unit CONTNRS
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to CONTNRS
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit THORIUM_BASE
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to THORIUM_BASE
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit THORIUM_COMPILER
+(THORIUM_COMPILER) Loading unit THORIUM_COMPILER
+(THORIUM_COMPILER) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_compiler.ppu
+(THORIUM_COMPILER) PPU Time: 2009/10/03 19:51:12
+(THORIUM_COMPILER) PPU Flags: 151680
+(THORIUM_COMPILER) PPU Crc: 51C1E9ED
+(THORIUM_COMPILER) PPU Crc: 838C9BD2 (intfc)
+(THORIUM_COMPILER) Number of definitions: 384
+(THORIUM_COMPILER) Number of symbols: 635
+(THORIUM_COMPILER) PPU Source: thorium_compiler.pas not found
+(THORIUM_COMPILER) PPU Source: thorium.inc not found
+(THORIUM_COMPILER) Registering new unit ZSTREAM
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit SYSTEM
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to SYSTEM
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit OBJPAS
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to OBJPAS
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit CLASSES
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to CLASSES
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit SYSUTILS
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to SYSUTILS
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_GLOBALS
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_GLOBALS
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_COMPILERUTILS
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_COMPILERUTILS
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_BASE
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_BASE
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_LIBRARYBASE
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_LIBRARYBASE
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_HOSTTYPE
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_HOSTTYPE
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_HOSTCALLS
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_HOSTCALLS
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_HOSTTYPERTTI
+(THORIUM_HOSTTYPERTTI) Loading unit THORIUM_HOSTTYPERTTI
+(THORIUM_HOSTTYPERTTI) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_hosttypertti.ppu
+(THORIUM_HOSTTYPERTTI) PPU Time: 2009/10/03 19:47:46
+(THORIUM_HOSTTYPERTTI) PPU Flags: 151680
+(THORIUM_HOSTTYPERTTI) PPU Crc: 59AD54C7
+(THORIUM_HOSTTYPERTTI) PPU Crc: 17493BF2 (intfc)
+(THORIUM_HOSTTYPERTTI) Number of definitions: 209
+(THORIUM_HOSTTYPERTTI) Number of symbols: 510
+(THORIUM_HOSTTYPERTTI) PPU Source: thorium_hosttypertti.pas not found
+(THORIUM_HOSTTYPERTTI) PPU Source: thorium.inc not found
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit SYSTEM
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to SYSTEM
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit OBJPAS
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to OBJPAS
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit CLASSES
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to CLASSES
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit SYSUTILS
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to SYSUTILS
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit THORIUM_HOSTCALLS
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to THORIUM_HOSTCALLS
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit THORIUM_HOSTTYPE
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to THORIUM_HOSTTYPE
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit TYPINFO
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to TYPINFO
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit THORIUM_VALUES
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to THORIUM_VALUES
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit THORIUM_GLOBALS
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to THORIUM_GLOBALS
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit THORIUM_NATIVECALL
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to THORIUM_NATIVECALL
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit THORIUM_BASE
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to THORIUM_BASE
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit MD5
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to MD5
+(THORIUM_HOSTTYPERTTI) Load from THORIUM_HOSTTYPERTTI (interface) unit THORIUM_LIBRARYBASE
+(THORIUM_HOSTTYPERTTI) Add dependency of THORIUM_HOSTTYPERTTI to THORIUM_LIBRARYBASE
+(THORIUM_HOSTTYPERTTI) Finished loading unit THORIUM_HOSTTYPERTTI
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_HOSTTYPERTTI
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_VALUES
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_VALUES
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit MD5
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to MD5
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit THORIUM_INSTRUCTIONS
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to THORIUM_INSTRUCTIONS
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (interface) unit ZSTREAM
+(ZSTREAM)  Loading unit ZSTREAM
+(ZSTREAM)  PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/zstream.ppu
+(ZSTREAM)  PPU Time: 2009/07/04 05:16:26
+(ZSTREAM)  PPU Flags: 161984
+(ZSTREAM)  PPU Crc: B1B6E435
+(ZSTREAM)  PPU Crc: 30E187A8 (intfc)
+(ZSTREAM)  Number of definitions: 97
+(ZSTREAM)  Number of symbols: 199
+(ZSTREAM)  Registering new unit ZBASE
+(ZSTREAM)  Registering new unit GZIO
+(ZSTREAM)  Load from ZSTREAM (interface) unit SYSTEM
+(ZSTREAM)  Add dependency of ZSTREAM to SYSTEM
+(ZSTREAM)  Load from ZSTREAM (interface) unit OBJPAS
+(ZSTREAM)  Add dependency of ZSTREAM to OBJPAS
+(ZSTREAM)  Load from ZSTREAM (interface) unit CLASSES
+(ZSTREAM)  Add dependency of ZSTREAM to CLASSES
+(ZSTREAM)  Load from ZSTREAM (interface) unit ZBASE
+(ZBASE)    Loading unit ZBASE
+(ZBASE)    PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/zbase.ppu
+(ZBASE)    PPU Time: 2009/07/04 05:16:26
+(ZBASE)    PPU Flags: 161984
+(ZBASE)    PPU Crc: 5ECE2A71
+(ZBASE)    PPU Crc: A230DF03 (intfc)
+(ZBASE)    Number of definitions: 67
+(ZBASE)    Number of symbols: 220
+(ZBASE)    Load from ZBASE (interface) unit SYSTEM
+(ZBASE)    Add dependency of ZBASE to SYSTEM
+(ZBASE)    Finished loading unit ZBASE
+(ZSTREAM)  Add dependency of ZSTREAM to ZBASE
+(ZSTREAM)  Load from ZSTREAM (interface) unit GZIO
+(GZIO)     Loading unit GZIO
+(GZIO)     PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/gzio.ppu
+(GZIO)     PPU Time: 2009/07/04 05:16:26
+(GZIO)     PPU Flags: 159936
+(GZIO)     PPU Crc: 7053731A
+(GZIO)     PPU Crc: EB8A18D8 (intfc)
+(GZIO)     Number of definitions: 76
+(GZIO)     Number of symbols: 247
+(GZIO)     Registering new unit CRC
+(GZIO)     Registering new unit ZDEFLATE
+(GZIO)     Registering new unit ZINFLATE
+(GZIO)     Load from GZIO (interface) unit SYSTEM
+(GZIO)     Add dependency of GZIO to SYSTEM
+(GZIO)     Load from GZIO (interface) unit OBJPAS
+(GZIO)     Add dependency of GZIO to OBJPAS
+(GZIO)     Load from GZIO (interface) unit BASEUNIX
+(GZIO)     Add dependency of GZIO to BASEUNIX
+(GZIO)     Load from GZIO (interface) unit ZBASE
+(GZIO)     Add dependency of GZIO to ZBASE
+(GZIO)     Load from GZIO (interface) unit CRC
+(CRC)      Loading unit CRC
+(CRC)      PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/hash/crc.ppu
+(CRC)      PPU Time: 2009/07/04 05:16:25
+(CRC)      PPU Flags: 159936
+(CRC)      PPU Crc: A52C4C0E
+(CRC)      PPU Crc: 11900FC5 (intfc)
+(CRC)      Number of definitions: 15
+(CRC)      Number of symbols: 18
+(CRC)      Load from CRC (interface) unit SYSTEM
+(CRC)      Add dependency of CRC to SYSTEM
+(CRC)      Finished loading unit CRC
+(GZIO)     Add dependency of GZIO to CRC
+(GZIO)     Load from GZIO (interface) unit ZDEFLATE
+(ZDEFLATE) Loading unit ZDEFLATE
+(ZDEFLATE) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/zdeflate.ppu
+(ZDEFLATE) PPU Time: 2009/07/04 05:16:26
+(ZDEFLATE) PPU Flags: 159936
+(ZDEFLATE) PPU Crc: 8D1ACDAA
+(ZDEFLATE) PPU Crc: 25EE990B (intfc)
+(ZDEFLATE) Number of definitions: 117
+(ZDEFLATE) Number of symbols: 263
+(ZDEFLATE) Load from ZDEFLATE (interface) unit SYSTEM
+(ZDEFLATE) Add dependency of ZDEFLATE to SYSTEM
+(ZDEFLATE) Load from ZDEFLATE (interface) unit ZBASE
+(ZDEFLATE) Add dependency of ZDEFLATE to ZBASE
+(ZDEFLATE) Registering new unit TREES
+(ZDEFLATE) Registering new unit ADLER
+(ZDEFLATE) Load from ZDEFLATE (implementation) unit TREES
+(TREES)    Loading unit TREES
+(TREES)    PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/trees.ppu
+(TREES)    PPU Time: 2009/07/04 05:16:26
+(TREES)    PPU Flags: 159936
+(TREES)    PPU Crc: 6F5A72D4
+(TREES)    PPU Crc: D8A3528B (intfc)
+(TREES)    Number of definitions: 223
+(TREES)    Number of symbols: 300
+(TREES)    Load from TREES (interface) unit SYSTEM
+(TREES)    Add dependency of TREES to SYSTEM
+(TREES)    Load from TREES (interface) unit ZBASE
+(TREES)    Add dependency of TREES to ZBASE
+(TREES)    Finished loading unit TREES
+(ZDEFLATE) Add dependency of ZDEFLATE to TREES
+(ZDEFLATE) Load from ZDEFLATE (implementation) unit ADLER
+(ADLER)    Loading unit ADLER
+(ADLER)    PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/adler.ppu
+(ADLER)    PPU Time: 2009/07/04 05:16:26
+(ADLER)    PPU Flags: 159936
+(ADLER)    PPU Crc: B479E689
+(ADLER)    PPU Crc: 4A57DEB0 (intfc)
+(ADLER)    Number of definitions: 3
+(ADLER)    Number of symbols: 30
+(ADLER)    Load from ADLER (interface) unit SYSTEM
+(ADLER)    Add dependency of ADLER to SYSTEM
+(ADLER)    Finished loading unit ADLER
+(ZDEFLATE) Add dependency of ZDEFLATE to ADLER
+(ZDEFLATE) Finished loading unit ZDEFLATE
+(GZIO)     Add dependency of GZIO to ZDEFLATE
+(GZIO)     Load from GZIO (interface) unit ZINFLATE
+(ZINFLATE) Loading unit ZINFLATE
+(ZINFLATE) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/zinflate.ppu
+(ZINFLATE) PPU Time: 2009/07/04 05:16:26
+(ZINFLATE) PPU Flags: 159936
+(ZINFLATE) PPU Crc: E31AD3D3
+(ZINFLATE) PPU Crc: 6CCA56B2 (intfc)
+(ZINFLATE) Number of definitions: 39
+(ZINFLATE) Number of symbols: 100
+(ZINFLATE) Registering new unit INFBLOCK
+(ZINFLATE) Registering new unit INFUTIL
+(ZINFLATE) Load from ZINFLATE (interface) unit SYSTEM
+(ZINFLATE) Add dependency of ZINFLATE to SYSTEM
+(ZINFLATE) Load from ZINFLATE (interface) unit ZBASE
+(ZINFLATE) Add dependency of ZINFLATE to ZBASE
+(ZINFLATE) Load from ZINFLATE (interface) unit INFBLOCK
+(INFBLOCK) Loading unit INFBLOCK
+(INFBLOCK) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/infblock.ppu
+(INFBLOCK) PPU Time: 2009/07/04 05:16:26
+(INFBLOCK) PPU Flags: 159936
+(INFBLOCK) PPU Crc: 1D9E7C14
+(INFBLOCK) PPU Crc: 9B3F96C5 (intfc)
+(INFBLOCK) Number of definitions: 37
+(INFBLOCK) Number of symbols: 89
+(INFBLOCK) Load from INFBLOCK (interface) unit SYSTEM
+(INFBLOCK) Add dependency of INFBLOCK to SYSTEM
+(INFBLOCK) Load from INFBLOCK (interface) unit ZBASE
+(INFBLOCK) Add dependency of INFBLOCK to ZBASE
+(INFBLOCK) Registering new unit INFCODES
+(INFBLOCK) Registering new unit INFTREES
+(INFBLOCK) Load from INFBLOCK (implementation) unit INFCODES
+(INFCODES) Loading unit INFCODES
+(INFCODES) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/infcodes.ppu
+(INFCODES) PPU Time: 2009/07/04 05:16:26
+(INFCODES) PPU Flags: 159936
+(INFCODES) PPU Crc: 02C2A536
+(INFCODES) PPU Crc: AABD8778 (intfc)
+(INFCODES) Number of definitions: 18
+(INFCODES) Number of symbols: 58
+(INFCODES) Load from INFCODES (interface) unit SYSTEM
+(INFCODES) Add dependency of INFCODES to SYSTEM
+(INFCODES) Load from INFCODES (interface) unit ZBASE
+(INFCODES) Add dependency of INFCODES to ZBASE
+(INFCODES) Registering new unit INFFAST
+(INFCODES) Load from INFCODES (implementation) unit INFUTIL
+(INFUTIL)  Loading unit INFUTIL
+(INFUTIL)  PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/infutil.ppu
+(INFUTIL)  PPU Time: 2009/07/04 05:16:26
+(INFUTIL)  PPU Flags: 159936
+(INFUTIL)  PPU Crc: ED0B17A8
+(INFUTIL)  PPU Crc: AD627725 (intfc)
+(INFUTIL)  Number of definitions: 8
+(INFUTIL)  Number of symbols: 37
+(INFUTIL)  Load from INFUTIL (interface) unit SYSTEM
+(INFUTIL)  Add dependency of INFUTIL to SYSTEM
+(INFUTIL)  Load from INFUTIL (interface) unit ZBASE
+(INFUTIL)  Add dependency of INFUTIL to ZBASE
+(INFUTIL)  Finished loading unit INFUTIL
+(INFCODES) Add dependency of INFCODES to INFUTIL
+(INFCODES) Load from INFCODES (implementation) unit INFFAST
+(INFFAST)  Loading unit INFFAST
+(INFFAST)  PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/inffast.ppu
+(INFFAST)  PPU Time: 2009/07/04 05:16:26
+(INFFAST)  PPU Flags: 159936
+(INFFAST)  PPU Crc: 8DEB072B
+(INFFAST)  PPU Crc: 428F0EBB (intfc)
+(INFFAST)  Number of definitions: 15
+(INFFAST)  Number of symbols: 46
+(INFFAST)  Load from INFFAST (interface) unit SYSTEM
+(INFFAST)  Add dependency of INFFAST to SYSTEM
+(INFFAST)  Load from INFFAST (interface) unit ZBASE
+(INFFAST)  Add dependency of INFFAST to ZBASE
+(INFFAST)  Load from INFFAST (implementation) unit INFUTIL
+(INFFAST)  Add dependency of INFFAST to INFUTIL
+(INFFAST)  Finished loading unit INFFAST
+(INFCODES) Add dependency of INFCODES to INFFAST
+(INFCODES) Finished loading unit INFCODES
+(INFBLOCK) Add dependency of INFBLOCK to INFCODES
+(INFBLOCK) Load from INFBLOCK (implementation) unit INFTREES
+(INFTREES) Loading unit INFTREES
+(INFTREES) PPU Name: /usr/lib64/fpc/2.2.4/units/x86_64-linux/paszlib/inftrees.ppu
+(INFTREES) PPU Time: 2009/07/04 05:16:26
+(INFTREES) PPU Flags: 159936
+(INFTREES) PPU Crc: BBC3E9C2
+(INFTREES) PPU Crc: BC505668 (intfc)
+(INFTREES) Number of definitions: 84
+(INFTREES) Number of symbols: 138
+(INFTREES) Load from INFTREES (interface) unit SYSTEM
+(INFTREES) Add dependency of INFTREES to SYSTEM
+(INFTREES) Load from INFTREES (interface) unit ZBASE
+(INFTREES) Add dependency of INFTREES to ZBASE
+(INFTREES) Finished loading unit INFTREES
+(INFBLOCK) Add dependency of INFBLOCK to INFTREES
+(INFBLOCK) Load from INFBLOCK (implementation) unit INFUTIL
+(INFBLOCK) Add dependency of INFBLOCK to INFUTIL
+(INFBLOCK) Finished loading unit INFBLOCK
+(ZINFLATE) Add dependency of ZINFLATE to INFBLOCK
+(ZINFLATE) Load from ZINFLATE (interface) unit INFUTIL
+(ZINFLATE) Add dependency of ZINFLATE to INFUTIL
+(ZINFLATE) Load from ZINFLATE (implementation) unit ADLER
+(ZINFLATE) Add dependency of ZINFLATE to ADLER
+(ZINFLATE) Finished loading unit ZINFLATE
+(GZIO)     Add dependency of GZIO to ZINFLATE
+(GZIO)     Finished loading unit GZIO
+(ZSTREAM)  Add dependency of ZSTREAM to GZIO
+(ZSTREAM)  Load from ZSTREAM (implementation) unit ZDEFLATE
+(ZSTREAM)  Add dependency of ZSTREAM to ZDEFLATE
+(ZSTREAM)  Load from ZSTREAM (implementation) unit ZINFLATE
+(ZSTREAM)  Add dependency of ZSTREAM to ZINFLATE
+(ZSTREAM)  Finished loading unit ZSTREAM
+(THORIUM_COMPILER) Add dependency of THORIUM_COMPILER to ZSTREAM
+(THORIUM_COMPILER) Load from THORIUM_COMPILER (implementation) unit THORIUM_EXPORTS
+(THORIUM_EXPORTS) Second load for unit THORIUM_EXPORTS
+(THORIUM_EXPORTS) Previous state of THORIUM_EXPORTS: Load
+(THORIUM_EXPORTS) Loading unit THORIUM_EXPORTS
+(THORIUM_EXPORTS) PPU Name: /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_exports.ppu
+(THORIUM_EXPORTS) PPU Time: 2009/10/03 19:47:46
+(THORIUM_EXPORTS) PPU Flags: 151680
+(THORIUM_EXPORTS) PPU Crc: 9B2431F2
+(THORIUM_EXPORTS) PPU Crc: F04EEF7A (intfc)
+(THORIUM_EXPORTS) Number of definitions: 131
+(THORIUM_EXPORTS) Number of symbols: 205
+(THORIUM_EXPORTS) PPU Source: thorium_exports.pas not found
+(THORIUM_EXPORTS) PPU Source: thorium.inc not found
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit SYSTEM
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to SYSTEM
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit OBJPAS
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to OBJPAS
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit CLASSES
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to CLASSES
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit SYSUTILS
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to SYSUTILS
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit THORIUM_GLOBALS
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to THORIUM_GLOBALS
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit THORIUM_VALUES
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to THORIUM_VALUES
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit CONTNRS
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to CONTNRS
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit THORIUM_BASE
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to THORIUM_BASE
+(THORIUM_EXPORTS) Load from THORIUM_EXPORTS (interface) unit THORIUM_COMPILER
+(THORIUM_EXPORTS) Add dependency of THORIUM_EXPORTS to THORIUM_COMPILER
+(THORIUM_EXPORTS) Recompiling Thorium_Exports, checksum changed for Thorium_Compiler
+PPU Loading /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_exports.ppu
+PPU Loading /home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lib/x86_64-linux/thorium_exports.ppu
+thorium_exports.pas(37,66) Fatal: Can't find unit Thorium_Exports used by Thorium_Compiler
+Fatal: Compilation aborted
+Error: /usr/bin/ppcx64 returned an error exitcode (normal if you did not specify a source file to be compiled)

@@ -1,0 +1,16 @@
+require "stdlib";
+
+private string getstr()
+{
+  return "Hello World! %s\n";
+}
+
+private void test(string s)
+{
+  printf(s, s);
+}
+
+public void main()
+{
+  printf(getstr(), getstr());
+}

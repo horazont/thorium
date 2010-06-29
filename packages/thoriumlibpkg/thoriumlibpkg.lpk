@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <Package Version="3">
+    <Name Value="thoriumlibpkg"/>
+    <Author Value="Jonas Wielicki"/>
+    <CompilerOptions>
+      <Version Value="8"/>
+      <SearchPaths>
+        <UnitOutputDirectory Value="$(PkgDir)/lib/$(TargetCPU)-$(TargetOS)"/>
+      </SearchPaths>
+      <Other>
+        <CompilerPath Value="$(CompPath)"/>
+      </Other>
+    </CompilerOptions>
+    <Description Value="Package containing units which define libraries of the host environment loadable by the Thorium engine."/>
+    <License Value="MPL 1.1"/>
+    <Version Minor="2"/>
+    <Files Count="6">
+      <Item1>
+        <Filename Value="thoriumlibstd.pas"/>
+        <UnitName Value="ThoriumLibStd"/>
+      </Item1>
+      <Item2>
+        <Filename Value="thoriumlibstdio.pas"/>
+        <UnitName Value="ThoriumLibStdIO"/>
+      </Item2>
+      <Item3>
+        <Filename Value="thoriumlibstreams.pas"/>
+        <UnitName Value="ThoriumLibStreams"/>
+      </Item3>
+      <Item4>
+        <Filename Value="thoriumlibstring.pas"/>
+        <UnitName Value="ThoriumLibString"/>
+      </Item4>
+      <Item5>
+        <Filename Value="LICENSE.txt"/>
+        <Type Value="Text"/>
+      </Item5>
+      <Item6>
+        <Filename Value="CHANGELOG.txt"/>
+        <Type Value="Text"/>
+      </Item6>
+    </Files>
+    <RequiredPkgs Count="2">
+      <Item1>
+        <PackageName Value="thoriumcorepkg"/>
+        <MaxVersion Major="1"/>
+        <MinVersion Major="1" Release="5" Valid="True"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="FCL"/>
+        <MinVersion Major="1" Valid="True"/>
+      </Item2>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)/"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+    </PublishOptions>
+  </Package>
+</CONFIG>

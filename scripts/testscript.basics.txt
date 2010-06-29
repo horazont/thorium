@@ -1,0 +1,65 @@
+public static string someVar = "Hello World!";
+public int someConst = 213;
+private static int testvar = 0x123456789ABCDEF0;
+static float cookie = 1.23;  // variables without visibility modificator are
+                      // treated as private
+public string test;
+
+require "stdlib";
+
+private string fltToString(float v)
+{
+  return "just a cookie :P";
+}
+                      
+public void main()
+{
+  string someText;
+  someText = "keks";
+  
+  float somevalue;
+  
+  somevalue = 30 + 10 / 20.0;
+  printf("keks");
+  
+  // WARNING: This instruction does NOTHING!
+  //somevalue = somevalue++;
+  //printf(fltToString(somevalue));
+  
+  if (somevalue == 1.00)
+  {
+    sometext = "bleuf";
+  }
+  elseif (sometext == "Hello World!")
+    sometext = "";
+  else
+  {
+    sometext = "ja gut ähhh";
+  }
+  
+  do
+  {
+    somevalue = somevalue + 1.0;
+  }
+  while (somevalue < 10.0)
+  
+  while (somevalue >= 5.0)
+  {
+    somevalue = somevalue - 1.0;
+  }
+  
+  switch (someText)
+  {
+    case "keks": 
+    {
+      break;
+    }
+  }
+  
+  for (int i=0;i<10;i++)
+  {
+  
+  }
+  int i = 0;
+  i++;
+}

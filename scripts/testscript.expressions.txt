@@ -1,0 +1,105 @@
+/*******************************************************************************
+*** THORIUM SCRIPTING LANGUAGE - by Jonas Wielicki
+********************************************************************************
+The contents of this file are subject to the Mozilla Public License
+Version 1.1 (the "License"); you may not use this file except in
+compliance with the License. You may obtain a copy of the License at
+http://www.mozilla.org/MPL/
+
+Software distributed under the License is distributed on an "AS IS"
+basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+License for the specific language governing rights and limitations
+under the License.
+
+Alternatively, the contents of this file may be used under the terms
+of the GNU General Public license (the  "GPL License"), in which case the
+provisions of GPL License are applicable instead of those
+above.
+
+
+For feedback and questions about Thorium Scripting Language please mail me,
+Jonas Wielicki:
+j.wielicki@sotecware.net
+*******************************************************************************/
+// Subject: Test the expression compiler of Thorium in all its details
+//          At least I hope so ;)
+
+loadlibrary "core.std.io"
+
+private void printstr(string value, string name)
+{
+  printf("%s = \"%s\"\n", name, value);
+}
+
+private void printint(int value, string name)
+{
+  printf("%s = %d\n", name, value);
+}
+
+private void printflt(float value, string name)
+{
+  printf("%s = %.4f\n", name, value);
+}
+private void test_int()
+{
+  int a = 10; int b = 20;
+  int c;
+  
+  printint(a, "a");
+  printint(b, "b");
+  
+  c = a * b;
+  printint(c, "a * b");
+  
+  printint(a + b, "a + b");
+  
+  c = b div a;
+  printint(c, "b div a");
+}
+
+private void test_float()
+{
+  float a = 10.0;
+  float b = 20.0;
+  
+  float c;
+  
+  printflt(a, "a");
+  printflt(b, "b");
+  
+  c = a * b;
+  
+  printflt(c, "a * b");
+  
+  printflt(a + b, "a + b");
+  
+  c = b / a;
+  printflt(c, "b / a");
+  c = a / b;
+  printflt(c, "a / b");
+}
+
+private void test_str()
+{
+  string a = "meow";
+  string b = "cookie";
+  string c;
+  
+  printstr(a, "a");
+  printstr(b, "b");
+  
+  c = "Hello World!";
+  printstr(c, "c");
+  
+  printstr(a + b, "1: a + b");
+  
+  c = a + b;
+  printstr(c, "2: a + b");
+}
+
+public void main()
+{
+  test_int();
+  test_float();
+  test_str();
+}

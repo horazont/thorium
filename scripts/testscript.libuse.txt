@@ -1,0 +1,14 @@
+public int A;
+public string B;
+public float C;
+
+require "testscript.lib", "stdlib";
+
+public void main()
+{
+  B = "Hallo Welt!";
+  A = 10;
+  C = A;
+  
+  test();
+}

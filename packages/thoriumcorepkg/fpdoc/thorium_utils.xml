@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<fpdoc-descriptions>
+<package name="thoriumcore">
+
+<!--
+  ====================================================================
+    Thorium_Utils
+  ====================================================================
+-->
+
+<module name="Thorium_Utils">
+<short></short>
+<descr>
+</descr>
+
+<!-- record type Visibility: default -->
+<element name="TThoriumNativeConverterHelper">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumNativeConverterHelper.Float">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumNativeConverterHelper.Hi">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumNativeConverterHelper.Lo">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- variable Visibility: default -->
+<element name="TThoriumNativeConverterHelper.I64">
+<short></short>
+<descr>
+</descr>
+<seealso>
+</seealso>
+</element>
+
+<!-- function Visibility: default -->
+<element name="UTF8Chr">
+<short></short>
+<descr>
+</descr>
+<errors>
+</errors>
+<seealso>
+</seealso>
+</element>
+
+<!-- function result Visibility: default -->
+<element name="UTF8Chr.Result">
+<short></short>
+</element>
+
+<!-- argument Visibility: default -->
+<element name="UTF8Chr.Value">
+<short></short>
+</element>
+
+</module> <!-- Thorium_Utils -->
+
+</package>
+</fpdoc-descriptions>

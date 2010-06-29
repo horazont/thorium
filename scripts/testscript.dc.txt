@@ -1,0 +1,8 @@
+loadlibrary "core.streams"
+
+public void main()
+{
+  TThoriumFileStream stream;
+  stream = TThoriumFileStream.create("/home/horazont/scripttest.txt", fmCreate);
+  stream.writestring("Hello World!");
+}

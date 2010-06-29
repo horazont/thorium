@@ -1,0 +1,7 @@
+require "!stdlib";
+
+public void main()
+{
+  string s = "%s";
+  printf(s, "Meow");
+}

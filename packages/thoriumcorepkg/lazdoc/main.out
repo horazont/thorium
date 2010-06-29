@@ -1,0 +1,535 @@
+\BOOKMARK [0][-]{chapter.1}{Reference for unit 'Thorium'}{}
+\BOOKMARK [1][-]{section.1.1}{Used units}{chapter.1}
+\BOOKMARK [1][-]{section.1.2}{Constants, types and variables}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.2.1}{Types}{section.1.2}
+\BOOKMARK [1][-]{section.1.3}{Procedures and functions}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.3.1}{ThoriumCreateExtendedTypeValue}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.2}{ThoriumCreateFloatValue}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.3}{ThoriumCreateIntegerValue}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.4}{ThoriumCreateStringValue}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.5}{ThoriumCreateValue}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.6}{ThoriumExternalVarTypeToTypeSpec}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.7}{ThoriumInstructionToStr}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.8}{ThoriumMakeOOPEvent}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.9}{ThoriumRegisterToStr}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.10}{ThoriumValueToStr}{section.1.3}
+\BOOKMARK [2][-]{subsection.1.3.11}{ThoriumVarTypeToTypeSpec}{section.1.3}
+\BOOKMARK [1][-]{section.1.4}{EThoriumCompilerException}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.4.1}{Description}{section.1.4}
+\BOOKMARK [1][-]{section.1.5}{EThoriumDebuggerException}{chapter.1}
+\BOOKMARK [1][-]{section.1.6}{EThoriumDependencyException}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.6.1}{Description}{section.1.6}
+\BOOKMARK [1][-]{section.1.7}{EThoriumException}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.7.1}{Description}{section.1.7}
+\BOOKMARK [1][-]{section.1.8}{EThoriumHashException}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.8.1}{Description}{section.1.8}
+\BOOKMARK [1][-]{section.1.9}{EThoriumRuntimeException}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.9.1}{Description}{section.1.9}
+\BOOKMARK [1][-]{section.1.10}{EThoriumRuntimeExecutionException}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.10.1}{Description}{section.1.10}
+\BOOKMARK [2][-]{subsection.1.10.2}{Method overview}{section.1.10}
+\BOOKMARK [2][-]{subsection.1.10.3}{Property overview}{section.1.10}
+\BOOKMARK [2][-]{subsection.1.10.4}{EThoriumRuntimeExecutionException.Create}{section.1.10}
+\BOOKMARK [2][-]{subsection.1.10.5}{EThoriumRuntimeExecutionException.Destroy}{section.1.10}
+\BOOKMARK [2][-]{subsection.1.10.6}{EThoriumRuntimeExecutionException.OriginalException}{section.1.10}
+\BOOKMARK [1][-]{section.1.11}{EThoriumVerificationException}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.11.1}{Description}{section.1.11}
+\BOOKMARK [1][-]{section.1.12}{IThoriumPersistent}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.12.1}{Description}{section.1.12}
+\BOOKMARK [2][-]{subsection.1.12.2}{Method overview}{section.1.12}
+\BOOKMARK [2][-]{subsection.1.12.3}{IThoriumPersistent.EnableHostControl}{section.1.12}
+\BOOKMARK [2][-]{subsection.1.12.4}{IThoriumPersistent.DisableHostControl}{section.1.12}
+\BOOKMARK [2][-]{subsection.1.12.5}{IThoriumPersistent.FreeReference}{section.1.12}
+\BOOKMARK [2][-]{subsection.1.12.6}{IThoriumPersistent.GetReference}{section.1.12}
+\BOOKMARK [1][-]{section.1.13}{TThorium}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.13.1}{Description}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.2}{Method overview}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.3}{Property overview}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.4}{TThorium.Create}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.5}{TThorium.Destroy}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.6}{TThorium.DoCompilerOutput}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.7}{TThorium.DoRequireModule}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.8}{TThorium.DoOpenModule}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.9}{TThorium.ClearLibraries}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.10}{TThorium.ClearModules}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.11}{TThorium.FindLibrary}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.12}{TThorium.FindModule}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.13}{TThorium.InitializeVirtualMachine}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.14}{TThorium.LoadLibrary}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.15}{TThorium.LoadModuleFromFile}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.16}{TThorium.LoadModuleFromStream}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.17}{TThorium.NewModule}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.18}{TThorium.ReleaseVirtualMachine}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.19}{TThorium.HostLibrary}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.20}{TThorium.HostLibraryCount}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.21}{TThorium.Locked}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.22}{TThorium.Module}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.23}{TThorium.ModuleCount}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.24}{TThorium.OnCompilerOutput}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.25}{TThorium.OnOpenModule}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.26}{TThorium.OnRequireModule}{section.1.13}
+\BOOKMARK [2][-]{subsection.1.13.27}{TThorium.VirtualMachine}{section.1.13}
+\BOOKMARK [1][-]{section.1.14}{TThoriumDebuggingVirtualMachine}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.14.1}{Description}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.2}{Method overview}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.3}{Property overview}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.4}{TThoriumDebuggingVirtualMachine.Create}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.5}{TThoriumDebuggingVirtualMachine.Destroy}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.6}{TThoriumDebuggingVirtualMachine.Execute}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.7}{TThoriumDebuggingVirtualMachine.StepInto}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.8}{TThoriumDebuggingVirtualMachine.StepOver}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.9}{TThoriumDebuggingVirtualMachine.BreakpointInstructions}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.10}{TThoriumDebuggingVirtualMachine.BreakpointLines}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.11}{TThoriumDebuggingVirtualMachine.Registers}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.12}{TThoriumDebuggingVirtualMachine.Stack}{section.1.14}
+\BOOKMARK [2][-]{subsection.1.14.13}{TThoriumDebuggingVirtualMachine.StepMode}{section.1.14}
+\BOOKMARK [1][-]{section.1.15}{TThoriumFunction}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.15.1}{Description}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.2}{Method overview}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.3}{Property overview}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.4}{TThoriumFunction.Create}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.5}{TThoriumFunction.Destroy}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.6}{TThoriumFunction.Call}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.7}{TThoriumFunction.Duplicate}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.8}{TThoriumFunction.AsEvent}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.9}{TThoriumFunction.LoadFromStream}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.10}{TThoriumFunction.SafeCall}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.11}{TThoriumFunction.SaveToStream}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.12}{TThoriumFunction.EntryPoint}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.13}{TThoriumFunction.NestingLevel}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.14}{TThoriumFunction.Parameters}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.15}{TThoriumFunction.Prototyped}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.16}{TThoriumFunction.ReturnValues}{section.1.15}
+\BOOKMARK [2][-]{subsection.1.15.17}{TThoriumFunction.VisibilityLevel}{section.1.15}
+\BOOKMARK [1][-]{section.1.16}{TThoriumFunctionCallbackCapsule}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.16.1}{Description}{section.1.16}
+\BOOKMARK [2][-]{subsection.1.16.2}{Method overview}{section.1.16}
+\BOOKMARK [2][-]{subsection.1.16.3}{TThoriumFunctionCallbackCapsule.Create}{section.1.16}
+\BOOKMARK [1][-]{section.1.17}{TThoriumHashableObject}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.17.1}{Description}{section.1.17}
+\BOOKMARK [2][-]{subsection.1.17.2}{Method overview}{section.1.17}
+\BOOKMARK [2][-]{subsection.1.17.3}{TThoriumHashableObject.Create}{section.1.17}
+\BOOKMARK [2][-]{subsection.1.17.4}{TThoriumHashableObject.CalcHash}{section.1.17}
+\BOOKMARK [2][-]{subsection.1.17.5}{TThoriumHashableObject.InvalidateHash}{section.1.17}
+\BOOKMARK [2][-]{subsection.1.17.6}{TThoriumHashableObject.GetHash}{section.1.17}
+\BOOKMARK [1][-]{section.1.18}{TThoriumHostCallableBase}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.18.1}{Description}{section.1.18}
+\BOOKMARK [2][-]{subsection.1.18.2}{Method overview}{section.1.18}
+\BOOKMARK [2][-]{subsection.1.18.3}{Property overview}{section.1.18}
+\BOOKMARK [2][-]{subsection.1.18.4}{TThoriumHostCallableBase.Create}{section.1.18}
+\BOOKMARK [2][-]{subsection.1.18.5}{TThoriumHostCallableBase.Destroy}{section.1.18}
+\BOOKMARK [2][-]{subsection.1.18.6}{TThoriumHostCallableBase.CalcHash}{section.1.18}
+\BOOKMARK [2][-]{subsection.1.18.7}{TThoriumHostCallableBase.Parameters}{section.1.18}
+\BOOKMARK [2][-]{subsection.1.18.8}{TThoriumHostCallableBase.ReturnType}{section.1.18}
+\BOOKMARK [2][-]{subsection.1.18.9}{TThoriumHostCallableBase.Name}{section.1.18}
+\BOOKMARK [1][-]{section.1.19}{TThoriumHostFunctionBase}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.19.1}{Method overview}{section.1.19}
+\BOOKMARK [2][-]{subsection.1.19.2}{TThoriumHostFunctionBase.CallFromVirtualMachine}{section.1.19}
+\BOOKMARK [1][-]{section.1.20}{TThoriumHostFunctionNativeCall}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.20.1}{Description}{section.1.20}
+\BOOKMARK [2][-]{subsection.1.20.2}{Method overview}{section.1.20}
+\BOOKMARK [2][-]{subsection.1.20.3}{Property overview}{section.1.20}
+\BOOKMARK [2][-]{subsection.1.20.4}{TThoriumHostFunctionNativeCall.Create}{section.1.20}
+\BOOKMARK [2][-]{subsection.1.20.5}{TThoriumHostFunctionNativeCall.Destroy}{section.1.20}
+\BOOKMARK [2][-]{subsection.1.20.6}{TThoriumHostFunctionNativeCall.CallFromVirtualMachine}{section.1.20}
+\BOOKMARK [2][-]{subsection.1.20.7}{TThoriumHostFunctionNativeCall.Precompile}{section.1.20}
+\BOOKMARK [2][-]{subsection.1.20.8}{TThoriumHostFunctionNativeCall.CallingConvention}{section.1.20}
+\BOOKMARK [2][-]{subsection.1.20.9}{TThoriumHostFunctionNativeCall.CodePointer}{section.1.20}
+\BOOKMARK [1][-]{section.1.21}{TThoriumHostFunctionParameterSpec}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.21.1}{Description}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.2}{Method overview}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.3}{Property overview}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.4}{TThoriumHostFunctionParameterSpec.Create}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.5}{TThoriumHostFunctionParameterSpec.Destroy}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.6}{TThoriumHostFunctionParameterSpec.Expand}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.7}{TThoriumHostFunctionParameterSpec.GetCompleteType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.8}{TThoriumHostFunctionParameterSpec.GetExtendedType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.9}{TThoriumHostFunctionParameterSpec.GetParamType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.10}{TThoriumHostFunctionParameterSpec.SetCapacity}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.11}{TThoriumHostFunctionParameterSpec.SetExtendedType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.12}{TThoriumHostFunctionParameterSpec.SetParamType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.13}{TThoriumHostFunctionParameterSpec.AddType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.14}{TThoriumHostFunctionParameterSpec.AddExtendedType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.15}{TThoriumHostFunctionParameterSpec.AllTypes}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.16}{TThoriumHostFunctionParameterSpec.IndexOfType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.17}{TThoriumHostFunctionParameterSpec.InsertType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.18}{TThoriumHostFunctionParameterSpec.InsertExtendedType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.19}{TThoriumHostFunctionParameterSpec.DeleteType}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.20}{TThoriumHostFunctionParameterSpec.Clear}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.21}{TThoriumHostFunctionParameterSpec.Types}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.22}{TThoriumHostFunctionParameterSpec.ExtendedTypes}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.23}{TThoriumHostFunctionParameterSpec.CompleteTypes}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.24}{TThoriumHostFunctionParameterSpec.Capacity}{section.1.21}
+\BOOKMARK [2][-]{subsection.1.21.25}{TThoriumHostFunctionParameterSpec.Count}{section.1.21}
+\BOOKMARK [1][-]{section.1.22}{TThoriumHostFunctionSimpleMethod}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.22.1}{Description}{section.1.22}
+\BOOKMARK [2][-]{subsection.1.22.2}{Method overview}{section.1.22}
+\BOOKMARK [2][-]{subsection.1.22.3}{Property overview}{section.1.22}
+\BOOKMARK [2][-]{subsection.1.22.4}{TThoriumHostFunctionSimpleMethod.Create}{section.1.22}
+\BOOKMARK [2][-]{subsection.1.22.5}{TThoriumHostFunctionSimpleMethod.CallFromVirtualMachine}{section.1.22}
+\BOOKMARK [2][-]{subsection.1.22.6}{TThoriumHostFunctionSimpleMethod.Method}{section.1.22}
+\BOOKMARK [1][-]{section.1.23}{TThoriumHostMethodAsFunctionNativeCall}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.23.1}{Description}{section.1.23}
+\BOOKMARK [2][-]{subsection.1.23.2}{Method overview}{section.1.23}
+\BOOKMARK [2][-]{subsection.1.23.3}{Property overview}{section.1.23}
+\BOOKMARK [2][-]{subsection.1.23.4}{TThoriumHostMethodAsFunctionNativeCall.Create}{section.1.23}
+\BOOKMARK [2][-]{subsection.1.23.5}{TThoriumHostMethodAsFunctionNativeCall.CallFromVirtualMachine}{section.1.23}
+\BOOKMARK [2][-]{subsection.1.23.6}{TThoriumHostMethodAsFunctionNativeCall.Precompile}{section.1.23}
+\BOOKMARK [2][-]{subsection.1.23.7}{TThoriumHostMethodAsFunctionNativeCall.DataPointer}{section.1.23}
+\BOOKMARK [1][-]{section.1.24}{TThoriumHostMethodBase}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.24.1}{Description}{section.1.24}
+\BOOKMARK [2][-]{subsection.1.24.2}{Method overview}{section.1.24}
+\BOOKMARK [2][-]{subsection.1.24.3}{TThoriumHostMethodBase.Create}{section.1.24}
+\BOOKMARK [2][-]{subsection.1.24.4}{TThoriumHostMethodBase.CallFromVirtualMachine}{section.1.24}
+\BOOKMARK [1][-]{section.1.25}{TThoriumHostMethodNativeCall}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.25.1}{Description}{section.1.25}
+\BOOKMARK [2][-]{subsection.1.25.2}{Method overview}{section.1.25}
+\BOOKMARK [2][-]{subsection.1.25.3}{Property overview}{section.1.25}
+\BOOKMARK [2][-]{subsection.1.25.4}{TThoriumHostMethodNativeCall.Create}{section.1.25}
+\BOOKMARK [2][-]{subsection.1.25.5}{TThoriumHostMethodNativeCall.Destroy}{section.1.25}
+\BOOKMARK [2][-]{subsection.1.25.6}{TThoriumHostMethodNativeCall.CallFromVirtualMachine}{section.1.25}
+\BOOKMARK [2][-]{subsection.1.25.7}{TThoriumHostMethodNativeCall.Precompile}{section.1.25}
+\BOOKMARK [2][-]{subsection.1.25.8}{TThoriumHostMethodNativeCall.CallingConvention}{section.1.25}
+\BOOKMARK [2][-]{subsection.1.25.9}{TThoriumHostMethodNativeCall.CodePointer}{section.1.25}
+\BOOKMARK [1][-]{section.1.26}{TThoriumHostMethodSimple}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.26.1}{Description}{section.1.26}
+\BOOKMARK [2][-]{subsection.1.26.2}{Method overview}{section.1.26}
+\BOOKMARK [2][-]{subsection.1.26.3}{Property overview}{section.1.26}
+\BOOKMARK [2][-]{subsection.1.26.4}{TThoriumHostMethodSimple.Create}{section.1.26}
+\BOOKMARK [2][-]{subsection.1.26.5}{TThoriumHostMethodSimple.CallFromVirtualMachine}{section.1.26}
+\BOOKMARK [2][-]{subsection.1.26.6}{TThoriumHostMethodSimple.ClassMethod}{section.1.26}
+\BOOKMARK [1][-]{section.1.27}{TThoriumHostObjectType}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.27.1}{Description}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.2}{Method overview}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.3}{Property overview}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.4}{TThoriumHostObjectType.Create}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.5}{TThoriumHostObjectType.Destroy}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.6}{TThoriumHostObjectType.GetNeededMemoryAmount}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.7}{TThoriumHostObjectType.DuplicateValue}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.8}{TThoriumHostObjectType.AssignValue}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.9}{TThoriumHostObjectType.PerformOperation}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.10}{TThoriumHostObjectType.PerformEvaluation}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.11}{TThoriumHostObjectType.PerformNegation}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.12}{TThoriumHostObjectType.PerformNot}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.13}{TThoriumHostObjectType.DisposeValue}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.14}{TThoriumHostObjectType.IsTypeCompatible}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.15}{TThoriumHostObjectType.IsTypeOperationAvailable}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.16}{TThoriumHostObjectType.HasFields}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.17}{TThoriumHostObjectType.HasStaticFields}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.18}{TThoriumHostObjectType.HasIndicies}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.19}{TThoriumHostObjectType.FindMethod}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.20}{TThoriumHostObjectType.FieldID}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.21}{TThoriumHostObjectType.StaticFieldID}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.22}{TThoriumHostObjectType.IndexType}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.23}{TThoriumHostObjectType.StaticFieldType}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.24}{TThoriumHostObjectType.FieldType}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.25}{TThoriumHostObjectType.GetIndex}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.26}{TThoriumHostObjectType.SetIndex}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.27}{TThoriumHostObjectType.GetField}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.28}{TThoriumHostObjectType.GetStaticField}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.29}{TThoriumHostObjectType.SetField}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.30}{TThoriumHostObjectType.SetStaticField}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.31}{TThoriumHostObjectType.GetPropertyStoring}{section.1.27}
+\BOOKMARK [2][-]{subsection.1.27.32}{TThoriumHostObjectType.Name}{section.1.27}
+\BOOKMARK [1][-]{section.1.28}{TThoriumIdentifierTable}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.28.1}{Description}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.2}{Method overview}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.3}{Property overview}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.4}{TThoriumIdentifierTable.Create}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.5}{TThoriumIdentifierTable.Destroy}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.6}{TThoriumIdentifierTable.AddConstantIdentifier}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.7}{TThoriumIdentifierTable.AddVariableIdentifier}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.8}{TThoriumIdentifierTable.AddRegisterVariableIdentifier}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.9}{TThoriumIdentifierTable.AddFunctionIdentifier}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.10}{TThoriumIdentifierTable.ClearTable}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.11}{TThoriumIdentifierTable.ClearTableTo}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.12}{TThoriumIdentifierTable.FindIdentifier}{section.1.28}
+\BOOKMARK [2][-]{subsection.1.28.13}{TThoriumIdentifierTable.Count}{section.1.28}
+\BOOKMARK [1][-]{section.1.29}{TThoriumInstructions}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.29.1}{Description}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.2}{Method overview}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.3}{Property overview}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.4}{TThoriumInstructions.Create}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.5}{TThoriumInstructions.Destroy}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.6}{TThoriumInstructions.AppendCode}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.7}{TThoriumInstructions.DeleteInstructions}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.8}{TThoriumInstructions.Finish}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.9}{TThoriumInstructions.ClearCode}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.10}{TThoriumInstructions.RegisterAddressList}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.11}{TThoriumInstructions.UnRegisterAddressList}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.12}{TThoriumInstructions.AddInstructionPointer}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.13}{TThoriumInstructions.RemoveInstructionPointer}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.14}{TThoriumInstructions.DumpCodeBin}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.15}{TThoriumInstructions.DumpCodeStr}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.16}{TThoriumInstructions.LoadFromStream}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.17}{TThoriumInstructions.SaveToStream}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.18}{TThoriumInstructions.Count}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.19}{TThoriumInstructions.Capacity}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.20}{TThoriumInstructions.Instruction}{section.1.29}
+\BOOKMARK [2][-]{subsection.1.29.21}{TThoriumInstructions.Position}{section.1.29}
+\BOOKMARK [1][-]{section.1.30}{TThoriumIntList}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.30.1}{Description}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.2}{Method overview}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.3}{Property overview}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.4}{TThoriumIntList.Create}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.5}{TThoriumIntList.Destroy}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.6}{TThoriumIntList.AddEntry}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.7}{TThoriumIntList.FindValue}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.8}{TThoriumIntList.DeleteEntry}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.9}{TThoriumIntList.Items}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.10}{TThoriumIntList.Count}{section.1.30}
+\BOOKMARK [2][-]{subsection.1.30.11}{TThoriumIntList.Capacity}{section.1.30}
+\BOOKMARK [1][-]{section.1.31}{TThoriumIntStack}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.31.1}{Description}{section.1.31}
+\BOOKMARK [2][-]{subsection.1.31.2}{Method overview}{section.1.31}
+\BOOKMARK [2][-]{subsection.1.31.3}{TThoriumIntStack.Push}{section.1.31}
+\BOOKMARK [2][-]{subsection.1.31.4}{TThoriumIntStack.Pop}{section.1.31}
+\BOOKMARK [1][-]{section.1.32}{TThoriumJumpList}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.32.1}{Description}{section.1.32}
+\BOOKMARK [2][-]{subsection.1.32.2}{Method overview}{section.1.32}
+\BOOKMARK [2][-]{subsection.1.32.3}{TThoriumJumpList.FillAddresses}{section.1.32}
+\BOOKMARK [2][-]{subsection.1.32.4}{TThoriumJumpList.ChangeAddresses}{section.1.32}
+\BOOKMARK [1][-]{section.1.33}{TThoriumLibrary}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.33.1}{Description}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.2}{Method overview}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.3}{Property overview}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.4}{TThoriumLibrary.Create}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.5}{TThoriumLibrary.Destroy}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.6}{TThoriumLibrary.GetConstant}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.7}{TThoriumLibrary.GetConstantCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.8}{TThoriumLibrary.GetHostFunction}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.9}{TThoriumLibrary.GetHostFunctionCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.10}{TThoriumLibrary.GetHostType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.11}{TThoriumLibrary.GetHostTypeCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.12}{TThoriumLibrary.GetLibraryProperty}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.13}{TThoriumLibrary.GetLibraryPropertyCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.14}{TThoriumLibrary.GetRTTIType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.15}{TThoriumLibrary.GetRTTITypeCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.16}{TThoriumLibrary.PrecompileFunctions}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.17}{TThoriumLibrary.AddDependency}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.18}{TThoriumLibrary.ClearAll}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.19}{TThoriumLibrary.ClearFunctions}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.20}{TThoriumLibrary.ClearTypes}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.21}{TThoriumLibrary.DeleteHostFunction}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.22}{TThoriumLibrary.DeleteHostType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.23}{TThoriumLibrary.GetName}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.24}{TThoriumLibrary.InitializeLibrary}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.25}{TThoriumLibrary.RegisterConstant}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.26}{TThoriumLibrary.RegisterNativeCallFunction}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.27}{TThoriumLibrary.RegisterNativeCallMethodAsFunction}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.28}{TThoriumLibrary.RegisterObjectType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.29}{TThoriumLibrary.RegisterPropertyCallback}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.30}{TThoriumLibrary.RegisterPropertyCustom}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.31}{TThoriumLibrary.RegisterPropertyDirect}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.32}{TThoriumLibrary.RegisterPropertyDirectCallback}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.33}{TThoriumLibrary.RegisterRTTIType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.34}{TThoriumLibrary.RegisterSimpleMethod}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.35}{TThoriumLibrary.DeepFindHostType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.36}{TThoriumLibrary.DeepFindRTTIType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.37}{TThoriumLibrary.DeepFindRTTITypeByClass}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.38}{TThoriumLibrary.FindConstant}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.39}{TThoriumLibrary.FindHostFunction}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.40}{TThoriumLibrary.FindHostType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.41}{TThoriumLibrary.FindProperty}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.42}{TThoriumLibrary.FindRTTIType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.43}{TThoriumLibrary.FindRTTITypeByClass}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.44}{TThoriumLibrary.IndexOfConstant}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.45}{TThoriumLibrary.IndexOfHostFunction}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.46}{TThoriumLibrary.IndexOfHostType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.47}{TThoriumLibrary.IndexOfProperty}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.48}{TThoriumLibrary.IndexOfRTTIType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.49}{TThoriumLibrary.Constant}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.50}{TThoriumLibrary.ConstantCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.51}{TThoriumLibrary.HostFunction}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.52}{TThoriumLibrary.HostFunctionCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.53}{TThoriumLibrary.HostType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.54}{TThoriumLibrary.HostTypeCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.55}{TThoriumLibrary.LibraryProperty}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.56}{TThoriumLibrary.LibraryPropertyCount}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.57}{TThoriumLibrary.RTTIType}{section.1.33}
+\BOOKMARK [2][-]{subsection.1.33.58}{TThoriumLibrary.RTTITypeCount}{section.1.33}
+\BOOKMARK [1][-]{section.1.34}{TThoriumLibraryConstant}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.34.1}{Description}{section.1.34}
+\BOOKMARK [1][-]{section.1.35}{TThoriumLibraryProperty}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.35.1}{Description}{section.1.35}
+\BOOKMARK [2][-]{subsection.1.35.2}{Method overview}{section.1.35}
+\BOOKMARK [2][-]{subsection.1.35.3}{TThoriumLibraryProperty.Create}{section.1.35}
+\BOOKMARK [2][-]{subsection.1.35.4}{TThoriumLibraryProperty.GetValue}{section.1.35}
+\BOOKMARK [2][-]{subsection.1.35.5}{TThoriumLibraryProperty.GetStatic}{section.1.35}
+\BOOKMARK [2][-]{subsection.1.35.6}{TThoriumLibraryProperty.GetType}{section.1.35}
+\BOOKMARK [2][-]{subsection.1.35.7}{TThoriumLibraryProperty.SetValue}{section.1.35}
+\BOOKMARK [1][-]{section.1.36}{TThoriumLibraryPropertyCallback}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.36.1}{Description}{section.1.36}
+\BOOKMARK [2][-]{subsection.1.36.2}{Method overview}{section.1.36}
+\BOOKMARK [2][-]{subsection.1.36.3}{TThoriumLibraryPropertyCallback.Create}{section.1.36}
+\BOOKMARK [2][-]{subsection.1.36.4}{TThoriumLibraryPropertyCallback.CalcHash}{section.1.36}
+\BOOKMARK [2][-]{subsection.1.36.5}{TThoriumLibraryPropertyCallback.GetValue}{section.1.36}
+\BOOKMARK [2][-]{subsection.1.36.6}{TThoriumLibraryPropertyCallback.GetStatic}{section.1.36}
+\BOOKMARK [2][-]{subsection.1.36.7}{TThoriumLibraryPropertyCallback.GetType}{section.1.36}
+\BOOKMARK [2][-]{subsection.1.36.8}{TThoriumLibraryPropertyCallback.SetValue}{section.1.36}
+\BOOKMARK [1][-]{section.1.37}{TThoriumLibraryPropertyDirect}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.37.1}{Description}{section.1.37}
+\BOOKMARK [2][-]{subsection.1.37.2}{Method overview}{section.1.37}
+\BOOKMARK [2][-]{subsection.1.37.3}{TThoriumLibraryPropertyDirect.Create}{section.1.37}
+\BOOKMARK [2][-]{subsection.1.37.4}{TThoriumLibraryPropertyDirect.Destroy}{section.1.37}
+\BOOKMARK [2][-]{subsection.1.37.5}{TThoriumLibraryPropertyDirect.CalcHash}{section.1.37}
+\BOOKMARK [2][-]{subsection.1.37.6}{TThoriumLibraryPropertyDirect.GetValue}{section.1.37}
+\BOOKMARK [2][-]{subsection.1.37.7}{TThoriumLibraryPropertyDirect.GetStatic}{section.1.37}
+\BOOKMARK [2][-]{subsection.1.37.8}{TThoriumLibraryPropertyDirect.GetType}{section.1.37}
+\BOOKMARK [2][-]{subsection.1.37.9}{TThoriumLibraryPropertyDirect.SetValue}{section.1.37}
+\BOOKMARK [1][-]{section.1.38}{TThoriumLibraryPropertyDirectSetCallback}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.38.1}{Description}{section.1.38}
+\BOOKMARK [2][-]{subsection.1.38.2}{Method overview}{section.1.38}
+\BOOKMARK [2][-]{subsection.1.38.3}{Property overview}{section.1.38}
+\BOOKMARK [2][-]{subsection.1.38.4}{TThoriumLibraryPropertyDirectSetCallback.Create}{section.1.38}
+\BOOKMARK [2][-]{subsection.1.38.5}{TThoriumLibraryPropertyDirectSetCallback.SetValue}{section.1.38}
+\BOOKMARK [2][-]{subsection.1.38.6}{TThoriumLibraryPropertyDirectSetCallback.OnPropertySet}{section.1.38}
+\BOOKMARK [1][-]{section.1.39}{TThoriumModule}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.39.1}{Description}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.2}{Method overview}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.3}{Property overview}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.4}{TThoriumModule.Create}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.5}{TThoriumModule.Destroy}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.6}{TThoriumModule.CalcHash}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.7}{TThoriumModule.FillHeader}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.8}{TThoriumModule.FindHostFunction}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.9}{TThoriumModule.FindHostObjectType}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.10}{TThoriumModule.FindHostRTTIType}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.11}{TThoriumModule.FindLibraryConstant}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.12}{TThoriumModule.FindLibraryProperty}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.13}{TThoriumModule.InternalLoadFromStream}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.14}{TThoriumModule.InternalSaveToStream}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.15}{TThoriumModule.CompileFromStream}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.16}{TThoriumModule.Dump}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.17}{TThoriumModule.DumpCodeStr}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.18}{TThoriumModule.DumpLibStr}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.19}{TThoriumModule.ExecuteMain}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.20}{TThoriumModule.FindPublicFunction}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.21}{TThoriumModule.IndexOfPublicFunction}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.22}{TThoriumModule.IsTypeCompatible}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.23}{TThoriumModule.IsTypeOperationAvailable}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.24}{TThoriumModule.LoadFromStream}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.25}{TThoriumModule.SaveToStream}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.26}{TThoriumModule.Compiled}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.27}{TThoriumModule.Compress}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.28}{TThoriumModule.InstructionCount}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.29}{TThoriumModule.LastCompilerError}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.30}{TThoriumModule.LibraryString}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.31}{TThoriumModule.LibraryStringCount}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.32}{TThoriumModule.Name}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.33}{TThoriumModule.OptimizedInstructions}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.34}{TThoriumModule.PublicFunction}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.35}{TThoriumModule.PublicFunctionCount}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.36}{TThoriumModule.PublicVariable}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.37}{TThoriumModule.PublicVariableCount}{section.1.39}
+\BOOKMARK [2][-]{subsection.1.39.38}{TThoriumModule.Thorium}{section.1.39}
+\BOOKMARK [1][-]{section.1.40}{TThoriumParameters}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.40.1}{Description}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.2}{Method overview}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.3}{Property overview}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.4}{TThoriumParameters.Create}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.5}{TThoriumParameters.Destroy}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.6}{TThoriumParameters.AddParameter}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.7}{TThoriumParameters.Clear}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.8}{TThoriumParameters.RemoveParameter}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.9}{TThoriumParameters.Duplicate}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.10}{TThoriumParameters.GetParameterSpec}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.11}{TThoriumParameters.LoadFromStream}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.12}{TThoriumParameters.SaveToStream}{section.1.40}
+\BOOKMARK [2][-]{subsection.1.40.13}{TThoriumParameters.Count}{section.1.40}
+\BOOKMARK [1][-]{section.1.41}{TThoriumPersistent}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.41.1}{Description}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.2}{Method overview}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.3}{TThoriumPersistent.Create}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.4}{TThoriumPersistent.FreeReference}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.5}{TThoriumPersistent.\137AddRef}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.6}{TThoriumPersistent.\137Release}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.7}{TThoriumPersistent.QueryInterface}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.8}{TThoriumPersistent.GetStaticMethodList}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.9}{TThoriumPersistent.GetMethodList}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.10}{TThoriumPersistent.EnableHostControl}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.11}{TThoriumPersistent.DisableHostControl}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.12}{TThoriumPersistent.GetReference}{section.1.41}
+\BOOKMARK [2][-]{subsection.1.41.13}{TThoriumPersistent.GetReferenceCount}{section.1.41}
+\BOOKMARK [1][-]{section.1.42}{TThoriumPublicValue}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.42.1}{Description}{section.1.42}
+\BOOKMARK [2][-]{subsection.1.42.2}{Method overview}{section.1.42}
+\BOOKMARK [2][-]{subsection.1.42.3}{Property overview}{section.1.42}
+\BOOKMARK [2][-]{subsection.1.42.4}{TThoriumPublicValue.Create}{section.1.42}
+\BOOKMARK [2][-]{subsection.1.42.5}{TThoriumPublicValue.LoadFromStream}{section.1.42}
+\BOOKMARK [2][-]{subsection.1.42.6}{TThoriumPublicValue.SaveToStream}{section.1.42}
+\BOOKMARK [2][-]{subsection.1.42.7}{TThoriumPublicValue.Module}{section.1.42}
+\BOOKMARK [2][-]{subsection.1.42.8}{TThoriumPublicValue.Name}{section.1.42}
+\BOOKMARK [1][-]{section.1.43}{TThoriumRTTIObjectType}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.43.1}{Description}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.2}{Method overview}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.3}{Property overview}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.4}{TThoriumRTTIObjectType.Create}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.5}{TThoriumRTTIObjectType.Destroy}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.6}{TThoriumRTTIObjectType.GetNeededMemoryAmount}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.7}{TThoriumRTTIObjectType.DuplicateValue}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.8}{TThoriumRTTIObjectType.DisposeValue}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.9}{TThoriumRTTIObjectType.IsTypeCompatible}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.10}{TThoriumRTTIObjectType.IsTypeOperationAvailable}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.11}{TThoriumRTTIObjectType.HasFields}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.12}{TThoriumRTTIObjectType.HasStaticFields}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.13}{TThoriumRTTIObjectType.HasIndicies}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.14}{TThoriumRTTIObjectType.FindMethod}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.15}{TThoriumRTTIObjectType.CalcHash}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.16}{TThoriumRTTIObjectType.FieldID}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.17}{TThoriumRTTIObjectType.StaticFieldID}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.18}{TThoriumRTTIObjectType.FieldType}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.19}{TThoriumRTTIObjectType.StaticFieldType}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.20}{TThoriumRTTIObjectType.GetField}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.21}{TThoriumRTTIObjectType.SetField}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.22}{TThoriumRTTIObjectType.GetPropertyStoring}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.23}{TThoriumRTTIObjectType.SetPropertyStoring}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.24}{TThoriumRTTIObjectType.NewNativeCallMethod}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.25}{TThoriumRTTIObjectType.NewNativeCallStaticMethod}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.26}{TThoriumRTTIObjectType.NewNativeCallStaticFunction}{section.1.43}
+\BOOKMARK [2][-]{subsection.1.43.27}{TThoriumRTTIObjectType.BaseClass}{section.1.43}
+\BOOKMARK [1][-]{section.1.44}{TThoriumScanner}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.44.1}{Description}{section.1.44}
+\BOOKMARK [2][-]{subsection.1.44.2}{Method overview}{section.1.44}
+\BOOKMARK [2][-]{subsection.1.44.3}{Property overview}{section.1.44}
+\BOOKMARK [2][-]{subsection.1.44.4}{TThoriumScanner.Create}{section.1.44}
+\BOOKMARK [2][-]{subsection.1.44.5}{TThoriumScanner.Destroy}{section.1.44}
+\BOOKMARK [2][-]{subsection.1.44.6}{TThoriumScanner.ScanForSymbol}{section.1.44}
+\BOOKMARK [2][-]{subsection.1.44.7}{TThoriumScanner.CurrentSym}{section.1.44}
+\BOOKMARK [2][-]{subsection.1.44.8}{TThoriumScanner.CurrentStr}{section.1.44}
+\BOOKMARK [2][-]{subsection.1.44.9}{TThoriumScanner.CurrentLine}{section.1.44}
+\BOOKMARK [1][-]{section.1.45}{TThoriumStack}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.45.1}{Description}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.2}{Method overview}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.3}{Property overview}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.4}{TThoriumStack.Create}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.5}{TThoriumStack.Destroy}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.6}{TThoriumStack.FastGetStackEntry}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.7}{TThoriumStack.GetTopStackEntry}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.8}{TThoriumStack.GetTop}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.9}{TThoriumStack.Prealloc}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.10}{TThoriumStack.Push}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.11}{TThoriumStack.Pop}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.12}{TThoriumStack.PopTop}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.13}{TThoriumStack.ClearStack}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.14}{TThoriumStack.StackEntry}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.15}{TThoriumStack.EntryCount}{section.1.45}
+\BOOKMARK [2][-]{subsection.1.45.16}{TThoriumStack.Capacity}{section.1.45}
+\BOOKMARK [1][-]{section.1.46}{TThoriumVariable}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.46.1}{Description}{section.1.46}
+\BOOKMARK [2][-]{subsection.1.46.2}{Method overview}{section.1.46}
+\BOOKMARK [2][-]{subsection.1.46.3}{Property overview}{section.1.46}
+\BOOKMARK [2][-]{subsection.1.46.4}{TThoriumVariable.Create}{section.1.46}
+\BOOKMARK [2][-]{subsection.1.46.5}{TThoriumVariable.LoadFromStream}{section.1.46}
+\BOOKMARK [2][-]{subsection.1.46.6}{TThoriumVariable.SaveToStream}{section.1.46}
+\BOOKMARK [2][-]{subsection.1.46.7}{TThoriumVariable.IsStatic}{section.1.46}
+\BOOKMARK [2][-]{subsection.1.46.8}{TThoriumVariable.StackPosition}{section.1.46}
+\BOOKMARK [2][-]{subsection.1.46.9}{TThoriumVariable.TypeSpec}{section.1.46}
+\BOOKMARK [1][-]{section.1.47}{TThoriumVirtualMachine}{chapter.1}
+\BOOKMARK [2][-]{subsection.1.47.1}{Description}{section.1.47}
+\BOOKMARK [2][-]{subsection.1.47.2}{Method overview}{section.1.47}
+\BOOKMARK [2][-]{subsection.1.47.3}{TThoriumVirtualMachine.Create}{section.1.47}
+\BOOKMARK [2][-]{subsection.1.47.4}{TThoriumVirtualMachine.Destroy}{section.1.47}
+\BOOKMARK [2][-]{subsection.1.47.5}{TThoriumVirtualMachine.DumpStack}{section.1.47}
+\BOOKMARK [2][-]{subsection.1.47.6}{TThoriumVirtualMachine.GetStack}{section.1.47}
+\BOOKMARK [2][-]{subsection.1.47.7}{TThoriumVirtualMachine.Execute}{section.1.47}

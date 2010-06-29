@@ -1,0 +1,17 @@
+public int A;
+public string B;
+public float C;
+
+// require "testscript.lib", "stdlib";
+loadlibrary "core.std";
+loadlibrary "core.std.io";
+loadmodule "testscript.lib";
+
+public void main()
+{
+  B = "Hallo Welt!";
+  A = 10;
+  C = A;
+  
+  test();
+}
