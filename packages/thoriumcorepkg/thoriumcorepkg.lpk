@@ -25,7 +25,7 @@
     <Description Value="Core package of Thorium Scripting Language, containing the main engine and global constants."/>
     <License Value="MPL 1.1"/>
     <Version Major="1" Release="6"/>
-    <Files Count="7">
+    <Files Count="8">
       <Item1>
         <Filename Value="thorium.pas"/>
         <UnitName Value="Thorium"/>
@@ -54,6 +54,10 @@
         <Filename Value="Thorium_InstructionConstructors.inc"/>
         <Type Value="Binary"/>
       </Item7>
+      <Item8>
+        <Filename Value="thorium_objectinstructions.pas"/>
+        <UnitName Value="thorium_objectinstructions"/>
+      </Item8>
     </Files>
     <LazDoc Paths="/home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lazdoc/"/>
     <RequiredPkgs Count="1">
