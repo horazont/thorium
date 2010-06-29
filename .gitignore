@@ -1,0 +1,15 @@
+scripttest.lpi.bak
+scripttest.pas.bak
+backup
+lib
+*.bak
+releases
+other
+tools
+changes backup
+*~
+debugging
+heaptrc.txt
+*.log
+*.tsb
+scripttest

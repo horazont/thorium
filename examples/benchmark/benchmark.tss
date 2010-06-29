@@ -1,0 +1,228 @@
+/*******************************************************************************
+*** THORIUM SCRIPTING LANGUAGE - by Jonas Wielicki
+********************************************************************************
+** File Name: benchmark.tss
+** Last update: 2009-07-08
+This file is part of the Thorium Scripting Language Project.
+
+The contents of this file are subject to the Mozilla Public License
+Version 1.1 (the "License"); you may not use this file except in
+compliance with the License. You may obtain a copy of the License at
+http://www.mozilla.org/MPL/
+
+Software distributed under the License is distributed on an "AS IS"
+basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+License for the specific language governing rights and limitations
+under the License.
+
+Alternatively, the contents of this file may be used under the terms
+of the GNU General Public license (the  "GPL License"), in which case the
+provisions of GPL License are applicable instead of those
+above.
+
+For feedback and questions about Thorium Scripting Language please mail me,
+Jonas Wielicki:
+j.wielicki@sotecware.net
+*******************************************************************************/
+
+float fac = 10.0;
+float f;
+
+private int t_formax()
+{
+  return 1000000;
+}
+
+public void t_fortest1()
+{
+  for (int i=0;i<1000000;i++)
+  {
+    f = i / fac;
+  }
+}
+
+public void t_fortest2()
+{
+  for (int i=0;i<2000000;i++)
+  {
+    f = i / fac;
+  }
+}
+
+public void t_fortest3()
+{
+  for (int i=0;i<3000000;i++)
+  {
+    f = i / fac;
+  }
+}
+
+public void t_fortest4()
+{
+  for (int i=0;i<t_formax();i++)
+  {
+    f = i / fac;
+  }
+}
+
+public void t_whiletest1()
+{
+  int i=0;
+  while (i<1000000)
+  {
+    f = i / fac;
+    i++;
+  }
+}
+
+public void t_whiletest2()
+{
+  int i=0;
+  while (i<2000000)
+  {
+    f = i / fac;
+    i++;
+  }
+}
+
+public void t_whiletest3()
+{
+  int i=0;
+  while (i<3000000)
+  {
+    f = i / fac;
+    i++;
+  }
+}
+
+public void t_whiletest4()
+{
+  int i=0;
+  while (i<t_formax())
+  {
+    f = i / fac;
+    i++;
+  }
+}
+
+private void t_recursion_test1_recursive(int depth)
+{
+  if (depth >= 100000)
+    return;
+  t_recursion_test1_recursive(depth+1);
+}
+
+public void t_recursion_test1()
+{
+  t_recursion_test1_recursive(1);
+}
+
+public void ld_test1()
+{
+  for (int i=0;i<1000000;i++)
+  {
+  
+  }
+}
+
+public void ld_test2()
+{
+  for (int i=0;i<2000000;i++)
+  {
+  
+  }
+}
+
+public void ld_test3()
+{
+  for (int i=0;i<3000000;i++)
+  {
+  
+  }
+}
+
+public void ld_test4()
+{
+  for (int i=0;i<1000000;i++)
+  {
+    if (i mod 2 == 0) {}
+    if (i mod 3 == 0) {}
+    if (i mod 4 == 0) {}
+  }
+}
+
+public void ld_test5()
+{
+  for (int i=0;i<2000000;i++)
+  {
+    if (i mod 2 == 0) {}
+    if (i mod 3 == 0) {}
+    if (i mod 4 == 0) {}
+  }
+}
+
+public void ld_test6()
+{
+  for (int i=0;i<3000000;i++)
+  {
+    if (i mod 2 == 0) {}
+    if (i mod 3 == 0) {}
+    if (i mod 4 == 0) {}
+  }
+}
+
+public void ld_test7()
+{
+  for (int i=0;i<1000000;i++)
+  {
+    if (i mod 2 == 0) {}
+    if (i mod 3 == 0) {}
+    if (i mod 4 == 0) {}
+    if (i mod 5 == 0) {}
+    if (i mod 6 == 0) {}
+    if (i mod 7 == 0) {}
+    if (i mod 8 == 0) {}
+    if (i mod 9 == 0) {}
+    if (i mod 10 == 0) {}
+  }
+}
+
+public void ld_test8()
+{
+  for (int i=0;i<2000000;i++)
+  {
+    if (i mod 2 == 0) {}
+    if (i mod 3 == 0) {}
+    if (i mod 4 == 0) {}
+    if (i mod 5 == 0) {}
+    if (i mod 6 == 0) {}
+    if (i mod 7 == 0) {}
+    if (i mod 8 == 0) {}
+    if (i mod 9 == 0) {}
+    if (i mod 10 == 0) {}
+  }
+}
+
+public void ld_test9()
+{
+  for (int i=0;i<3000000;i++)
+  {
+    if (i mod 2 == 0) {}
+    if (i mod 3 == 0) {}
+    if (i mod 4 == 0) {}
+    if (i mod 5 == 0) {}
+    if (i mod 6 == 0) {}
+    if (i mod 7 == 0) {}
+    if (i mod 8 == 0) {}
+    if (i mod 9 == 0) {}
+    if (i mod 10 == 0) {}
+  }
+}
+
+public void compare_test()
+{
+  for (int i=0;i<1000000;i++)
+  {
+    f = i / fac;
+  }
+}

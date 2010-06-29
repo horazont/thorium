@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="7"/>
+    <General>
+      <Flags>
+        <MainUnitHasUsesSectionForAllUnits Value="False"/>
+        <MainUnitHasCreateFormStatements Value="False"/>
+        <MainUnitHasTitleStatement Value="False"/>
+      </Flags>
+      <MainUnit Value="0"/>
+      <TargetFileExt Value=""/>
+      <Title Value="rttisample"/>
+      <Icon Value="0"/>
+      <UseXPManifest Value="True"/>
+      <ActiveEditorIndexAtStart Value="3"/>
+    </General>
+    <VersionInfo>
+      <ProjectVersion Value=""/>
+      <Language Value=""/>
+      <CharSet Value=""/>
+    </VersionInfo>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|ppw|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="thoriumlibpkg"/>
+        <MinVersion Minor="2" Valid="True"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="thoriumcorepkg"/>
+        <MinVersion Major="1" Valid="True"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="11">
+      <Unit0>
+        <Filename Value="rttisample.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="rttisample"/>
+        <CursorPos X="60" Y="41"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="0"/>
+        <UsageCount Value="43"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <UnitName Value="Thorium"/>
+        <CursorPos X="1" Y="14842"/>
+        <TopLine Value="14817"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="template.tss"/>
+        <CursorPos X="40" Y="6"/>
+        <TopLine Value="1"/>
+        <UsageCount Value="8"/>
+        <SyntaxHighlighter Value="None"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="../../packages/thoriumlibpkg/thoriumlibstdio.pas"/>
+        <UnitName Value="ThoriumLibStdIO"/>
+        <CursorPos X="99" Y="72"/>
+        <TopLine Value="44"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="rttisample.tss"/>
+        <IsPartOfProject Value="True"/>
+        <CursorPos X="42" Y="25"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="5"/>
+        <UsageCount Value="43"/>
+        <Loaded Value="True"/>
+        <SyntaxHighlighter Value="None"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="libcustom.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="libcustom"/>
+        <CursorPos X="94" Y="6"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="43"/>
+        <Loaded Value="True"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="../../packages/thoriumcorepkg/thorium_globals.pas"/>
+        <UnitName Value="Thorium_Globals"/>
+        <CursorPos X="38" Y="286"/>
+        <TopLine Value="246"/>
+        <UsageCount Value="15"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="../../packages/thoriumcorepkg/CHANGELOG.txt"/>
+        <CursorPos X="53" Y="3"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="15"/>
+        <Loaded Value="True"/>
+        <SyntaxHighlighter Value="None"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="../../packages/thoriumlibpkg/thoriumlibstreams.pas"/>
+        <UnitName Value="ThoriumLibStreams"/>
+        <CursorPos X="38" Y="59"/>
+        <TopLine Value="29"/>
+        <UsageCount Value="9"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="../../packages/thoriumlibpkg/thoriumlibstring.pas"/>
+        <UnitName Value="ThoriumLibString"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="53"/>
+        <UsageCount Value="9"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="../../packages/thoriumlibpkg/thoriumlibstd.pas"/>
+        <UnitName Value="ThoriumLibStd"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <UsageCount Value="9"/>
+      </Unit10>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="1409" Column="61" TopLine="1384"/>
+      </Position1>
+      <Position2>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="10318" Column="46" TopLine="10317"/>
+      </Position2>
+      <Position3>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="14351" Column="72" TopLine="14322"/>
+      </Position3>
+      <Position4>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position4>
+      <Position5>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="1946" Column="16" TopLine="1921"/>
+      </Position5>
+      <Position6>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="1949" Column="33" TopLine="1921"/>
+      </Position6>
+      <Position7>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="1951" Column="28" TopLine="1921"/>
+      </Position7>
+      <Position8>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="2036" Column="34" TopLine="1997"/>
+      </Position8>
+      <Position9>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="5389" Column="45" TopLine="5364"/>
+      </Position9>
+      <Position10>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="15350" Column="19" TopLine="15325"/>
+      </Position10>
+      <Position11>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="15352" Column="35" TopLine="15325"/>
+      </Position11>
+      <Position12>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="15355" Column="64" TopLine="15325"/>
+      </Position12>
+      <Position13>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="15356" Column="45" TopLine="15325"/>
+      </Position13>
+      <Position14>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="16692" Column="47" TopLine="16638"/>
+      </Position14>
+      <Position15>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="11157" Column="27" TopLine="11131"/>
+      </Position15>
+      <Position16>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="2022" Column="49" TopLine="1986"/>
+      </Position16>
+      <Position17>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="11183" Column="7" TopLine="11158"/>
+      </Position17>
+      <Position18>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="11157" Column="25" TopLine="11127"/>
+      </Position18>
+      <Position19>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="1950" Column="48" TopLine="1944"/>
+      </Position19>
+      <Position20>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="13858" Column="59" TopLine="13820"/>
+      </Position20>
+      <Position21>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="9632" Column="78" TopLine="9598"/>
+      </Position21>
+      <Position22>
+        <Filename Value="../../packages/thoriumcorepkg/CHANGELOG.txt"/>
+        <Caret Line="5" Column="29" TopLine="1"/>
+      </Position22>
+      <Position23>
+        <Filename Value="libcustom.pas"/>
+        <Caret Line="107" Column="26" TopLine="78"/>
+      </Position23>
+      <Position24>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="93" Column="50" TopLine="71"/>
+      </Position24>
+      <Position25>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="4972" Column="1" TopLine="4947"/>
+      </Position25>
+      <Position26>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="9459" Column="70" TopLine="9433"/>
+      </Position26>
+      <Position27>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="14842" Column="1" TopLine="14817"/>
+      </Position27>
+      <Position28>
+        <Filename Value="../../packages/thoriumlibpkg/thoriumlibstdio.pas"/>
+        <Caret Line="69" Column="75" TopLine="43"/>
+      </Position28>
+      <Position29>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="6697" Column="1" TopLine="6672"/>
+      </Position29>
+      <Position30>
+        <Filename Value="../../packages/thoriumcorepkg/thorium.pas"/>
+        <Caret Line="14842" Column="1" TopLine="14817"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="8"/>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)/"/>
+      <UnitOutputDirectory Value="$ProjPath()/lib/$TargetCPU()-$TargetOS()"/>
+    </SearchPaths>
+    <CodeGeneration>
+      <TargetCPU Value="x86_64"/>
+      <TargetOS Value="Linux"/>
+    </CodeGeneration>
+    <Other>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

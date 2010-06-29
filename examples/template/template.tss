@@ -1,0 +1,31 @@
+/*******************************************************************************
+*** THORIUM SCRIPTING LANGUAGE - by Jonas Wielicki
+********************************************************************************
+** File Name: template.tss
+** Last update: 2009-07-08
+This file is part of the Thorium Scripting Language Project.
+
+As this file is part of an example, you may do with it what you want, except
+sue me for anything I've coded here. When you are going to redistribute this
+file in its original functionallity (that is, the same effective code, removing
+comments or this notice does not count), you must name the source where you
+got it.
+
+For feedback and questions about Thorium Scripting Language please mail me,
+Jonas Wielicki:
+j.wielicki@sotecware.net
+*******************************************************************************/
+
+loadlibrary "core.std"
+loadlibrary "core.std.io"
+
+private void test(float i)
+{
+
+}
+
+public void main()
+{
+  test(1);
+  printf("Script successfully called.\n");
+}

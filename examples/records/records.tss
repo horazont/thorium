@@ -1,0 +1,28 @@
+loadlibrary "example.records"
+loadlibrary "core.std.io"
+
+public void testSimple()
+{
+  TSimpleRecord rec;
+  rec.a = 0xF0;
+  rec.b = 0xF000;
+  rec.c = 0xF0000000;
+  rec.d = 0xF000000000000000;
+  printf("rec.a = %x; rec.b = %x\n", rec.a, rec.b);
+  printf("rec.c = %x; rec.d = %x\n", rec.c, rec.d);
+  printSimpleRecord(rec);
+}
+
+public void testExtended()
+{
+  TStringRecord rec;
+  rec.a = 0xF0;
+  rec.s = "Hello World!";
+  printf("rec.a = %d\n", rec.a);
+  printf("rec.s = \"%s\"\n", rec.s);
+}
+
+public void testAsParameter(TStringRecord rec)
+{
+  printf("rec.s = \"%s\"\n", rec.s);
+}

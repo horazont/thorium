@@ -1,0 +1,53 @@
+/*******************************************************************************
+*** THORIUM SCRIPTING LANGUAGE - by Jonas Wielicki
+********************************************************************************
+** File Name: template.tss
+** Last update: 2009-08-15
+This file is part of the Thorium Scripting Language Project.
+
+As this file is part of an example, you may do with it what you want, except
+sue me for anything I've coded here. When you are going to redistribute this
+file in its original functionallity (that is, the same effective code, removing
+comments or this notice does not count), you must name the source where you
+got it.
+
+For feedback and questions about Thorium Scripting Language please mail me,
+Jonas Wielicki:
+j.wielicki@sotecware.net
+*******************************************************************************/
+
+loadlibrary "core.std.io"
+loadlibrary "libcustom"
+
+public void main()
+{
+  TUser user;
+  string username;
+  string s;
+  int i;
+  float f;
+  printf("Welcome to FUMS (Fake User Management System)\nNew user.\nEnter user name: ");
+  username = readstr();
+  printf("Verifying user name ...");
+  if (!VerifyUserName(username))
+  {
+    printf(" invalid.\nUser name must consist only of chars from a-z and their\nuppercase variants.\nExit because of error.");
+    return;
+  }
+  user = TUser.create(username);
+  printf(" valid.\nReal name: ");
+  s = readstr();
+  user.RealName = s;
+  printf("Age: ");
+  i = readint();
+  user.Age = i;
+  printf("Body height [m]: ");
+  f = readfloat();
+  user.BodyHeight = f;
+  printf("Hobbies: ");
+  s = readstr();
+  user.Hobbies = s;
+  printf("\n\n");
+  user.DumpUser();
+  printf("Done.\n");
+}
