@@ -5,7 +5,7 @@ unit Thorium_DefaultCompiler;
 interface
 
 uses
-  Classes, SysUtils, Thorium, Thorium_Globals, Thorium_Utils;
+  Classes, SysUtils, Thorium, Thorium_Globals, Thorium_Utils, typinfo;
 
 type
   TThoriumDefaultSymbol = (
@@ -171,6 +171,8 @@ const
   );
 
 type
+  EThoriumCompilationError = class (EThoriumCompilerException);
+
   { TThoriumDefaultScanner }
 
   TThoriumDefaultScanner = class (TObject)
@@ -205,16 +207,12 @@ type
     FScanner: TThoriumDefaultScanner;
   protected
     procedure CompilerError(const Msg: String); override;
+    procedure CompilerError(const Msg: String; X, Y: Integer); override;
     function ExpectSymbol(SymbolMask: TThoriumDefaultSymbols; ThrowError: Boolean = True): Boolean;
     function GenCode(AInstruction: TThoriumInstruction): Integer; override;
-    procedure Proceed;
+    function Proceed(ExpectMask: TThoriumDefaultSymbols = []; ThrowError: Boolean = False): Boolean;
   protected
-    procedure GenericDeclaration(IsStatic: Boolean;
-      VisibilityLevel: TThoriumVisibilityLevel; var Offset: Integer);
     procedure Module;
-    function QualifyIdentifier(out Ident: TThoriumQualifiedIdentifier;
-      AllowedKinds: TThoriumQualifiedIdentifierKinds;
-      TargetRegister: TThoriumRegisterID): Boolean;
   public
     function CompileFromStream(SourceStream: TStream;
        Flags: TThoriumCompilerFlags=[cfOptimize]): Boolean; override;
@@ -223,6 +221,18 @@ type
 implementation
 
 {$I Thorium_InstructionConstructors.inc}
+
+function SymbolMaskToStr(const Mask: TThoriumDefaultSymbols): String;
+var
+  Sym: TThoriumDefaultSymbol;
+begin
+  Result := '';
+  for Sym := Low(TThoriumDefaultSymbols) to High(TThoriumDefaultSymbols) do
+    if Sym in Mask then
+      Result += GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(Sym))+', ';
+  if Length(Result) > 0 then
+    Delete(Result, Length(Result)-2, 2);
+end;
 
 { TThoriumDefaultScanner }
 
@@ -519,6 +529,87 @@ begin
   if ATarget = nil then
     raise EThoriumCompilerException.Create('Compiler must have a target module.');
   inherited Create(ATarget);
+end;
+
+procedure TThoriumDefaultCompiler.CompilerError(const Msg: String);
+begin
+  CompilerError(Msg, FScanner.FX, FScanner.FLine);
+end;
+
+procedure TThoriumDefaultCompiler.CompilerError(const Msg: String; X, Y: Integer
+  );
+begin
+  raise EThoriumCompilationError.CreateFmt('%d|%d: %s', [X, Y, Msg]);
+end;
+
+function TThoriumDefaultCompiler.ExpectSymbol(
+  SymbolMask: TThoriumDefaultSymbols; ThrowError: Boolean): Boolean;
+begin
+  if SymbolMask = [] then
+    Exit(True);
+  Result := FCurrentSym in SymbolMask;
+  if not Result and ThrowError then
+    CompilerError('Unexpected symbol: '+GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(FCurrentSym))+'. Expected: '+SymbolMaskToStr(SymbolMask));
+end;
+
+function TThoriumDefaultCompiler.GenCode(AInstruction: TThoriumInstruction
+  ): Integer;
+begin
+  AInstruction.CodeLine := FScanner.FLine;
+  Result:=inherited GenCode(AInstruction);
+end;
+
+function TThoriumDefaultCompiler.Proceed(ExpectMask: TThoriumDefaultSymbols;
+  ThrowError: Boolean): Boolean;
+begin
+  Result := FScanner.NextSymbol(FCurrentSym, FCurrentStr);
+  if Result and (ExpectMask <> []) then
+    Result := ExpectSymbol(ExpectMask, ThrowError);
+end;
+
+procedure TThoriumDefaultCompiler.Module;
+var
+  IsStatic: Boolean;
+  Visibility: TThoriumVisibilityLevel;
+begin
+  IsStatic := False;
+  Visibility := vsPrivate;
+  while Proceed([tsLoadLibrary, tsLoadModule, tsIdentifier, tsPublic, tsStatic], False) do
+  begin
+    case FCurrentSym of
+      tsLoadModule:
+      begin
+        // ToDo: Load module
+      end;
+      tsLoadLibrary:
+      begin
+        // ToDo: Load library
+      end;
+      tsStatic:
+      begin
+        // Use default value for visibility
+        Visibility := vsPrivate;
+        IsStatic := True;
+        Proceed([tsIdentifier], True);
+      end;
+      tsPublic, tsPrivate:
+      begin
+        if FCurrentSym = tsPublic then
+          Visibility := vsPublic
+        else
+          Visibility := vsPrivate;
+        Proceed([tsIdentifier, tsStatic], True);
+        if FCurrentSym = tsStatic then
+        begin
+          IsStatic := True;
+          Proceed([tsIdentifier], True);
+        end
+        else
+          IsStatic := False;
+      end;
+    end;
+  end;
+  ExpectSymbol([tsUnknown], True);
 end;
 
 function TThoriumDefaultCompiler.CompileFromStream(SourceStream: TStream;

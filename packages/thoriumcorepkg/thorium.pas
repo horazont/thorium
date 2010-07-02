@@ -1627,7 +1627,7 @@ type
     function AddPublicVariable: TThoriumVariable;
     function AppendCode(ACodeArray: TThoriumInstructionArray): Integer;
     procedure CompilerError(const Msg: String); virtual;
-    procedure CompilerError(const Msg: String; X, Y: Integer);
+    procedure CompilerError(const Msg: String; X, Y: Integer); virtual;
     procedure DumpState; virtual;
     function FindTableEntry(const Ident: String; out Entry: TThoriumTableEntry;
       out Module: TThoriumModule; RaiseError: Boolean = True; AllowFar: Boolean = True): Boolean; inline;

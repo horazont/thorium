@@ -21,19 +21,6 @@ type
 
   TThoriumStatementDynamicList = specialize TFPGList<TThoriumStatement>;
 
-  { TThoriumExpression }
-
-  TThoriumExpression = class (TObject)
-  public
-    function Evaluate: TThoriumValue; virtual; abstract;
-    function EvaluateStr: TThoriumString; virtual;
-    function EvaluateInt: TThoriumInteger; virtual;
-    function EvaluateFloat: TThoriumFloat; virtual;
-    procedure Execute; override;
-  end;
-
-  TThoriumExpressionDynamicList = specialize TFPGList<TThoriumStatement>;
-
   { TThoriumStatementList }
 
   TThoriumStatementList = class (TThoriumStatement)
@@ -47,6 +34,23 @@ type
     procedure AfterCompilation; override;
     procedure Execute; override;
   end;
+
+(******************************************************************************)
+// Expressions
+
+  { TThoriumExpression }
+
+  TThoriumExpression = class (TThoriumStatement)
+  public
+    function Evaluate: TThoriumValue; virtual; abstract;
+    function EvaluateStr: TThoriumString; virtual;
+    function EvaluateInt: TThoriumInteger; virtual;
+    function EvaluateFloat: TThoriumFloat; virtual;
+    procedure Execute; override;
+  end;
+  TThoriumExpressionDynamicList = specialize TFPGList<TThoriumStatement>;
+
+  TThorium
 
 implementation
 
