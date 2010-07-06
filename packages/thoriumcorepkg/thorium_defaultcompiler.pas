@@ -213,6 +213,8 @@ type
     function Proceed(ExpectMask: TThoriumDefaultSymbols = []; ThrowError: Boolean = False): Boolean;
   protected
     procedure Module;
+    function SolveIdentifier(TargetRegister: Word;
+      AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
   public
     function CompileFromStream(SourceStream: TStream;
        Flags: TThoriumCompilerFlags=[cfOptimize]): Boolean; override;
@@ -555,8 +557,7 @@ end;
 function TThoriumDefaultCompiler.GenCode(AInstruction: TThoriumInstruction
   ): Integer;
 begin
-  AInstruction.CodeLine := FScanner.FLine;
-  Result:=inherited GenCode(AInstruction);
+  inherited GenCode(AInstruction, FScanner.FLine);
 end;
 
 function TThoriumDefaultCompiler.Proceed(ExpectMask: TThoriumDefaultSymbols;
@@ -610,6 +611,34 @@ begin
     end;
   end;
   ExpectSymbol([tsUnknown], True);
+end;
+
+function TThoriumDefaultCompiler.SolveIdentifier(TargetRegister: Word;
+  AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
+(*
+  @parserContext: Expects FCurrentSym to be tsIdentifier
+*)
+var
+  Entries: TThoriumTableEntryResults;
+begin
+  Result.FinalType := nil;
+  Result.GetCode := nil;
+  Result.GetJumpMarks := nil;
+  Result.SetCode := nil;
+  Result.SetJumpMarks := nil;
+  Result.UsedExtendedTypes := nil;
+  Result.UsedLibraryProps := nil;
+
+  Assert(FCurrentSym = tsIdentifier);
+  FindTableEntries(FCurrentStr, Entries);
+  if Length(Entries) = 0 then
+  begin
+    Result.Kind := ikUndeclared;
+    Result.FullStr := FCurrentStr;
+    Exit;
+  end;
+
+
 end;
 
 function TThoriumDefaultCompiler.CompileFromStream(SourceStream: TStream;

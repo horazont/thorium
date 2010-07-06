@@ -277,7 +277,7 @@ type
 
 
   TThoriumTableEntryType = (etStatic, etVariable, etRegisterVariable,
-    etCallable, etHostCallable, etProperty, etLibraryConstant);
+    etCallable, etHostCallable, etProperty, etLibraryConstant, etType);
   TThoriumTableEntryTypes = set of TThoriumTableEntryType;
   TThoriumQualifiedIdentifierKind = (ikType, ikVariable, ikStatic, ikComplex,
     ikUndeclared, ikNoFar, ikPrototypedFunction, ikLibraryProperty);
