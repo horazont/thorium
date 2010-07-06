@@ -619,8 +619,13 @@ function TThoriumDefaultCompiler.SolveIdentifier(TargetRegister: Word;
   @parserContext: Expects FCurrentSym to be tsIdentifier
 *)
 var
-  Entries: TThoriumTableEntryResults;
+  Entries: TThoriumTableEntryResultList;
+  EntriesHandle: TThoriumTableEntryResults;
+  I: Integer;
+  Entry: PThoriumTableEntryResult;
 begin
+  Assert(FCurrentSym = tsIdentifier);
+
   Result.FinalType := nil;
   Result.GetCode := nil;
   Result.GetJumpMarks := nil;
@@ -628,17 +633,40 @@ begin
   Result.SetJumpMarks := nil;
   Result.UsedExtendedTypes := nil;
   Result.UsedLibraryProps := nil;
+  Result.FullStr := FCurrentStr;
 
-  Assert(FCurrentSym = tsIdentifier);
-  FindTableEntries(FCurrentStr, Entries);
-  if Length(Entries) = 0 then
-  begin
-    Result.Kind := ikUndeclared;
-    Result.FullStr := FCurrentStr;
-    Exit;
+  Entries := TThoriumTableEntryResultList.Create;
+  try
+    FindTableEntries(FCurrentStr, EntriesHandle);
+    for I := 0 to High(EntriesHandle) do
+      Entries.Add(@EntriesHandle[I]);
+
+    // Filter
+    I := Entries.Count-1;
+    while I >= 0 do
+    begin
+      Entry := Entries[I];
+      if (ikNoFar in AllowedKinds) and (Entry^.SourceModule <> FModule) then
+        Entries.Delete(I)
+      else if (not (ikType in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etType) then
+        Entries.Delete(I)
+      else if (not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type in [etCallable, etHostCallable]) then
+        Entries.Delete(I)
+      else if (not (ikVariable in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etVariable) then
+        Entries.Delete(I)
+      else if (not (ikStatic in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etStatic) then
+        Entries.Delete(I);
+      Dec(I);
+    end;
+
+    if Entries.Count = 0 then
+    begin
+      Result.Kind := ikUndeclared;
+      Exit;
+    end;
+  finally
+    Entries.Free;
   end;
-
-
 end;
 
 function TThoriumDefaultCompiler.CompileFromStream(SourceStream: TStream;
