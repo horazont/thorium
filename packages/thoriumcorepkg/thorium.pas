@@ -489,6 +489,18 @@ type
     Cast: TThoriumCastDescription;
   end;
 
+  TThoriumInitialData = record
+  case Byte of
+    0: (Int: Int64);
+    1: (Flt: Double);
+    2: (Bin: array [0..7] of Byte);
+  end;
+
+  TThoriumCreateInstructionDescription = record
+    TargetRegisterOffset: Integer;
+    Instruction: TThoriumInstructionREG;
+  end;
+
   { IThoriumType }
 
   IThoriumType = interface ['{C1948C5E-4486-4600-B9FA-F50E33B49E9A}']
@@ -498,6 +510,7 @@ type
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
       const AnotherType: IThoriumType = nil): Boolean;
     function CanCall: Boolean;
+    function CanCreate(const InitialData: TThoriumInitialData; const ToRegister: Boolean; out Instruction: TThoriumCreateInstructionDescription): Boolean;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
       const TheObject: IThoriumType = nil; const ExName: String = ''): Boolean;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue;
@@ -551,6 +564,7 @@ type
   public
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription; const AnotherType: IThoriumType = nil): Boolean; virtual;
     function CanCall: Boolean; virtual;
+    function CanCreate(const InitialData: TThoriumInitialData; const ToRegister: Boolean; out Instruction: TThoriumCreateInstructionDescription): Boolean; virtual;
     function CanPerformOperation(var Operation: TThoriumOperationDescription; const TheObject: IThoriumType = nil; const ExName: String = ''): Boolean; virtual;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; virtual; abstract;
     function DuplicateValue(const Input: TThoriumValue): TThoriumValue; virtual;
@@ -578,6 +592,9 @@ type
   public
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
        const AnotherType: IThoriumType=nil): Boolean; override;
+    function CanCreate(const InitialData: TThoriumInitialData;
+       const ToRegister: Boolean; out
+       Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
   end;
@@ -586,6 +603,9 @@ type
 
   TThoriumTypeFloat = class (TThoriumTypeSimple)
   public
+    function CanCreate(const InitialData: TThoriumInitialData;
+       const ToRegister: Boolean; out
+       Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
   end;
@@ -596,6 +616,9 @@ type
   protected
     function GetTypeKind: TThoriumTypeKind; override;
   public
+    function CanCreate(const InitialData: TThoriumInitialData;
+       const ToRegister: Boolean; out
+       Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: IThoriumType=nil; const ExName: String=''): Boolean; override;
     function HasIndexedAccess: Boolean; override;
@@ -3366,6 +3389,13 @@ begin
   Result.TargetRIOffset := ATargetRegister;
 end;
 
+function CreationDescription(const AInstruction: TThoriumInstruction;
+  ATargetRegister: Integer = -1): TThoriumCreateInstructionDescription;
+begin
+  Result.Instruction := TThoriumInstructionREG(AInstruction);
+  Result.TargetRegisterOffset := ATargetRegister;
+end;
+
 
 function ThoriumMakeOOPEvent(ACode: Pointer; Userdata: Pointer): TMethod;
 begin
@@ -4022,6 +4052,13 @@ begin
   Result := CanPerformOperation(Dummy, nil, '');
 end;
 
+function TThoriumType.CanCreate(const InitialData: TThoriumInitialData;
+  const ToRegister: Boolean; out
+  Instruction: TThoriumCreateInstructionDescription): Boolean;
+begin
+  Result := False;
+end;
+
 function TThoriumType.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
   const ExName: String): Boolean;
@@ -4120,6 +4157,17 @@ begin
   end
   else
     Result := inherited;
+end;
+
+function TThoriumTypeInteger.CanCreate(const InitialData: TThoriumInitialData;
+  const ToRegister: Boolean; out
+  Instruction: TThoriumCreateInstructionDescription): Boolean;
+begin
+  if ToRegister then
+    Instruction := CreationDescription(int(InitialData.Int, 0), 4)
+  else
+    Instruction := CreationDescription(int_s(InitialData.Int));
+  Result := True;
 end;
 
 function TThoriumTypeInteger.CanPerformOperation(
@@ -4260,6 +4308,17 @@ end;
 
 { TThoriumTypeFloat }
 
+function TThoriumTypeFloat.CanCreate(const InitialData: TThoriumInitialData;
+  const ToRegister: Boolean; out
+  Instruction: TThoriumCreateInstructionDescription): Boolean;
+begin
+  if ToRegister then
+    Instruction := CreationDescription(flt(InitialData.Flt, 0), 4)
+  else
+    Instruction := CreationDescription(flt_s(InitialData.Flt));
+  Result := True;
+end;
+
 function TThoriumTypeFloat.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
   const ExName: String): Boolean;
@@ -4350,6 +4409,27 @@ end;
 function TThoriumTypeString.GetTypeKind: TThoriumTypeKind;
 begin
   Result := tkString;
+end;
+
+function TThoriumTypeString.CanCreate(const InitialData: TThoriumInitialData;
+  const ToRegister: Boolean; out
+  Instruction: TThoriumCreateInstructionDescription): Boolean;
+begin
+  if ToRegister then
+  begin
+    if InitialData.Int < 0 then
+      Instruction := CreationDescription(str(0), 0)
+    else
+      Instruction := CreationDescription(strl(InitialData.Int, 0), 2);
+  end
+  else
+  begin
+    if InitialData.Int < 0 then
+      Instruction := CreationDescription(str_s())
+    else
+      Instruction := CreationDescription(strl_s(InitialData.Int));
+  end;
+  Result := True;
 end;
 
 function TThoriumTypeString.CanPerformOperation(

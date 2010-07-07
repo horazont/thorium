@@ -212,9 +212,15 @@ type
     function GenCode(AInstruction: TThoriumInstruction): Integer; override;
     function Proceed(ExpectMask: TThoriumDefaultSymbols = []; ThrowError: Boolean = False): Boolean;
   protected
+    function Expression(ATargetRegister: Word; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function Factor(ATargetRegister: Word; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function FindFilteredTableEntry(const Ident: String; AllowedKinds: TThoriumQualifiedIdentifierKinds; out Entry: TThoriumTableEntry; DropMultiple: Boolean = True; GetLast: Boolean = False): Boolean;
+    procedure FilterTableEntries(Entries: TThoriumTableEntryResultList; AllowedKinds: TThoriumQualifiedIdentifierKinds);
     procedure Module;
-    function SolveIdentifier(TargetRegister: Word;
+    function SimpleExpression(ATargetRegister: Word; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
+    function Term(ATargetRegister: Word; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
   public
     function CompileFromStream(SourceStream: TStream;
        Flags: TThoriumCompilerFlags=[cfOptimize]): Boolean; override;
@@ -568,6 +574,98 @@ begin
     Result := ExpectSymbol(ExpectMask, ThrowError);
 end;
 
+function TThoriumDefaultCompiler.Expression(ATargetRegister: Word;
+  ATypeHint: IThoriumType; AIsStatic: PBoolean; AStaticValue: PThoriumValue
+  ): IThoriumType;
+begin
+  raise EThoriumCompilerException.Create('Expression not implemented.');
+end;
+
+function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
+  ATypeHint: IThoriumType; AIsStatic: PBoolean; AStaticValue: PThoriumValue
+  ): IThoriumType;
+begin
+  case FCurrentSym of
+    tsIntegerValue:
+    begin
+
+    end;
+  end;
+end;
+
+function TThoriumDefaultCompiler.FindFilteredTableEntry(const Ident: String;
+  AllowedKinds: TThoriumQualifiedIdentifierKinds; out
+  Entry: TThoriumTableEntry; DropMultiple: Boolean; GetLast: Boolean): Boolean;
+var
+  EntriesHandle: TThoriumTableEntryResults;
+  Entries: TThoriumTableEntryResultList;
+  I: Integer;
+begin
+  Entries := TThoriumTableEntryResultList.Create;
+  try
+    FindTableEntries(Ident, EntriesHandle);
+    for I := 0 to High(EntriesHandle) do
+      Entries.Add(@EntriesHandle[I]);
+
+    FilterTableEntries(Entries, AllowedKinds);
+
+    if Entries.Count = 0 then
+      Exit(False)
+    else if Entries.Count = 1 then
+    begin
+      Move(Entries[0]^, Entry, SizeOf(TThoriumTableEntry));
+      Exit(True);
+    end
+    else
+    begin
+      if not DropMultiple then
+        raise EThoriumCompilerException.Create('Ambigous identifier.')
+      else
+      begin
+        if GetLast then
+        begin
+          Move(Entries[Entries.Count - 1]^, Entry, SizeOf(TThoriumTableEntry));
+          Exit(True);
+        end
+        else
+        begin
+          Move(Entries[0]^, Entry, SizeOf(TThoriumTableEntry));
+          Exit(True);
+        end;
+      end;
+    end;
+  finally
+    Entries.Free;
+  end;
+  Result := False;
+end;
+
+procedure TThoriumDefaultCompiler.FilterTableEntries(
+  Entries: TThoriumTableEntryResultList;
+  AllowedKinds: TThoriumQualifiedIdentifierKinds);
+var
+  Entry: PThoriumTableEntryResult;
+  I: Integer;
+begin
+  // Filter
+  I := Entries.Count-1;
+  while I >= 0 do
+  begin
+    Entry := Entries[I];
+    if (ikNoFar in AllowedKinds) and (Entry^.SourceModule <> FModule) then
+      Entries.Delete(I)
+    else if (not (ikType in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etType) then
+      Entries.Delete(I)
+    else if (not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type in [etCallable, etHostCallable]) then
+      Entries.Delete(I)
+    else if (not (ikVariable in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etVariable) then
+      Entries.Delete(I)
+    else if (not (ikStatic in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etStatic) then
+      Entries.Delete(I);
+    Dec(I);
+  end;
+end;
+
 procedure TThoriumDefaultCompiler.Module;
 var
   IsStatic: Boolean;
@@ -613,7 +711,14 @@ begin
   ExpectSymbol([tsUnknown], True);
 end;
 
-function TThoriumDefaultCompiler.SolveIdentifier(TargetRegister: Word;
+function TThoriumDefaultCompiler.SimpleExpression(ATargetRegister: Word;
+  ATypeHint: IThoriumType; AIsStatic: PBoolean; AStaticValue: PThoriumValue
+  ): IThoriumType;
+begin
+
+end;
+
+function TThoriumDefaultCompiler.SolveIdentifier(ATargetRegister: Word;
   AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
 (*
   @parserContext: Expects FCurrentSym to be tsIdentifier
@@ -677,6 +782,8 @@ var
   EntriesHandle: TThoriumTableEntryResults;
   I: Integer;
   Entry: PThoriumTableEntryResult;
+
+  Operation: TThoriumOperationDescription;
 begin
   Assert(FCurrentSym = tsIdentifier);
 
@@ -692,26 +799,12 @@ begin
   Entries := TThoriumTableEntryResultList.Create;
   try
     FindTableEntries(FCurrentStr, EntriesHandle);
-    for I := 0 to High(EntriesHandle) do
+    // Add items in reverse order as we walk through the list in reverse order
+    // later due to performance and safety reasons
+    for I := High(EntriesHandle) downto 0 do
       Entries.Add(@EntriesHandle[I]);
 
-    // Filter
-    I := Entries.Count-1;
-    while I >= 0 do
-    begin
-      Entry := Entries[I];
-      if (ikNoFar in AllowedKinds) and (Entry^.SourceModule <> FModule) then
-        Entries.Delete(I)
-      else if (not (ikType in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etType) then
-        Entries.Delete(I)
-      else if (not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type in [etCallable, etHostCallable]) then
-        Entries.Delete(I)
-      else if (not (ikVariable in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etVariable) then
-        Entries.Delete(I)
-      else if (not (ikStatic in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etStatic) then
-        Entries.Delete(I);
-      Dec(I);
-    end;
+    FilterTableEntries(Entries, AllowedKinds);
 
     if Entries.Count = 0 then
     begin
@@ -721,12 +814,48 @@ begin
 
     while Proceed([tsDot, tsOpenSquareBracket, tsOpenBracket], False) do
     begin
+      EnforceAccess(FCurrentSym);
+      if Entries.Count = 0 then
+        CompilerError('Illegal qualifier.');
 
+      case FCurrentSym of
+        tsDot:
+        begin
+          Proceed([tsIdentifier], True);
+          Operation.Operation := opFieldAccess;
+
+          I := Entries.Count - 1;
+          while I >= 0 do
+          begin
+            Entry := Entries[I];
+            if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation, nil, FCurrentStr) then
+              Discard(I);
+            Dec(I);
+          end;
+
+          if Entries.Count = 0 then
+            CompilerError('No node with '+Result.FullStr+' available with a field called '+FCurrentStr);
+
+          Result.FullStr += '.'+FCurrentStr;
+        end;
+
+        tsOpenSquareBracket:
+        begin
+
+        end;
+      end;
     end;
 
   finally
     Entries.Free;
   end;
+end;
+
+function TThoriumDefaultCompiler.Term(ATargetRegister: Word;
+  ATypeHint: IThoriumType; AIsStatic: PBoolean; AStaticValue: PThoriumValue
+  ): IThoriumType;
+begin
+
 end;
 
 function TThoriumDefaultCompiler.CompileFromStream(SourceStream: TStream;
