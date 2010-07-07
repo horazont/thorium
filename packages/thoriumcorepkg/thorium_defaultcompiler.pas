@@ -171,7 +171,7 @@ const
   );
 
 type
-  EThoriumCompilationError = class (EThoriumCompilerException);
+  EThoriumCompilerError = class (EThoriumCompilerException);
 
   { TThoriumDefaultScanner }
 
@@ -541,7 +541,7 @@ end;
 procedure TThoriumDefaultCompiler.CompilerError(const Msg: String; X, Y: Integer
   );
 begin
-  raise EThoriumCompilationError.CreateFmt('%d|%d: %s', [X, Y, Msg]);
+  raise EThoriumCompilerError.CreateFmt('%d|%d: %s', [X, Y, Msg]);
 end;
 
 function TThoriumDefaultCompiler.ExpectSymbol(
@@ -618,8 +618,62 @@ function TThoriumDefaultCompiler.SolveIdentifier(TargetRegister: Word;
 (*
   @parserContext: Expects FCurrentSym to be tsIdentifier
 *)
+
 var
+  Solutions: TThoriumQualifiedIdentifierList;
   Entries: TThoriumTableEntryResultList;
+
+  procedure FillSolutionList;
+  var
+    I: Integer;
+    Solution: PThoriumQualifiedIdentifier;
+  begin
+    for I := 0 to Entries.Count - 1 do
+    begin
+      New(Solution);
+      FillByte(Solution^, SizeOf(TThoriumQualifiedIdentifier), 0);
+      Solutions.Add(Solution);
+    end;
+  end;
+
+  procedure Discard(const I: Integer);
+  begin
+    Dispose(Solutions[I]);
+    Solutions.Delete(I);
+    Entries.Delete(I);
+  end;
+
+  procedure EnforceAccess(Sym: TThoriumDefaultSymbol);
+  var
+    I: Integer;
+  begin
+    I := Entries.Count - 1;
+    while I >= 0 do
+    begin
+      case Sym of
+        tsDot: // Attribute access
+        begin
+          if not Entries[I]^.Entry.TypeSpec.HasFieldAccess then
+            Discard(I);
+        end;
+        tsOpenSquareBracket: // Element access
+        begin
+          if not Entries[I]^.Entry.TypeSpec.HasIndexedAccess then
+            Discard(I);
+        end;
+        tsOpenBracket: // Call
+        begin
+          if not Entries[I]^.Entry.TypeSpec.CanCall then
+            Discard(I);
+        end;
+      else
+        raise EThoriumCompilerException.CreateFmt('TThoriumDefaultCompiler.SolveIdentifier EnforceAccess called with Sym=''%s''.', [GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(Sym))]);
+      end;
+      Dec(I);
+    end;
+  end;
+
+var
   EntriesHandle: TThoriumTableEntryResults;
   I: Integer;
   Entry: PThoriumTableEntryResult;
@@ -664,6 +718,12 @@ begin
       Result.Kind := ikUndeclared;
       Exit;
     end;
+
+    while Proceed([tsDot, tsOpenSquareBracket, tsOpenBracket], False) do
+    begin
+
+    end;
+
   finally
     Entries.Free;
   end;

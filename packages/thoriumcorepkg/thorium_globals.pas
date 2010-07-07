@@ -1790,7 +1790,7 @@ type
     opCmpLessOrEqual, opAddition, opSubtraction, opMultiplication, opDivision,
     opIntegerDivision, opModulus, opBitAnd, opBitOr, opBitXor, opBitShr,
     opBitShl, opBitNot, opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot,
-    opNegate, opCall);
+    opNegate, opCall, opIndexedAccess, opFieldAccess);
   TThoriumOperations = set of TThoriumOperation;
 
 const

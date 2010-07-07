@@ -497,8 +497,9 @@ type
 
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
       const AnotherType: IThoriumType = nil): Boolean;
+    function CanCall: Boolean;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-      const TheObject: IThoriumType = nil): Boolean;
+      const TheObject: IThoriumType = nil; const ExName: String = ''): Boolean;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue;
     function GetClassType: TClass;
     function GetInstance: TThoriumType;
@@ -549,7 +550,8 @@ type
     property TypeKind: TThoriumTypeKind read GetTypeKind;
   public
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription; const AnotherType: IThoriumType = nil): Boolean; virtual;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription; const TheObject: IThoriumType = nil): Boolean; virtual;
+    function CanCall: Boolean; virtual;
+    function CanPerformOperation(var Operation: TThoriumOperationDescription; const TheObject: IThoriumType = nil; const ExName: String = ''): Boolean; virtual;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; virtual; abstract;
     function DuplicateValue(const Input: TThoriumValue): TThoriumValue; virtual;
     class function FromExternalType(const ExternalType: PThoriumExternalFunctionVarType): TThoriumType;
@@ -577,7 +579,7 @@ type
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
        const AnotherType: IThoriumType=nil): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
+       const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
   end;
 
   { TThoriumTypeFloat }
@@ -585,7 +587,7 @@ type
   TThoriumTypeFloat = class (TThoriumTypeSimple)
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
+       const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
   end;
 
   { TThoriumTypeString }
@@ -595,7 +597,9 @@ type
     function GetTypeKind: TThoriumTypeKind; override;
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
+       const TheObject: IThoriumType=nil; const ExName: String=''): Boolean; override;
+    function HasIndexedAccess: Boolean; override;
+    function HasFieldAccess: Boolean; override;
   end;
 
   { TThoriumTypeFunction }
@@ -614,7 +618,7 @@ type
     function GetTypeKind: TThoriumTypeKind; override;
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
+       const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
   published
     property HasReturnValue: Boolean read GetHasReturnValue;
@@ -637,7 +641,7 @@ type
     function GetTypeKind: TThoriumTypeKind; override;
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
+       const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
   published
     property HasReturnValue: Boolean read GetHasReturnValue;
@@ -659,7 +663,7 @@ type
     property HostType: TThoriumHostObjectType read FHostType;
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
+       const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
   end;
 
@@ -682,7 +686,7 @@ type
       const ValueType: IThoriumType): Integer;
     function Add(const AReference: TThoriumStructFieldDefinition): Integer;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
+       const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
     procedure Delete(const AIndex: Integer);
     function IndexOf(const AName: String): Integer;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
@@ -711,7 +715,7 @@ type
     property ValueType: IThoriumType read FValueType write FValueType;
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
+       const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
   end;
 
@@ -752,6 +756,7 @@ type
     UsedExtendedTypes: array of TThoriumHostObjectType;
     UsedLibraryProps: array of TThoriumLibraryProperty;
   end;
+  PThoriumQualifiedIdentifier = ^TThoriumQualifiedIdentifier;
 
   (* This record contains information about a relocation. *)
   TThoriumRelocation = record
@@ -761,6 +766,8 @@ type
 
   (* A pointer to a record containing information about a relocation. *)
   PThoriumRelocation = ^TThoriumRelocation;
+
+  TThoriumQualifiedIdentifierList = specialize TFPGList<PThoriumQualifiedIdentifier>;
 {%ENDREGION}
 
 (*
@@ -4007,9 +4014,17 @@ begin
   end;
 end;
 
+function TThoriumType.CanCall: Boolean;
+var
+  Dummy: TThoriumOperationDescription;
+begin
+  Dummy.Operation := opCall;
+  Result := CanPerformOperation(Dummy, nil, '');
+end;
+
 function TThoriumType.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 begin
   Result := False;
 end;
@@ -4108,8 +4123,8 @@ begin
 end;
 
 function TThoriumTypeInteger.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 
   function IntIntOp(Instruction: TThoriumInstruction): Boolean;
   begin
@@ -4246,8 +4261,8 @@ end;
 { TThoriumTypeFloat }
 
 function TThoriumTypeFloat.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 
   function FltFltOp(Instruction: TThoriumInstruction): Boolean;
   begin
@@ -4338,8 +4353,8 @@ begin
 end;
 
 function TThoriumTypeString.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 
   function StrStrOp(Instruction: TThoriumInstruction): Boolean;
   begin
@@ -4354,10 +4369,33 @@ function TThoriumTypeString.CanPerformOperation(
       Result := False;
   end;
 
+  function StrIntOp(Instruction: TThoriumInstruction): Boolean;
+  begin
+    if TheObject.GetInstance is TThoriumTypeInteger then
+    begin
+      Operation.ResultType := Self;
+      Operation.Casts[0].Needed := False;
+      Operation.Casts[1].Needed := False;
+      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
+    end
+    else
+      Result := False;
+  end;
+
 begin
   Result := True;
   if Operation.Operation in opReflexive then
     Result := inherited
+  else if Operation.Operation = opFieldAccess then
+  begin
+    if Name = 'length' then
+    begin
+      Operation.ResultType := TThoriumTypeInteger.Create;
+      Operation.Casts[0].Needed := False;
+      Operation.Casts[1].Needed := False;
+      Operation.OperationInstruction := OperationInstructionDescription(noop(0, 0, 0, 0));
+    end;
+  end
   else if TheObject = nil then
     RaiseMissingTheObject
   else
@@ -4366,9 +4404,22 @@ begin
       opAddition:
         if StrStrOp(adds(0, 0, 0)) then
           Exit;
+      opIndexedAccess:
+        if StrIntOp(noop(0, 0, 0, 0)) then
+          Exit;
     end;
   end;
   Result := inherited;
+end;
+
+function TThoriumTypeString.HasIndexedAccess: Boolean;
+begin
+  Result := True;
+end;
+
+function TThoriumTypeString.HasFieldAccess: Boolean;
+begin
+  Result := True;
 end;
 
 { TThoriumTypeFunction }
@@ -4405,8 +4456,8 @@ begin
 end;
 
 function TThoriumTypeFunction.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 begin
   Result := False;
 end;
@@ -4448,8 +4499,8 @@ begin
 end;
 
 function TThoriumTypeHostFunction.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 begin
   Result := False;
 end;
@@ -4474,8 +4525,8 @@ begin
 end;
 
 function TThoriumTypeHostType.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 begin
   raise EThoriumException.Create('Not implemented yet.');
 end;
@@ -4529,8 +4580,8 @@ begin
 end;
 
 function TThoriumTypeStruct.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 begin
   Result := inherited CanPerformOperation(Operation, TheObject);
 end;
@@ -4621,8 +4672,8 @@ begin
 end;
 
 function TThoriumTypeArray.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
+  const ExName: String): Boolean;
 begin
   if TheObject.IsEqualTo(Self) then
   begin
