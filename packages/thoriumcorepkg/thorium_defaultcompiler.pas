@@ -584,11 +584,64 @@ end;
 function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
   ATypeHint: IThoriumType; AIsStatic: PBoolean; AStaticValue: PThoriumValue
   ): IThoriumType;
+var
+  InitialData: TThoriumInitialData;
+  CreationDescription: TThoriumCreateInstructionDescription;
+  TableEntry: TThoriumTableEntry;
 begin
   case FCurrentSym of
+    tsMinus:
+    begin
+      Result := Factor(ATargetRegister, ATypeHint, AIsStatic, AStaticValue);
+      if not Result.CanPerformOperation(opNegate) then
+        CompilerError('Cannot negate this kind of value.');
+    end;
+    tsPlus:
+    begin
+      Proceed;
+      // Just ignore it
+      Exit(Factor(ATargetRegister, ATypeHint, AIsStatic, AStaticValue));
+    end;
     tsIntegerValue:
     begin
-
+      InitialData.Int := StrToInt64(FCurrentStr);
+      Result := TThoriumTypeInteger.Create;
+      if not Result.CanCreate(InitialData, True, CreationDescription) then
+        CompilerError('Internal compiler error: Cannot create integer value.');
+    end;
+    tsFloatValue:
+    begin
+      InitialData.Flt := StrToFloat(FCurrentStr, THORIUM_NUMBER_FORMAT);
+      Result := TThoriumTypeFloat.Create;
+      if not Result.CanCreate(InitialData, True, CreationDescription) then
+        CompilerError('Internal compiler error: Cannot create float value.');
+    end;
+    tsStringValue:
+    begin
+      if FCurrentStr <> '' then
+        InitialData.Int := AddLibraryString(FCurrentStr)
+      else
+        InitialData.Int := -1;
+      Result := TThoriumTypeString.Create;
+      if not Result.CanCreate(InitialData, True, CreationDescription) then
+        CompilerError('Internal compiler error: Cannot create string value.');
+    end;
+    tsOpenBracket:
+    begin
+      Proceed;
+      if FCurrentSym = tsIdentifier then
+      begin
+        if FindFilteredTableEntry(FCurrentStr, [ikType], TableEntry) then
+        begin
+          // Type name. We should probably to cast handling here.
+          // Problems:
+          // * Make sure that the following symbol is a closing bracket
+          // * Rewind to previous symbol if not.
+        end;
+      end;
+      Result := SimpleExpression(ATargetRegister, ATypeHint, AIsStatic, AStaticValue);
+      ExpectSymbol([tsCloseBracket]);
+      Proceed;
     end;
   end;
 end;
