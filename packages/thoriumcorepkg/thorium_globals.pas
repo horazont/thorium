@@ -1790,7 +1790,7 @@ type
     opCmpLessOrEqual, opAddition, opSubtraction, opMultiplication, opDivision,
     opIntegerDivision, opModulus, opBitAnd, opBitOr, opBitXor, opBitShr,
     opBitShl, opBitNot, opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot,
-    opNegate, opCall, opIndexedAccess, opFieldAccess);
+    opNegate, opCall, opIndexedAccess, opFieldAccess, opEvaluate);
   TThoriumOperations = set of TThoriumOperation;
 
 const
@@ -1798,10 +1798,11 @@ const
     opCmpLess, opCmpLessOrEqual];
   opIncDec = [opIncrement, opDecrement];
   opBitwise = [opBitAnd, opBitOr, opBitXor, opBitShr, opBitShl, opBitNot];
-  opLogical = [opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot];
+  opLogical = [opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot,
+    opEvaluate];
 
   opReflexive = [opIncrement, opDecrement, opBitNot, opLogicalNot, opNegate,
-    opCall];
+    opCall, opEvaluate];
 {%ENDREGION}
 
 (*

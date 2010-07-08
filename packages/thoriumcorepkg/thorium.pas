@@ -261,9 +261,8 @@ type
                                                                               *)
 {%REGION 'Thorium values' /fold}
   TThoriumValue = record
-    // Only used with non-builtin types, that are types which have a TypeKind
-    // which is not tkSimple and not tkString.
-    TypeInfo: TThoriumType;
+    // Should be available all the time, but may be unused.
+    RTTI: TThoriumType;
     References: LongInt;
   case Byte of
     0: (Int: TThoriumInteger);
@@ -275,6 +274,12 @@ type
     6: (Struct: Pointer);
     7: (HostObject: Pointer);
     8: (ThArray: Pointer);
+  end;
+
+  TThoriumCompileTimeValue = record
+    // Keep this as reference counter
+    CTTI: IThoriumType;
+    Value: TThoriumValue;
   end;
 
   PThoriumValue = ^TThoriumValue;
@@ -468,6 +473,7 @@ type
   TThoriumCastDescription = record
     Needed: Boolean;
     Instruction: TThoriumInstructionCAST;
+    TargetType: IThoriumType;
   end;
 
   TThoriumOperationInstructionDescription = record
@@ -504,9 +510,6 @@ type
   { IThoriumType }
 
   IThoriumType = interface ['{C1948C5E-4486-4600-B9FA-F50E33B49E9A}']
-    property Name: String;
-    property TypeKind: TThoriumTypeKind;
-
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
       const AnotherType: IThoriumType = nil): Boolean;
     function CanCall: Boolean;
@@ -516,10 +519,49 @@ type
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue;
     function GetClassType: TClass;
     function GetInstance: TThoriumType;
+    function GetName: String;
     function HasFieldAccess: Boolean;
     function HasIndexedAccess: Boolean;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean;
     function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean = True): Boolean;
+    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoBitAnd(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoBitNot(const AValue: TThoriumValue): TThoriumValue;
+    function DoBitOr(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoBitShl(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoBitShr(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoBitXor(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoCast(const AValue: TThoriumValue; const TargetType: IThoriumType): TThoriumValue;
+    procedure DoCastlessAssign(const ASource: Pointer; var ADest: TThoriumValue);
+    function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue;
+    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
+    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
+    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue): Boolean;
+    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean;
+    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean;
+    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
+    procedure DoDecrement(var ASubject: TThoriumValue);
+    function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoEvaluate(const AValue: Pointer): Integer;
+    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue;
+    function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue;
+    function DoGetStaticField(const AFieldID: QWord): TThoriumValue;
+    procedure DoIncrement(var ASubject: TThoriumValue);
+    function DoIntegerDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoLogicalAnd(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoLogicalOr(const AValue, BValue: TThoriumValue): TThoriumValue;
+    procedure DoLogicalNot(var ASubject: TThoriumValue);
+    function DoLogicalXor(const AValue, BValue: TThoriumValue): TThoriumValue;
+    procedure DoNegate(var AValue: TThoriumValue);
+    function DoModulus(const AValue, BValue: TThoriumValue): TThoriumValue;
+    function DoMultiplication(const AValue, BValue: TThoriumValue): TThoriumValue;
+    procedure DoSetField(const AValue: TThoriumValue; const AFieldID: QWord; const NewValue: TThoriumValue);
+    procedure DoSetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue; const NewValue: TThoriumValue);
+    procedure DoSetStaticField(const AFieldID: QWord; const NewValue: TThoriumValue);
+    function DoSubtraction(const AValue, BValue: TThoriumValue): TThoriumValue;
+
+    property Name: String read GetName;
+    property TypeKind: TThoriumTypeKind;
   end;
 
   TThoriumStructFieldDefinition = record
@@ -574,6 +616,43 @@ type
     function GetClassType: TClass;
     function GetInstance: TThoriumType;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; virtual; abstract;
+    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoBitAnd(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoBitNot(const AValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoBitOr(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoBitShl(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoBitShr(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoBitXor(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoCast(const AValue: TThoriumValue; const TargetType: IThoriumType): TThoriumValue; virtual; abstract;
+    procedure DoCastlessAssign(const ASource: Pointer; var ADest: TThoriumValue); virtual; abstract;
+    function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue; virtual; abstract;
+    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
+    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
+    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue): Boolean; virtual;
+    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
+    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean; virtual;
+    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
+    procedure DoDecrement(var ASubject: TThoriumValue); virtual; abstract;
+    function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoEvaluate(const AValue: Pointer): Integer; virtual; abstract;
+    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue; virtual; abstract;
+    function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoGetStaticField(const AFieldID: QWord): TThoriumValue; virtual; abstract;
+    procedure DoIncrement(var ASubject: TThoriumValue); virtual; abstract;
+    function DoIntegerDivision(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoLogicalAnd(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoLogicalOr(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    procedure DoLogicalNot(var ASubject: TThoriumValue); virtual; abstract;
+    function DoLogicalXor(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    procedure DoNegate(var AValue: TThoriumValue); virtual; abstract;
+    function DoModulus(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoMultiplication(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    procedure DoSetField(const AValue: TThoriumValue; const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
+    procedure DoSetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue; const NewValue: TThoriumValue); virtual; abstract;
+    procedure DoSetStaticField(const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
+    function DoSubtraction(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    class function PerformOperation(const AValue: TThoriumValue; const Operation: TThoriumOperationDescription; const BValue: PThoriumValue = nil): TThoriumValue;
+    class function PerformCmpOperation(const AValue: TThoriumValue; const Operation: TThoriumOperationDescription; const BValue: PThoriumValue = nil): Boolean;
     function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean = True): Boolean; virtual;
   end;
 
@@ -597,6 +676,37 @@ type
        Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
+
+    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoBitAnd(const AValue, BValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoBitOr(const AValue, BValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoBitXor(const AValue, BValue: TThoriumValue): TThoriumValue;
+         override;
+    function DoBitShr(const AValue, BValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoBitShl(const AValue, BValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoBitNot(const AValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoCast(const AValue: TThoriumValue; const TargetType: IThoriumType
+       ): TThoriumValue; override;
+    procedure DoDecrement(var ASubject: TThoriumValue); override;
+    function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue;
+       override;
+    procedure DoIncrement(var ASubject: TThoriumValue); override;
+    function DoIntegerDivision(const AValue, BValue: TThoriumValue
+       ): TThoriumValue; override;
+    function DoModulus(const AValue, BValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoMultiplication(const AValue, BValue: TThoriumValue
+       ): TThoriumValue; override;
+    procedure DoNegate(var AValue: TThoriumValue); override;
+    function DoSubtraction(const AValue, BValue: TThoriumValue
+       ): TThoriumValue; override;
+
   end;
 
   { TThoriumTypeFloat }
@@ -608,6 +718,20 @@ type
        Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
+
+    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
+         override;
+    function DoCreate(const InitialData: TThoriumInitialData
+         ): TThoriumValue; override;
+    procedure DoDecrement(var ASubject: TThoriumValue); override;
+    function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
+        override;
+    procedure DoIncrement(var ASubject: TThoriumValue); override;
+    procedure DoNegate(var AValue: TThoriumValue); override;
+    function DoMultiplication(const AValue, BValue: TThoriumValue
+       ): TThoriumValue; override;
+    function DoSubtraction(const AValue, BValue: TThoriumValue
+       ): TThoriumValue; override;
   end;
 
   { TThoriumTypeString }
@@ -623,6 +747,13 @@ type
        const TheObject: IThoriumType=nil; const ExName: String=''): Boolean; override;
     function HasIndexedAccess: Boolean; override;
     function HasFieldAccess: Boolean; override;
+
+    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
+       ): TThoriumValue; override;
+    function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue
+       ): TThoriumValue; override;
   end;
 
   { TThoriumTypeFunction }
@@ -1197,16 +1328,6 @@ type
     function GetStaticFieldID(const FieldIdent: String; out ID: QWord): Boolean; virtual;
     function GetStaticFieldStoring(const AFieldID: QWord): Boolean; virtual; abstract;
     procedure GetStaticFieldType(const AFieldID: QWord; out TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition); virtual; abstract;
-    procedure OpAssign(const ASource: Pointer; var ADest: TThoriumValue); virtual;
-    function OpEvaluate(const AValue: Pointer): Integer; virtual; abstract;
-    function OpGetField(const AInstance: Pointer; const AFieldID: QWord): TThoriumValue; virtual; abstract;
-    function OpGetIndexed(const AInstance: Pointer; const AIndex: TThoriumValue): TThoriumValue; virtual; abstract;
-    function OpGetStaticField(const AFieldID: QWord): TThoriumValue; virtual; abstract;
-    procedure OpNegate(const AValue: Pointer); virtual; abstract;
-    procedure OpNot(const AValue: Pointer); virtual; abstract;
-    procedure OpSetField(const AInstance: Pointer; const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
-    procedure OpSetIndexed(const AInstance: Pointer; const AIndex: TThoriumValue; const NewValue: TThoriumValue); virtual; abstract;
-    procedure OpSetStaticField(const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
   end;
   TThoriumHostObjectTypeClass = class of TThoriumHostObjectType;
 
@@ -1254,10 +1375,10 @@ type
        ): Boolean; override;
     procedure GetStaticFieldType(const AFieldID: QWord; out
        TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition); override;
-    function OpEvaluate(const AValue: Pointer): Integer; override;
-    function OpGetField(const AInstance: Pointer; const AFieldID: QWord
+    function DoEvaluate(const AValue: Pointer): Integer; override;
+    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
        ): TThoriumValue; override;
-    procedure OpSetField(const AInstance: Pointer;
+    procedure DoSetField(const AValue: TThoriumValue;
               const AFieldID: QWord; const NewValue: TThoriumValue); override;
     procedure SetPropertyStoring(const PropInfo: PPropInfo; const Storing: Boolean);
     procedure SetPropertyStoring(const PropertyName: String; const Storing: Boolean);
@@ -1688,6 +1809,12 @@ type
         AInstruction: TThoriumInstruction): Integer; virtual; abstract;
     function GenCodeEx(var TargetArray: TThoriumInstructionArray;
         AInstruction: TThoriumInstruction; CodeLine: Integer): Integer;
+    function GenCreation(AOperation: TThoriumCreateInstructionDescription;
+      const ATargetRI: Word = THORIUM_REGISTER_INVALID): Integer;
+    function GenOperation(AOperation: TThoriumOperationDescription;
+      const ATargetRI: Word = THORIUM_REGISTER_INVALID;
+      const AValue1RI: Word = THORIUM_REGISTER_INVALID;
+      const AValue2RI: Word = THORIUM_REGISTER_INVALID): Integer;
     function GetCurrentTableStackPos: Integer;
     function GetFreeRegister(Kind: TThoriumRegisterKind; out RegisterID: TThoriumRegisterID; ThrowError: Boolean = True): Boolean;
     function GetHighestRegisterInUse: TThoriumRegisterID;
@@ -1979,6 +2106,9 @@ function HostRecordField(const AType: TThoriumExternalFunctionVarType;
 function HostVarType(const AHostType: TThoriumHostType;
   const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumExternalFunctionVarType;
 
+operator := (Input: TThoriumValue): TThoriumCompileTimeValue;
+operator := (Input: TThoriumCompileTimeValue): TThoriumValue;
+
 implementation
 
 uses
@@ -2003,6 +2133,13 @@ begin
 end;
 
 {$endif}
+
+var
+  // These are used to access their type functions quickly in runtime functions
+  // E.g. to create an integer result value etc.
+  IntType: TThoriumType;
+  FloatType: TThoriumType;
+  StrType: TThoriumType;
 
 {$I Thorium_InstructionConstructors.inc}
 
@@ -3346,6 +3483,17 @@ begin
     Result.Storing := AStoring;
 end;
 
+operator:=(Input: TThoriumValue): TThoriumCompileTimeValue;
+begin
+  Result.Value := Input;
+  Result.CTTI := Input.RTTI;
+end;
+
+operator:=(Input: TThoriumCompileTimeValue): TThoriumValue;
+begin
+  Result := Input.Value;
+end;
+
 procedure ThoriumDumpInstructions(const AInstructions: TThoriumInstructionArray);
 var
   I: Integer;
@@ -3617,6 +3765,11 @@ end;
 procedure ThoriumFreeValue(var AValue: TThoriumValue);
 begin
   raise Exception.Create('ThoriumFreeValue not implemented.');
+end;
+
+function InitialData(const Int: TThoriumInteger): TThoriumInitialData;
+begin
+  Result.Int := Int;
 end;
 
 {%ENDREGION}
@@ -4126,6 +4279,113 @@ begin
   Result := Self;
 end;
 
+function TThoriumType.DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  Result := DoCmpEqual(AValue, BValue) or DoCmpGreater(AValue, BValue);
+end;
+
+function TThoriumType.DoCmpLessOrEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  Result := DoCmpEqual(AValue, BValue) or DoCmpLess(AValue, BValue);
+end;
+
+class function TThoriumType.PerformOperation(const AValue: TThoriumValue;
+  const Operation: TThoriumOperationDescription; const BValue: PThoriumValue
+  ): TThoriumValue;
+var
+  A, B: TThoriumValue;
+begin
+  if Operation.Casts[0].Needed then
+    A := AValue.RTTI.DoCast(AValue, Operation.Casts[0].TargetType)
+  else
+    A := AValue;
+  if BValue <> nil then
+  begin
+    if Operation.Casts[1].Needed then
+      B := BValue^.RTTI.DoCast(BValue^, Operation.Casts[1].TargetType)
+    else
+      B := BValue^;
+  end;
+  case Operation.Operation of
+    opIncrement:
+    begin
+      Result := A;
+      DoIncrement(Result);
+    end;
+    opDecrement:
+    begin
+      Result := B;
+      DoDecrement(Result);
+    end;
+    (*opCmpEqual: Result := DoCmpEqual(A, B);
+    opCmpNotEqual: Result := DoCmpNotEqual(A, B);
+    opCmpGreater: Result := DoCmpGreater(A, B);
+    opCmpGreaterOrEqual: Result := DoCmpGreaterOrEqual(A, B);
+    opCmpLess: Result := DoCmpLess(A, B);
+    opCmpLessOrEqual: Result := DoCmpLessOrEqual(A, B);*)
+
+    opAddition: Result := DoAddition(A, B);
+    opSubtraction: Result := DoSubtraction(A, B);
+    opMultiplication: Result := DoMultiplication(A, B);
+    opDivision: Result := DoDivision(A, B);
+    opIntegerDivision: Result := DoIntegerDivision(A, B);
+    opModulus: Result := DoModulus(A, B);
+
+    opBitAnd: Result := DoBitAnd(A, B);
+    opBitOr: Result := DoBitOr(A, B);
+    opBitXor: Result := DoBitXor(A, B);
+    opBitShr: Result := DoBitShr(A, B);
+    opBitShl: Result := DoBitShl(A, B);
+    opBitNot:
+    begin
+      Result := A;
+      DoBitNot(Result);
+    end;
+
+    opLogicalAnd: Result := DoLogicalAnd(A, B);
+    opLogicalOr: Result := DoLogicalOr(A, B);
+    opLogicalXor: Result := DoLogicalXor(A, B);
+    opLogicalNot:
+    begin
+      Result := A;
+      DoLogicalNot(Result);
+    end;
+  else
+    raise EThoriumRuntimeException.CreateFmt('Invalid generic operation: %s.', [GetEnumName(TypeInfo(TThoriumOperation), Ord(Operation.Operation))]);
+  end;
+end;
+
+class function TThoriumType.PerformCmpOperation(const AValue: TThoriumValue;
+  const Operation: TThoriumOperationDescription; const BValue: PThoriumValue
+  ): Boolean;
+var
+  A, B: TThoriumValue;
+begin
+  if Operation.Casts[0].Needed then
+    A := AValue.RTTI.DoCast(AValue, Operation.Casts[0].TargetType)
+  else
+    A := AValue;
+  if BValue <> nil then
+  begin
+    if Operation.Casts[1].Needed then
+      B := BValue^.RTTI.DoCast(BValue^, Operation.Casts[1].TargetType)
+    else
+      B := BValue^;
+  end;
+  case Operation.Operation of
+    opCmpEqual: Result := DoCmpEqual(A, B);
+    opCmpNotEqual: Result := DoCmpNotEqual(A, B);
+    opCmpGreater: Result := DoCmpGreater(A, B);
+    opCmpGreaterOrEqual: Result := DoCmpGreaterOrEqual(A, B);
+    opCmpLess: Result := DoCmpLess(A, B);
+    opCmpLessOrEqual: Result := DoCmpLessOrEqual(A, B);
+  else
+    raise EThoriumRuntimeException.CreateFmt('Invalid comparision operation: %s.', [GetEnumName(TypeInfo(TThoriumOperation), Ord(Operation.Operation))]);
+  end;
+end;
+
 function TThoriumType.UsesType(const AnotherType: IThoriumType;
   MayRecurse: Boolean): Boolean;
 begin
@@ -4195,6 +4455,7 @@ function TThoriumTypeInteger.CanPerformOperation(
       Operation.ResultType := TheObject;
       Operation.Casts[0].Needed := True;
       Operation.Casts[0].Instruction := TThoriumInstructionCAST(castif(0, 0));
+      Operation.Casts[0].TargetType := Operation.ResultType;
       Operation.Casts[1].Needed := False;
       Operation.OperationInstruction := OperationInstructionDescription(Instruction);
       Result := True;
@@ -4265,8 +4526,10 @@ begin
           Operation.ResultType := TThoriumTypeFloat.Create();
           Operation.Casts[0].Needed := True;
           Operation.Casts[0].Instruction := TThoriumInstructionCAST(castif(0, 0));
+          Operation.Casts[0].TargetType := Operation.ResultType;
           Operation.Casts[1].Needed := True;
           Operation.Casts[1].Instruction := TThoriumInstructionCAST(castif(0, 0));
+          Operation.Casts[1].TargetType := Operation.ResultType;
           Operation.OperationInstruction := OperationInstructionDescription(divf(0, 0, 0));
           Exit;
         end
@@ -4304,6 +4567,117 @@ begin
     end;
   end;
   Result := inherited;
+end;
+
+function TThoriumTypeInteger.DoAddition(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int + BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoBitAnd(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int and BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoBitOr(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int or BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoBitXor(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int xor BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoBitShr(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int shr BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoBitShl(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int shl BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoBitNot(const AValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := not AValue.Int;
+end;
+
+function TThoriumTypeInteger.DoCast(const AValue: TThoriumValue;
+  const TargetType: IThoriumType): TThoriumValue;
+begin
+  if TargetType.GetInstance is TThoriumTypeFloat then
+  begin
+    Result.RTTI := TargetType.GetInstance;
+    Result.Float := AValue.Int;
+  end
+  else
+    raise EThoriumRuntimeException.CreateFmt('Cannot cast %s to %s.', [Name, TargetType.Name]);
+end;
+
+procedure TThoriumTypeInteger.DoDecrement(var ASubject: TThoriumValue);
+begin
+  ASubject.Int -= 1;
+end;
+
+function TThoriumTypeInteger.DoCreate(const InitialData: TThoriumInitialData
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := InitialData.Int;
+end;
+
+procedure TThoriumTypeInteger.DoIncrement(var ASubject: TThoriumValue);
+begin
+  ASubject.Int += 1;
+end;
+
+function TThoriumTypeInteger.DoIntegerDivision(const AValue,
+  BValue: TThoriumValue): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int div BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoModulus(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int mod BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoMultiplication(const AValue,
+  BValue: TThoriumValue): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int * BValue.Int;
+end;
+
+procedure TThoriumTypeInteger.DoNegate(var AValue: TThoriumValue);
+begin
+  AValue.Int := -AValue.Int;
+end;
+
+function TThoriumTypeInteger.DoSubtraction(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := AValue.Int - BValue.Int;
 end;
 
 { TThoriumTypeFloat }
@@ -4404,6 +4778,56 @@ begin
   Result := inherited;
 end;
 
+function TThoriumTypeFloat.DoAddition(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Float := AValue.Float + BValue.Float;
+end;
+
+function TThoriumTypeFloat.DoCreate(const InitialData: TThoriumInitialData
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := InitialData.Int;
+end;
+
+procedure TThoriumTypeFloat.DoDecrement(var ASubject: TThoriumValue);
+begin
+  ASubject.Float -= 1;
+end;
+
+function TThoriumTypeFloat.DoDivision(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Float := AValue.Float / BValue.Float;
+end;
+
+procedure TThoriumTypeFloat.DoIncrement(var ASubject: TThoriumValue);
+begin
+  ASubject.Float += 1;
+end;
+
+procedure TThoriumTypeFloat.DoNegate(var AValue: TThoriumValue);
+begin
+  AValue.Float := -AValue.Float;
+end;
+
+function TThoriumTypeFloat.DoMultiplication(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Float := AValue.Float * BValue.Float;
+end;
+
+function TThoriumTypeFloat.DoSubtraction(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Float := AValue.Float - BValue.Float;
+end;
+
 { TThoriumTypeString }
 
 function TThoriumTypeString.GetTypeKind: TThoriumTypeKind;
@@ -4500,6 +4924,30 @@ end;
 function TThoriumTypeString.HasFieldAccess: Boolean;
 begin
   Result := True;
+end;
+
+function TThoriumTypeString.DoAddition(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  New(Result.Str);
+  Result.Str^ := AValue.Str^ + BValue.Str^;
+end;
+
+function TThoriumTypeString.DoGetField(const AValue: TThoriumValue;
+  const AFieldID: QWord): TThoriumValue;
+begin
+  case AFieldID of
+    0: Result := IntType.DoCreate(InitialData(Length(AValue.Str^)));
+  end;
+end;
+
+function TThoriumTypeString.DoGetIndexed(const AValue: TThoriumValue;
+  const AIndex: TThoriumValue): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  New(Result.Str);
+  Result.Str^ := AValue.Str^[AIndex.Int];
 end;
 
 { TThoriumTypeFunction }
@@ -5385,20 +5833,20 @@ begin
   end;
 end;
 
-function TThoriumRTTIObjectType.OpEvaluate(const AValue: Pointer): Integer;
+function TThoriumRTTIObjectType.DoEvaluate(const AValue: Pointer): Integer;
 begin
   if AValue <> nil then
     Exit(1);
   Result := 0;
 end;
 
-function TThoriumRTTIObjectType.OpGetField(const AInstance: Pointer;
+function TThoriumRTTIObjectType.DoGetField(const AValue: TThoriumValue;
   const AFieldID: QWord): TThoriumValue;
 begin
   raise EThoriumException.Create('Not reimplemented yet.');
 end;
 
-procedure TThoriumRTTIObjectType.OpSetField(const AInstance: Pointer;
+procedure TThoriumRTTIObjectType.DoSetField(const AValue: TThoriumValue;
   const AFieldID: QWord; const NewValue: TThoriumValue);
 begin
   raise EThoriumException.Create('Not reimplemented yet.');
@@ -8148,6 +8596,51 @@ begin
   TargetArray[Result].CodeLine := CodeLine;
 end;
 
+function TThoriumCustomCompiler.GenCreation(
+  AOperation: TThoriumCreateInstructionDescription; const ATargetRI: Word
+  ): Integer;
+var
+  Instruction: TThoriumInstructionREG;
+begin
+  Instruction := AOperation.Instruction;
+  if AOperation.TargetRegisterOffset >= 0 then
+    Instruction.Reserved[AOperation.TargetRegisterOffset] := ATargetRI;
+  Result := GenCode(TThoriumInstruction(Instruction));
+end;
+
+function TThoriumCustomCompiler.GenOperation(
+  AOperation: TThoriumOperationDescription; const ATargetRI: Word;
+  const AValue1RI: Word; const AValue2RI: Word): Integer;
+var
+  Instruction: TThoriumOperationInstructionDescription;
+  Cast: TThoriumInstructionCAST;
+begin
+  Instruction := AOperation.OperationInstruction;
+  if Instruction.Value1RIOffset >= 0 then
+    Instruction.Instruction.Reserved[Instruction.Value1RIOffset] := AValue1RI;
+  if Instruction.Value2RIOffset >= 0 then
+    Instruction.Instruction.Reserved[Instruction.Value2RIOffset] := AValue2RI;
+  if Instruction.TargetRIOffset >= 0 then
+    Instruction.Instruction.Reserved[Instruction.TargetRIOffset] := ATargetRI;
+  if AOperation.Casts[0].Needed then
+  begin
+    Cast := AOperation.Casts[0].Instruction;
+    Cast.SRI := AValue1RI;
+    Cast.TRI := THORIUM_REGISTER_C1;
+    GenCode(TThoriumInstruction(Cast));
+    Instruction.Instruction.Reserved[Instruction.Value1RIOffset] := THORIUM_REGISTER_C1;
+  end;
+  if AOperation.Casts[1].Needed then
+  begin
+    Cast := AOperation.Casts[1].Instruction;
+    Cast.SRI := AValue2RI;
+    Cast.TRI := THORIUM_REGISTER_C2;
+    GenCode(TThoriumInstruction(Cast));
+    Instruction.Instruction.Reserved[Instruction.Value2RIOffset] := THORIUM_REGISTER_C2;
+  end;
+  Result := GenCode(TThoriumInstruction(Instruction.Instruction));
+end;
+
 function TThoriumCustomCompiler.GetCurrentTableStackPos: Integer;
 begin
   Result := FTableSizes.Count;
@@ -10564,5 +11057,9 @@ STACKENTRY_VADATA_OFFSET := ptruint(@TestEntry.VADataOrigin) - ptruint(@TestEntr
 {$ifdef HookSIGUSR1}
   FpSignal(Baseunix.SIGUSR1, @HandleSigUSR1);
 {$endif}
+
+IntType := TThoriumTypeInteger.Create;
+FloatType := TThoriumTypeFloat.Create;
+StrType := TThoriumTypeString.Create;
 
 end.

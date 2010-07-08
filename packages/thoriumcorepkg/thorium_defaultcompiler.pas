@@ -212,15 +212,15 @@ type
     function GenCode(AInstruction: TThoriumInstruction): Integer; override;
     function Proceed(ExpectMask: TThoriumDefaultSymbols = []; ThrowError: Boolean = False): Boolean;
   protected
-    function Expression(ATargetRegister: Word; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
-    function Factor(ATargetRegister: Word; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function Expression(ATargetRegister: Word; out AIsDynamic: Boolean; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function Factor(ATargetRegister: Word; out AIsDynamic: Boolean; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
     function FindFilteredTableEntry(const Ident: String; AllowedKinds: TThoriumQualifiedIdentifierKinds; out Entry: TThoriumTableEntry; DropMultiple: Boolean = True; GetLast: Boolean = False): Boolean;
     procedure FilterTableEntries(Entries: TThoriumTableEntryResultList; AllowedKinds: TThoriumQualifiedIdentifierKinds);
     procedure Module;
-    function SimpleExpression(ATargetRegister: Word; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function SimpleExpression(ATargetRegister: Word; out AIsDynamic: Boolean; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
-    function Term(ATargetRegister: Word; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function Term(ATargetRegister: Word; out AIsDynamic: Boolean; ATypeHint: IThoriumType = nil; AIsStatic: PBoolean = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
   public
     function CompileFromStream(SourceStream: TStream;
        Flags: TThoriumCompilerFlags=[cfOptimize]): Boolean; override;
@@ -575,26 +575,71 @@ begin
 end;
 
 function TThoriumDefaultCompiler.Expression(ATargetRegister: Word;
-  ATypeHint: IThoriumType; AIsStatic: PBoolean; AStaticValue: PThoriumValue
-  ): IThoriumType;
+  out AIsDynamic: Boolean; ATypeHint: IThoriumType; AIsStatic: PBoolean;
+  AStaticValue: PThoriumValue): IThoriumType;
 begin
   raise EThoriumCompilerException.Create('Expression not implemented.');
 end;
 
 function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
-  ATypeHint: IThoriumType; AIsStatic: PBoolean; AStaticValue: PThoriumValue
-  ): IThoriumType;
+  out AIsDynamic: Boolean; ATypeHint: IThoriumType; AIsStatic: PBoolean;
+  AStaticValue: PThoriumValue): IThoriumType;
 var
   InitialData: TThoriumInitialData;
   CreationDescription: TThoriumCreateInstructionDescription;
   TableEntry: TThoriumTableEntry;
+  OperationDescription: TThoriumOperationDescription;
+  IsStatic: Boolean;
+  StaticValue: TThoriumValue;
+  IsDynamic: Boolean;
+  Reg: TThoriumRegisterID;
 begin
   case FCurrentSym of
     tsMinus:
     begin
-      Result := Factor(ATargetRegister, ATypeHint, AIsStatic, AStaticValue);
-      if not Result.CanPerformOperation(opNegate) then
-        CompilerError('Cannot negate this kind of value.');
+      GetFreeRegister(trEXP, Reg);
+      try
+        Result := Factor(Reg, IsDynamic, ATypeHint, @IsStatic, @StaticValue);
+        OperationDescription.Operation := opNegate;
+        if not Result.CanPerformOperation(OperationDescription) then
+          CompilerError('Cannot negate this kind of value.');
+        if (AIsStatic <> nil) and (IsStatic) then
+        begin
+          Assert(StaticValue.RTTI.IsEqualTo(Result));
+          AStaticValue^ := StaticValue;
+          AIsStatic^ := True;
+          AStaticValue^.RTTI.DoNegate(AStaticValue^);
+        end
+        else
+        begin
+          if IsStatic then
+          begin
+            Assert(StaticValue.RTTI.IsEqualTo(Result));
+            StaticValue.RTTI.DoNegate(StaticValue);
+            if not (StaticValue.RTTI.TypeKind in [tkSimple, Thorium.tkString]) then
+              raise EThoriumCompilerException.Create('Cannot handle static values which are not simple or string.');
+            if StaticValue.RTTI is TThoriumTypeString then
+            begin
+              if StaticValue.Str^ <> '' then
+                InitialData.Int := AddLibraryString(StaticValue.Str^)
+              else
+                InitialData.Int := -1;
+              Assert(StaticValue.RTTI.CanCreate(InitialData, True, CreationDescription));
+            end
+            else
+            begin
+              InitialData.Int := StaticValue.Int;
+              Assert(StaticValue.RTTI.CanCreate(InitialData, True, CreationDescription));
+            end;
+            GenCreation(CreationDescription, ATargetRegister);
+          end
+          else
+            GenOperation(OperationDescription, ATargetRegister);
+        end;
+        AIsDynamic := True;
+      finally
+        ReleaseRegister(Reg);
+      end;
     end;
     tsPlus:
     begin
@@ -764,6 +809,13 @@ begin
   ExpectSymbol([tsUnknown], True);
 end;
 
+function TThoriumDefaultCompiler.SimpleExpression(ATargetRegister: Word; out
+  AIsDynamic: Boolean; ATypeHint: IThoriumType; AIsStatic: PBoolean;
+  AStaticValue: PThoriumValue): IThoriumType;
+begin
+
+end;
+
 function TThoriumDefaultCompiler.SimpleExpression(ATargetRegister: Word;
   ATypeHint: IThoriumType; AIsStatic: PBoolean; AStaticValue: PThoriumValue
   ): IThoriumType;
@@ -902,6 +954,13 @@ begin
   finally
     Entries.Free;
   end;
+end;
+
+function TThoriumDefaultCompiler.Term(ATargetRegister: Word; out
+  AIsDynamic: Boolean; ATypeHint: IThoriumType; AIsStatic: PBoolean;
+  AStaticValue: PThoriumValue): IThoriumType;
+begin
+
 end;
 
 function TThoriumDefaultCompiler.Term(ATargetRegister: Word;
