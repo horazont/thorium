@@ -891,6 +891,11 @@ type
      about (possibly relocation needing) uses of a library property. *)
   TThoriumLibraryPropertyArray = array of TThoriumLibraryProperty;
 
+  TThoriumValueState = (vsDynamic, vsAccessable, vsStatic);
+  // vsDynamic = Result of a calculating operation
+  // vsAccessable = Read from register or stack, just a "clone", not a copy
+  // vsStatic = Constant value which may be used for CTE (Compile time evaluation)
+
   (* A record containing information about a fully qualified identifier, which
      means that all brackets, dots and square brackets of the identifier
      expression are parsed. It contains also information about used host types
@@ -899,7 +904,7 @@ type
   TThoriumQualifiedIdentifier = record
     FullStr: String;
     Kind: TThoriumQualifiedIdentifierKind;
-    IsStatic: Boolean;
+    State: TThoriumValueState;
     FinalType: IThoriumType;
     Value: TThoriumValue;
 
