@@ -56,6 +56,7 @@ type
     tsXor,
     tsDiv,
     tsMod,
+    tsAnd,
     tsIf,
     tsElseIf,
     tsElse,
@@ -95,6 +96,10 @@ const
 
   THORIUM_DEFAULT_FIRST_MULTICHARSYM = tsEqual;
   THORIUM_DEFAULT_LAST_MULTICHARSYM = tsAppend;
+
+  THORIUM_DEFAULT_TERM_OPERATOR = [tsMultiply, tsDivide, tsDiv, tsMod, tsAnd, tsShl, tsShr];
+  THORIUM_DEFAULT_EXPRESSION_OPEARTOR = [tsPlus, tsMinus, tsOr, tsXor];
+  THORIUM_DEFAULT_RELATIONAL_OPERATOR = [tsLess, tsNotEqual, tsGreater, tsLessEqual, tsGreaterEqual, tsEqual];
 
   THORIUM_DEFAULT_SYMBOL_CODE : array [TThoriumDefaultSymbol] of String = (
     '',
@@ -144,6 +149,7 @@ const
     'xor',
     'div',
     'mod',
+    'and',
     'if',
     'elseif',
     'else',
@@ -212,16 +218,16 @@ type
     function GenCode(AInstruction: TThoriumInstruction): Integer; override;
     function Proceed(ExpectMask: TThoriumDefaultSymbols = []; ThrowError: Boolean = False): Boolean;
   protected
-    function Expression(ATargetRegister: Word; out AState: TThoriumValueState; ATypeHint: IThoriumType = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
-    function Factor(ATargetRegister: Word; out AState: TThoriumValueState; ATypeHint: IThoriumType = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function Expression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
+    function Factor(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
     function FindFilteredTableEntry(const Ident: String; AllowedKinds: TThoriumQualifiedIdentifierKinds; out Entry: TThoriumTableEntry; DropMultiple: Boolean = True; GetLast: Boolean = False): Boolean;
     procedure FilterTableEntries(Entries: TThoriumTableEntryResultList; AllowedKinds: TThoriumQualifiedIdentifierKinds);
     procedure Module;
     procedure PlaceStatic(const StaticValue: TThoriumValue; ATargetRegister: Word);
-    function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; ATypeHint: IThoriumType = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
-    function Term(ATargetRegister: Word; out AState: TThoriumValueState; ATypeHint: IThoriumType = nil; AStaticValue: PThoriumValue = nil): IThoriumType;
+    function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
   public
     function CompileFromStream(SourceStream: TStream;
        Flags: TThoriumCompilerFlags=[cfOptimize]): Boolean; override;
@@ -231,6 +237,11 @@ implementation
 
 {$I Thorium_InstructionConstructors.inc}
 
+function SymbolToStr(const Sym: TThoriumDefaultSymbol): String;
+begin
+  Result := GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(sym));
+end;
+
 function SymbolMaskToStr(const Mask: TThoriumDefaultSymbols): String;
 var
   Sym: TThoriumDefaultSymbol;
@@ -238,9 +249,37 @@ begin
   Result := '';
   for Sym := Low(TThoriumDefaultSymbols) to High(TThoriumDefaultSymbols) do
     if Sym in Mask then
-      Result += GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(Sym))+', ';
+      Result += SymbolToStr(Sym)+', ';
   if Length(Result) > 0 then
     Delete(Result, Length(Result)-2, 2);
+end;
+
+function SymbolToOperation(A: TThoriumDefaultSymbol): TThoriumOperation;
+begin
+  case A of
+    tsEqual: Result := opCmpEqual;
+    tsNotEqual: Result := opCmpNotEqual;
+    tsGreater: Result := opCmpGreater;
+    tsGreaterEqual: Result := opCmpGreaterOrEqual;
+    tsLess: Result := opCmpLess;
+    tsLessEqual: Result := opCmpLessOrEqual;
+
+    tsPlus: Result := opAddition;
+    tsMinus: Result := opSubtraction;
+    tsMultiply: Result := opMultiplication;
+    tsDivide: Result := opDivision;
+    tsDiv: Result := opIntegerDivision;
+    tsMod: Result := opModulus;
+
+    tsAnd: Result := opBitAnd;
+    tsOr: Result := opBitOr;
+    tsXor: Result := opBitXor;
+    tsShr: Result := opBitShr;
+    tsShl: Result := opBitShl;
+    tsNot: Result := opBitNot;
+  else
+    raise EThoriumCompilerException.CreateFmt('Cannot cast ''%s'' to operation.', [SymbolToStr(A)]);
+  end;
 end;
 
 { TThoriumDefaultScanner }
@@ -576,22 +615,20 @@ begin
 end;
 
 function TThoriumDefaultCompiler.Expression(ATargetRegister: Word;
-  out AState: TThoriumValueState; ATypeHint: IThoriumType;
-  AStaticValue: PThoriumValue): IThoriumType;
+  out AState: TThoriumValueState; AStaticValue: PThoriumValue;
+  ATypeHint: IThoriumType): IThoriumType;
 begin
   raise EThoriumCompilerException.Create('Expression not implemented.');
 end;
 
 function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
-  out AState: TThoriumValueState;  ATypeHint: IThoriumType;
-  AStaticValue: PThoriumValue): IThoriumType;
+  out AState: TThoriumValueState; out AStaticValue: TThoriumValue;
+  ATypeHint: IThoriumType): IThoriumType;
 var
   InitialData: TThoriumInitialData;
   CreationDescription: TThoriumCreateInstructionDescription;
   TableEntry: TThoriumTableEntry;
   OperationDescription: TThoriumOperationDescription;
-  StaticValue: TThoriumValue;
-  State: TThoriumValueState;
   Reg: TThoriumRegisterID;
   Identifier: TThoriumQualifiedIdentifier;
 begin
@@ -600,27 +637,19 @@ begin
     begin
       GetFreeRegister(trEXP, Reg);
       try
-        Result := Factor(Reg, State, ATypeHint, @StaticValue);
+        Result := Factor(Reg, AState, AStaticValue, ATypeHint);
         OperationDescription.Operation := opNegate;
         if not Result.CanPerformOperation(OperationDescription) then
           CompilerError('Cannot negate this kind of value.');
-        if (AStaticValue <> nil) and (State = vsStatic) then
+        if AState = vsStatic then
         begin
-          Assert(StaticValue.RTTI.IsEqualTo(Result));
-          StaticValue.RTTI.DoNegate(StaticValue);
+          Assert(AStaticValue.RTTI.IsEqualTo(Result));
+          AStaticValue.RTTI.DoNegate(AStaticValue);
           AState := vsStatic;
-          AStaticValue^ := StaticValue;
         end
         else
         begin
-          if State = vsStatic then
-          begin
-            Assert(StaticValue.RTTI.IsEqualTo(Result));
-            StaticValue.RTTI.DoNegate(StaticValue);
-            PlaceStatic(StaticValue, ATargetRegister);
-          end
-          else
-            GenOperation(OperationDescription, ATargetRegister, Reg);
+          GenOperation(OperationDescription, ATargetRegister, Reg);
           AState := vsDynamic;
         end;
       finally
@@ -631,7 +660,7 @@ begin
     begin
       Proceed;
       // Just ignore it
-      Exit(Factor(ATargetRegister, AState, ATypeHint, AStaticValue));
+      Exit(Factor(ATargetRegister, AState, AStaticValue, ATypeHint));
     end;
     tsIntegerValue:
     begin
@@ -662,8 +691,8 @@ begin
       Identifier := SolveIdentifier(ATargetRegister, [ikComplex, ikLibraryProperty, ikPrototypedFunction, ikStatic, ikVariable]);
       AState := Identifier.State;
       Result := Identifier.FinalType;
-      if (AState = vsStatic) and (AStaticValue <> nil) then
-        AStaticValue^ := Identifier.Value
+      if (AState = vsStatic) then
+        AStaticValue := Identifier.Value
       else
       begin
         if AState = vsStatic then
@@ -685,7 +714,7 @@ begin
         end;
       end;
       // Pass through
-      Result := SimpleExpression(ATargetRegister, AState, ATypeHint, AStaticValue);
+      Result := SimpleExpression(ATargetRegister, AState, @AStaticValue, ATypeHint);
       ExpectSymbol([tsCloseBracket]);
       Proceed;
     end;
@@ -835,10 +864,66 @@ begin
 end;
 
 function TThoriumDefaultCompiler.SimpleExpression(ATargetRegister: Word;
-  out AState: TThoriumValueState; ATypeHint: IThoriumType; AStaticValue: PThoriumValue
-  ): IThoriumType;
+  out AState: TThoriumValueState; AStaticValue: PThoriumValue;
+  ATypeHint: IThoriumType): IThoriumType;
+var
+  Sym: TThoriumDefaultSymbol;
+  Operation: TThoriumOperationDescription;
+  State1, State2: TThoriumValueState;
+  Value1, Value2: TThoriumValue;
+  RegID2: TThoriumRegisterID;
+  OperandType: IThoriumType;
+  ResultValue: TThoriumValue;
 begin
+  Result := Term(ATargetRegister, State1, Value1, ATypeHint);
 
+  GetFreeRegister(trEXP, RegID2);
+  while FCurrentSym in THORIUM_DEFAULT_EXPRESSION_OPEARTOR do
+  begin
+    Sym := FCurrentSym;
+    Proceed;
+
+    OperandType := Term(RegID2, State2, Value2, Result);
+
+    Operation.Operation := SymbolToOperation(Sym);
+    if not Result.CanPerformOperation(Operation, OperandType) then
+      CompilerError('Invalid operands for this operation.');
+
+    // Attempt to evaluate static values during compile time
+    if (State1 = vsStatic) and (State2 = vsStatic) then
+    begin
+      ResultValue := TThoriumType.PerformOperation(Value1, Operation, Value2);
+      ThoriumFreeValue(Value1);
+      ThoriumFreeValue(Value2);
+      Value1 := ResultValue;
+      Continue;
+    end;
+
+    if State1 = vsStatic then
+    begin
+      PlaceStatic(Value1, ATargetRegister);
+      ThoriumFreeValue(Value1);
+    end;
+
+    if State2 = vsStatic then
+    begin
+      PlaceStatic(Value2, RegID2);
+      ThoriumFreeValue(Value2);
+    end;
+
+    GenOperation(Operation, THORIUM_REGISTER_C3, ATargetRegister, RegID2);
+    GenCode(mover(THORIUM_REGISTER_C3, ATargetRegister));
+  end;
+
+  if (State1 = vsStatic) and (AStaticValue = nil) then
+  begin
+    PlaceStatic(Value1, ATargetRegister);
+    ThoriumFreeValue(Value1);
+    State1 := vsDynamic;
+    AStaticValue^ := Value1;
+  end;
+  AState := State1;
+  ReleaseRegister(RegID2);
 end;
 
 function TThoriumDefaultCompiler.SolveIdentifier(ATargetRegister: Word;
@@ -975,10 +1060,68 @@ begin
 end;
 
 function TThoriumDefaultCompiler.Term(ATargetRegister: Word; out
-  AState: TThoriumValueState; ATypeHint: IThoriumType;
-  AStaticValue: PThoriumValue): IThoriumType;
+  AState: TThoriumValueState; out AStaticValue: TThoriumValue;
+  ATypeHint: IThoriumType): IThoriumType;
+var
+  State1, State2: TThoriumValueState;
+  Value1, Value2: TThoriumValue;
+  Sym: TThoriumDefaultSymbol;
+  RegID2: TThoriumRegisterID;
+  OperandType: IThoriumType;
+  Operation: TThoriumOperationDescription;
+  ResultValue: TThoriumValue;
 begin
+  Result := Factor(ATargetRegister, State1, Value1, ATypeHint);
+  GetFreeRegister(trEXP, RegID2);
 
+  while FCurrentSym in THORIUM_DEFAULT_TERM_OPERATOR do
+  begin
+    Sym := FCurrentSym;
+    Proceed;
+
+    OperandType := Factor(RegID2, State2, Value2, Result);
+
+    Operation.Operation := SymbolToOperation(Sym);
+    if not Result.CanPerformOperation(Operation, OperandType) then
+      CompilerError('Invalid operands for this operation.');
+
+    // Attempt to evaluate the expression during compilation
+    if (State1 = vsStatic) and (State2 = vsStatic) then
+    begin
+      ResultValue := TThoriumType.PerformOperation(Value1, Operation, Value2);
+      ThoriumFreeValue(Value1);
+      ThoriumFreeValue(Value2);
+      Value1 := ResultValue;
+      Continue;
+    end;
+
+    // Otherwise, dynamify static values
+    if State1 = vsStatic then
+    begin
+      PlaceStatic(Value1, ATargetRegister);
+      ThoriumFreeValue(Value1);
+    end;
+
+    if State2 = vsStatic then
+    begin
+      PlaceStatic(Value2, RegID2);
+      ThoriumFreeValue(Value2);
+    end;
+
+    GenOperation(Operation, THORIUM_REGISTER_C3, ATargetRegister, RegID2);
+    if State1 = vsDynamic then
+      GenCode(clr(ATargetRegister));
+    if State2 = vsDynamic then
+      GenCode(clr(RegID2));
+    GenCode(mover(THORIUM_REGISTER_C3, ATargetRegister));
+    State1 := vsDynamic;
+  end;
+  ReleaseRegister(RegID2);
+  // All static evaluations are stored to Value1, so return that in case of a
+  // static value
+  AState := State1;
+  if AState = vsStatic then
+    AStaticValue := Value1;
 end;
 
 function TThoriumDefaultCompiler.CompileFromStream(SourceStream: TStream;
