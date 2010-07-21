@@ -470,6 +470,9 @@ type
   TThoriumTypeKind = (tkSimple, tkFunction, tkHostFunction, tkHostMethod,
     tkHostType, tkStruct, tkArray, tkString);
 
+  TThoriumOperationDescriptionKind = (okCast, okOperation, okAssignment,
+    okCreation, okCustom);
+
   TThoriumCastDescription = record
     Needed: Boolean;
     Instruction: TThoriumInstructionCAST;
@@ -488,6 +491,8 @@ type
     ResultType: IThoriumType;
     Casts: array [0..1] of TThoriumCastDescription;
     OperationInstruction: TThoriumOperationInstructionDescription;
+    // Does only need to be set for opFieldAccess and opIndexedAccess
+    TwoWayCanWrite: Boolean;
   end;
 
   TThoriumAssignmentDescription = record
@@ -506,6 +511,22 @@ type
     TargetRegisterOffset: Integer;
     Instruction: TThoriumInstructionREG;
   end;
+
+  TThoriumCustomOperation = record
+    Instructions: TThoriumInstructionArray;
+  end;
+
+  TThoriumGenericOperation = record
+    Kind: TThoriumOperationDescriptionKind;
+    Cast: TThoriumCastDescription;
+    Operation: TThoriumOperationDescription;
+    Assignment: TThoriumAssignmentDescription;
+    Creation: TThoriumCreateInstructionDescription;
+    Custom: TThoriumCustomOperation;
+
+    TargetRI, Value1RI, Value2RI: TThoriumRegisterID;
+  end;
+  TThoriumOperationArray = array of TThoriumGenericOperation;
 
   { IThoriumType }
 
@@ -907,11 +928,12 @@ type
     State: TThoriumValueState;
     FinalType: IThoriumType;
     Value: TThoriumValue;
+    Writable: Boolean;
 
     GetJumpMarks: TThoriumIntArray;
-    GetCode: TThoriumInstructionArray;
+    GetCode: TThoriumOperationArray;
     SetJumpMarks: TThoriumIntArray;
-    SetCode: TThoriumInstructionArray;
+    SetCode: TThoriumOperationArray;
     UsedExtendedTypes: array of TThoriumHostObjectType;
     UsedLibraryProps: array of TThoriumLibraryProperty;
   end;
@@ -1801,6 +1823,10 @@ type
     function AddHostFunctionUsageToRelocate(const AFunc: TThoriumHostCallableBase; const AOffset: ptruint): Integer;
     function AddPublicVariable: TThoriumVariable;
     function AppendCode(ACodeArray: TThoriumInstructionArray): Integer;
+    function AppendCodeEx(const ASource: TThoriumInstructionArray; var ADest: TThoriumInstructionArray): Integer;
+    function AppendCodeToOperation(const ASource: TThoriumInstructionArray; var AOperations: TThoriumOperationArray): Integer;
+    function AppendOperations(AOperations: TThoriumOperationArray): Integer;
+    procedure AppendOperation(var AOperations: TThoriumOperationArray; AOperation: TThoriumGenericOperation);
     procedure CompilerError(const Msg: String); virtual;
     procedure CompilerError(const Msg: String; X, Y: Integer); virtual;
     procedure DumpState; virtual;
@@ -1808,12 +1834,15 @@ type
       out Module: TThoriumModule; RaiseError: Boolean = True; AllowFar: Boolean = True): Boolean; inline;
     procedure FindTableEntries(const Ident: String;
       var Entries: TThoriumTableEntryResults);
+    procedure ForceNewCustomOperation(var OperationArray: TThoriumOperationArray);
     function GenCode(AInstruction: TThoriumInstruction): Integer; virtual; abstract;
     function GenCode(AInstruction: TThoriumInstruction; ACodeLine: Cardinal): Integer;
     function GenCodeEx(var TargetArray: TThoriumInstructionArray;
         AInstruction: TThoriumInstruction): Integer; virtual; abstract;
     function GenCodeEx(var TargetArray: TThoriumInstructionArray;
         AInstruction: TThoriumInstruction; CodeLine: Integer): Integer;
+    function GenCodeToOperation(var OperationArray: TThoriumOperationArray;
+        AInstruction: TThoriumInstruction): Integer;
     function GenCreation(AOperation: TThoriumCreateInstructionDescription;
       const ATargetRI: Word = THORIUM_REGISTER_INVALID): Integer;
     function GenOperation(AOperation: TThoriumOperationDescription;
@@ -2074,6 +2103,7 @@ type
     procedure ClearModules;
     function FindLibrary(const Name: String): TThoriumLibrary;
     function FindModule(const Name: String; AllowLoad: Boolean = True): TThoriumModule;
+    function IndexOfModule(const AModule: TThoriumModule): Integer;
     procedure InitializeVirtualMachine;
     function LoadLibrary(const ALibrary: TThoriumLibraryClass): TThoriumLibrary;
     function LoadModuleFromFile(AModuleName: String; NeededHash: PThoriumHash = nil): TThoriumModule;
@@ -2113,6 +2143,13 @@ function HostVarType(const AHostType: TThoriumHostType;
 
 operator := (Input: TThoriumValue): TThoriumCompileTimeValue;
 operator := (Input: TThoriumCompileTimeValue): TThoriumValue;
+
+operator := (Input: TThoriumInstructionArray): TThoriumGenericOperation;
+
+function ThoriumEncapsulateOperation(const AOperation: TThoriumOperationDescription;
+  const TargetRI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
+  const Value1RI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
+  const Value2RI: TThoriumRegisterID = THORIUM_REGISTER_INVALID): TThoriumGenericOperation;
 
 implementation
 
@@ -3499,6 +3536,27 @@ begin
   Result := Input.Value;
 end;
 
+operator:=(Input: TThoriumInstructionArray): TThoriumGenericOperation;
+begin
+  Result.Kind := okCustom;
+  Result.Custom.Instructions := Input;
+  Result.TargetRI := THORIUM_REGISTER_INVALID;
+  Result.Value1RI := THORIUM_REGISTER_INVALID;
+  Result.Value2RI := THORIUM_REGISTER_INVALID;
+end;
+
+function ThoriumEncapsulateOperation(
+  const AOperation: TThoriumOperationDescription;
+  const TargetRI: TThoriumRegisterID; const Value1RI: TThoriumRegisterID;
+  const Value2RI: TThoriumRegisterID): TThoriumGenericOperation;
+begin
+  Result.Kind := okOperation;
+  Result.Operation := AOperation;
+  Result.TargetRI := TargetRI;
+  Result.Value1RI := Value1RI;
+  Result.Value2RI := Value2RI;
+end;
+
 procedure ThoriumDumpInstructions(const AInstructions: TThoriumInstructionArray);
 var
   I: Integer;
@@ -4474,7 +4532,7 @@ function TThoriumTypeInteger.CanPerformOperation(
     Operation.ResultType := Self;
     Operation.Casts[0].Needed := False;
     Operation.Casts[1].Needed := False;
-    Operation.OperationInstruction := OperationInstructionDescription(Instruction, 0, -1, -1);
+    Operation.OperationInstruction := OperationInstructionDescription(Instruction, -1, -1, 0);
   end;
 
 begin
@@ -4878,14 +4936,15 @@ function TThoriumTypeString.CanPerformOperation(
       Result := False;
   end;
 
-  function StrIntOp(Instruction: TThoriumInstruction): Boolean;
+  function StrIndexOp(Instruction: TThoriumInstruction; AOp1, AOp2, ATarget: Integer): Boolean;
   begin
     if TheObject.GetInstance is TThoriumTypeInteger then
     begin
       Operation.ResultType := Self;
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
+      Operation.OperationInstruction := OperationInstructionDescription(Instruction, AOp1, AOp2, ATarget);
+      Operation.TwoWayCanWrite := False;
     end
     else
       Result := False;
@@ -4895,14 +4954,15 @@ begin
   Result := True;
   if Operation.Operation in opReflexive then
     Result := inherited
-  else if Operation.Operation = opFieldAccess then
+  else if Operation.Operation = opFieldRead then
   begin
     if Name = 'length' then
     begin
       Operation.ResultType := TThoriumTypeInteger.Create;
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(noop(0, 0, 0, 0));
+      Operation.OperationInstruction := OperationInstructionDescription(noop(0, 0, 0, 0), -1, -1, -1);
+      Operation.TwoWayCanWrite := False;
     end;
   end
   else if TheObject = nil then
@@ -4913,8 +4973,8 @@ begin
       opAddition:
         if StrStrOp(adds(0, 0, 0)) then
           Exit;
-      opIndexedAccess:
-        if StrIntOp(noop(0, 0, 0, 0)) then
+      opIndexedRead:
+        if StrIndexOp(noop(0, 0, 0, 0), -1, -1, -1) then
           Exit;
     end;
   end;
@@ -8242,6 +8302,63 @@ begin
     Result := FInstructions.AppendCode(ACodeArray);
 end;
 
+function TThoriumCustomCompiler.AppendCodeEx(
+  const ASource: TThoriumInstructionArray; var ADest: TThoriumInstructionArray
+  ): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  for I := 0 to High(ASource) do
+    Result := GenCodeEx(ADest, ASource[I]);
+end;
+
+function TThoriumCustomCompiler.AppendCodeToOperation(
+  const ASource: TThoriumInstructionArray;
+  var AOperations: TThoriumOperationArray): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  for I := 0 to High(ASource) do
+    Result := GenCodeToOperation(AOperations, ASource[I]);
+end;
+
+function TThoriumCustomCompiler.AppendOperations(
+  AOperations: TThoriumOperationArray): Integer;
+var
+  I: Integer;
+begin
+  for I := 0 to High(AOperations) do
+  begin
+    case AOperations[I].Kind of
+      okOperation:
+        Result := GenOperation(AOperations[I].Operation, AOperations[I].TargetRI, AOperations[I].Value1RI, AOperations[I].Value2RI);
+      okCustom:
+        Result := AppendCode(AOperations[I].Custom.Instructions);
+      okCreation:
+        Result := GenCreation(AOperations[I].Creation, AOperations[I].TargetRI);
+      //okAssignment:
+      //  Result := genass
+      //okCast:
+      //  Result := gen
+    else
+      raise EThoriumCompilerException.CreateFmt('Cannot handle this kind of generic operation in AppendOperations: %s.', [GetEnumName(TypeInfo(TThoriumOperationDescriptionKind), Ord(AOperations[I].Kind))]);
+    end;
+  end;
+end;
+
+procedure TThoriumCustomCompiler.AppendOperation(
+  var AOperations: TThoriumOperationArray; AOperation: TThoriumGenericOperation
+  );
+var
+  I: Integer;
+begin
+  I := Length(AOperations);
+  SetLength(AOperations, I+1);
+  AOperations[I] := AOperation;
+end;
+
 procedure TThoriumCustomCompiler.CompilerError(const Msg: String);
 begin
   CompilerError(Msg, 0, 0);
@@ -8569,6 +8686,27 @@ begin
   ScanGlobalSymbolTable;
 end;
 
+procedure TThoriumCustomCompiler.ForceNewCustomOperation(
+  var OperationArray: TThoriumOperationArray);
+var
+  I: Integer;
+begin
+  if Length(OperationArray) = 0 then
+    Exit;
+  I := High(OperationArray);
+  if OperationArray[I].Kind = okCustom then
+  begin
+    SetLength(OperationArray, I+2);
+    with OperationArray[I+1] do
+    begin
+      Kind := okCustom;
+      TargetRI := THORIUM_REGISTER_INVALID;
+      Value1RI := THORIUM_REGISTER_INVALID;
+      Value2RI := THORIUM_REGISTER_INVALID;
+    end;
+  end;
+end;
+
 function TThoriumCustomCompiler.GenCode(AInstruction: TThoriumInstruction; ACodeLine: Cardinal): Integer;
 begin
   if FCodeHook then
@@ -8599,6 +8737,28 @@ begin
   SetLength(TargetArray, Result+1);
   TargetArray[Result] := AInstruction;
   TargetArray[Result].CodeLine := CodeLine;
+end;
+
+function TThoriumCustomCompiler.GenCodeToOperation(
+  var OperationArray: TThoriumOperationArray; AInstruction: TThoriumInstruction
+  ): Integer;
+var
+  I: Integer;
+begin
+  I := High(OperationArray);
+  if (I < 0) or (OperationArray[I].Kind <> okCustom) then
+  begin
+    Inc(I);
+    SetLength(OperationArray, I+1);
+    with OperationArray[I] do
+    begin
+      Kind := okCustom;
+      TargetRI := THORIUM_REGISTER_INVALID;
+      Value1RI := THORIUM_REGISTER_INVALID;
+      Value2RI := THORIUM_REGISTER_INVALID;
+    end;
+  end;
+  Result := GenCodeEx(OperationArray[I].Custom.Instructions, AInstruction);
 end;
 
 function TThoriumCustomCompiler.GenCreation(
@@ -10812,6 +10972,11 @@ begin
     Exit;
   end;
   Result := nil;
+end;
+
+function TThorium.IndexOfModule(const AModule: TThoriumModule): Integer;
+begin
+  Result := FModules.IndexOf(AModule);
 end;
 
 procedure TThorium.InitializeVirtualMachine;

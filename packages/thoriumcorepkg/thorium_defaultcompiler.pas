@@ -216,6 +216,8 @@ type
     procedure CompilerError(const Msg: String; X, Y: Integer); override;
     function ExpectSymbol(SymbolMask: TThoriumDefaultSymbols; ThrowError: Boolean = True): Boolean;
     function GenCode(AInstruction: TThoriumInstruction): Integer; override;
+    function GenCodeEx(var TargetArray: TThoriumInstructionArray;
+       AInstruction: TThoriumInstruction): Integer; override;
     function Proceed(ExpectMask: TThoriumDefaultSymbols = []; ThrowError: Boolean = False): Boolean;
   protected
     function Expression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
@@ -606,6 +608,13 @@ begin
   inherited GenCode(AInstruction, FScanner.FLine);
 end;
 
+function TThoriumDefaultCompiler.GenCodeEx(
+  var TargetArray: TThoriumInstructionArray; AInstruction: TThoriumInstruction
+  ): Integer;
+begin
+  Result := inherited GenCodeEx(TargetArray, AInstruction, FScanner.FLine);
+end;
+
 function TThoriumDefaultCompiler.Proceed(ExpectMask: TThoriumDefaultSymbols;
   ThrowError: Boolean): Boolean;
 begin
@@ -697,7 +706,7 @@ begin
       begin
         if AState = vsStatic then
           AState := vsAccessable;
-        AppendCode(Identifier.GetCode);
+        AppendOperations(Identifier.GetCode);
       end;
     end;
     tsOpenBracket:
@@ -892,7 +901,7 @@ begin
     // Attempt to evaluate static values during compile time
     if (State1 = vsStatic) and (State2 = vsStatic) then
     begin
-      ResultValue := TThoriumType.PerformOperation(Value1, Operation, Value2);
+      ResultValue := TThoriumType.PerformOperation(Value1, Operation, @Value2);
       ThoriumFreeValue(Value1);
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
@@ -940,12 +949,77 @@ var
   var
     I: Integer;
     Solution: PThoriumQualifiedIdentifier;
+    Entry: PThoriumTableEntryResult;
   begin
     for I := 0 to Entries.Count - 1 do
     begin
       New(Solution);
       FillByte(Solution^, SizeOf(TThoriumQualifiedIdentifier), 0);
       Solutions.Add(Solution);
+      Entry := Entries[I];
+      Solution^.FinalType := Entry^.Entry.TypeSpec;
+      ForceNewCustomOperation(Solution^.GetCode);
+      ForceNewCustomOperation(Solution^.SetCode);
+      case Entry^.Entry._Type of
+        etStatic, etVariable:
+        begin
+          if Entry^.SourceModule <> FModule then
+          begin
+            GenCodeToOperation(Solution^.GetCode, movefs(FThorium.IndexOfModule(Entry^.SourceModule), Entry^.Entry.Offset, ATargetRegister));
+            GenCodeToOperation(Solution^.SetCode, copyr_fs(ATargetRegister, FThorium.IndexOfModule(Entry^.SourceModule), Entry^.Entry.Offset));
+          end
+          else
+          begin
+            GenCodeToOperation(Solution^.GetCode, moves(Entry^.Entry.Scope, Entry^.Entry.Offset, ATargetRegister));
+            GenCodeToOperation(Solution^.SetCode, copyr_s(ATargetRegister, Entry^.Entry.Scope, Entry^.Entry.Offset));
+          end;
+          if Entry^.Entry._Type = etStatic then
+          begin
+            Solution^.State := vsStatic;
+            Solution^.Writable := False;
+            Solution^.Value := Entry^.Entry.Value;
+          end
+          else
+          begin
+            Solution^.State := vsAccessable;
+            Solution^.Writable := True;
+          end;
+        end;
+        etRegisterVariable:
+        begin
+          GenCodeToOperation(Solution^.GetCode, mover(Entry^.Entry.Offset, ATargetRegister));
+          GenCodeToOperation(Solution^.SetCode, copyr(ATargetRegister, Entry^.Entry.Offset));
+          Solution^.State := vsAccessable;
+          Solution^.Writable := True;
+        end;
+        etCallable:
+        begin
+          Solution^.Writable := False;
+          Solution^.State := vsAccessable;
+        end;
+        etHostCallable:
+        begin
+          Solution^.Writable := False;
+          Solution^.State := vsAccessable;
+        end;
+        etProperty:
+        begin
+          GenCodeToOperation(Solution^.GetCode, xpget(TThoriumLibraryProperty(Entry^.Entry.Ptr), ATargetRegister));
+          GenCodeToOperation(Solution^.SetCode, xpset(TThoriumLibraryProperty(Entry^.Entry.Ptr), ATargetRegister));
+          Solution^.Writable := TThoriumLibraryProperty(Entry^.Entry.Ptr).GetStatic;
+          Solution^.State := vsDynamic;
+        end;
+        etLibraryConstant:
+        begin
+          Solution^.Writable := False;
+          Solution^.State := vsStatic;
+          Solution^.Value := TThoriumLibraryConstant(Entry^.Entry.Ptr).Value;
+        end;
+        etType:
+        begin
+          Solution^.Writable := False;
+        end;
+      end;
     end;
   end;
 
@@ -987,11 +1061,53 @@ var
   end;
 
 var
+  CodeHook1: TThoriumInstructionArray;
+  CodeHook2: TThoriumInstructionArray;
+
+  procedure AttachHook;
+  begin
+    FCodeHook := True;
+    FCodeHook1 := @CodeHook1;
+    FCodeHook2 := nil;
+  end;
+
+  procedure FlushHook(ForceNew: Boolean = True; FlushToGet: Boolean = True; FlushToSet: Boolean = True);
+  var
+    I: Integer;
+  begin
+    Assert(FlushToGet or FlushToSet);
+    for I := 0 to Solutions.Count - 1 do
+    begin
+      if FlushToGet then
+      begin
+        if ForceNew then
+          ForceNewCustomOperation(Solutions[I]^.GetCode);
+        AppendCodeToOperation(CodeHook1, Solutions[I]^.GetCode);
+      end;
+      if FlushToSet then
+      begin
+        if ForceNew then
+          ForceNewCustomOperation(Solutions[I]^.SetCode);
+        AppendCodeToOperation(CodeHook1, Solutions[I]^.SetCode);
+      end;
+    end;
+  end;
+
+var
   EntriesHandle: TThoriumTableEntryResults;
   I: Integer;
   Entry: PThoriumTableEntryResult;
 
-  Operation: TThoriumOperationDescription;
+  Operation, WriteOperation: TThoriumOperationDescription;
+  OldCodeHook: Boolean;
+  OldCodeHook1: PThoriumInstructionArray;
+  OldCodeHook2: PThoriumInstructionArray;
+
+  ExprType: IThoriumType;
+  ExprState: TThoriumValueState;
+  RegPreviousValue, RegID1: TThoriumRegisterID;
+
+  Solution: PThoriumQualifiedIdentifier;
 begin
   Assert(FCurrentSym = tsIdentifier);
 
@@ -1004,6 +1120,9 @@ begin
   Result.UsedLibraryProps := nil;
   Result.FullStr := FCurrentStr;
 
+  OldCodeHook := FCodeHook;
+  OldCodeHook1 := FCodeHook1;
+  OldCodeHook2 := FCodeHook2;
   Entries := TThoriumTableEntryResultList.Create;
   try
     FindTableEntries(FCurrentStr, EntriesHandle);
@@ -1030,14 +1149,29 @@ begin
         tsDot:
         begin
           Proceed([tsIdentifier], True);
-          Operation.Operation := opFieldAccess;
+          Operation.Operation := opFieldRead;
+          WriteOperation.Operation := opFieldWrite;
 
           I := Entries.Count - 1;
           while I >= 0 do
           begin
             Entry := Entries[I];
+            Solution := Solutions[I];
             if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation, nil, FCurrentStr) then
-              Discard(I);
+              Discard(I)
+            else
+            begin
+              Solution^.Writable := Entry^.Entry.TypeSpec.CanPerformOperation(WriteOperation, nil, FCurrentStr);
+              AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue));
+              if Solution^.Writable then
+                AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(WriteOperation, ATargetRegister, RegPreviousValue))
+              else
+              begin
+                // Append the read operation. This will be used to optimize
+                // later, if further qualification applies.
+                AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue));
+              end;
+            end;
             Dec(I);
           end;
 
@@ -1049,12 +1183,73 @@ begin
 
         tsOpenSquareBracket:
         begin
+          Proceed;
 
+          AttachHook;
+          GetFreeRegister(trEXP, RegID1);
+          ExprType := Expression(RegID1, ExprState);
+          FlushHook(False);
+
+          Operation.Operation := opIndexedRead;
+          WriteOperation.Operation := opIndexedWrite;
+          I := Entries.Count - 1;
+          while I >= 0 do
+          begin
+            Entry := Entries[I];
+            Solution := Solutions[I];
+            if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation, ExprType) then
+              Discard(I)
+            else
+            begin
+              Solution^.Writable := Entry^.Entry.TypeSpec.CanPerformOperation(WriteOperation, ExprType);
+              AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue, RegID1));
+              if Solution^.Writable then
+                AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(WriteOperation, ATargetRegister, RegPreviousValue, RegID1))
+              else
+              begin
+                // Append the read operation. This will be used to optimize
+                // later, if further qualification applies.
+                AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue, RegID1));
+              end;
+            end;
+            Dec(I);
+          end;
+
+          if Entries.Count = 0 then
+            CompilerError('No node with '+Result.FullStr+' available which is accessable by a '+ExprType.Name+' typed index.');
+
+          ReleaseRegister(RegID1);
+
+          Result.FullStr += '[]';
+        end;
+
+        tsOpenBracket:
+        begin
+          Proceed;
+
+          Operation.Operation := opCall;
+
+          I := Entries.Count - 1;
+          while I >= 0 do
+          begin
+            Entry := Entries[I];
+            Solution := Solutions[I];
+            if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation) then
+              Discard(I)
+            else
+            begin
+
+            end;
+            Dec(I);
+          end;
         end;
       end;
     end;
 
   finally
+    FCodeHook := OldCodeHook;
+    FCodeHook1 := OldCodeHook1;
+    FCodeHook2 := OldCodeHook2;
     Entries.Free;
   end;
 end;
@@ -1088,7 +1283,7 @@ begin
     // Attempt to evaluate the expression during compilation
     if (State1 = vsStatic) and (State2 = vsStatic) then
     begin
-      ResultValue := TThoriumType.PerformOperation(Value1, Operation, Value2);
+      ResultValue := TThoriumType.PerformOperation(Value1, Operation, @Value2);
       ThoriumFreeValue(Value1);
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
