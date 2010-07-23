@@ -965,13 +965,33 @@ var
         begin
           if Entry^.SourceModule <> FModule then
           begin
-            GenCodeToOperation(Solution^.GetCode, movefs(FThorium.IndexOfModule(Entry^.SourceModule), Entry^.Entry.Offset, ATargetRegister));
-            GenCodeToOperation(Solution^.SetCode, copyr_fs(ATargetRegister, FThorium.IndexOfModule(Entry^.SourceModule), Entry^.Entry.Offset));
+            AppendOperation(Solution^.GetCode,
+              ThoriumEncapsulateOperation(
+                movefsOperation(FThorium.IndexOfModule(Entry^.SourceModule), Entry^.Entry.Offset, ATargetRegister),
+                ATargetRegister
+              )
+            );
+            AppendOperation(Solution^.SetCode,
+              ThoriumEncapsulateOperation(
+                copyr_fsOperation(ATargetRegister, FThorium.IndexOfModule(Entry^.SourceModule), Entry^.Entry.Offset),
+                ATargetRegister
+              )
+            );
           end
           else
           begin
-            GenCodeToOperation(Solution^.GetCode, moves(Entry^.Entry.Scope, Entry^.Entry.Offset, ATargetRegister));
-            GenCodeToOperation(Solution^.SetCode, copyr_s(ATargetRegister, Entry^.Entry.Scope, Entry^.Entry.Offset));
+            AppendOperation(Solution^.GetCode,
+              ThoriumEncapsulateOperation(
+                movesOperation(Entry^.Entry.Scope, Entry^.Entry.Offset, ATargetRegister),
+                ATargetRegister
+              )
+            );
+            AppendOperation(Solution^.SetCode,
+              ThoriumEncapsulateOperation(
+                copyr_sOperation(ATargetRegister, Entry^.Entry.Scope, Entry^.Entry.Offset),
+                ATargetRegister
+              )
+            );
           end;
           if Entry^.Entry._Type = etStatic then
           begin
@@ -987,8 +1007,18 @@ var
         end;
         etRegisterVariable:
         begin
-          GenCodeToOperation(Solution^.GetCode, mover(Entry^.Entry.Offset, ATargetRegister));
-          GenCodeToOperation(Solution^.SetCode, copyr(ATargetRegister, Entry^.Entry.Offset));
+          AppendOperation(Solution^.GetCode,
+            ThoriumEncapsulateOperation(
+              moverOperation(Entry^.Entry.Offset, ATargetRegister),
+              ATargetRegister
+            )
+          );
+          AppendOperation(Solution^.SetCode,
+            ThoriumEncapsulateOperation(
+              copyrOperation(ATargetRegister, Entry^.Entry.Offset),
+              ATargetRegister
+            )
+          );
           Solution^.State := vsAccessable;
           Solution^.Writable := True;
         end;
@@ -996,16 +1026,50 @@ var
         begin
           Solution^.Writable := False;
           Solution^.State := vsAccessable;
+          AppendOperation(Solution^.GetCode,
+            ThoriumEncapsulateOperation(
+              fncOperation(TThoriumFunction(Entry^.Entry.Ptr), ATargetRegister),
+              ATargetRegister
+            )
+          );
+          AppendOperation(Solution^.SetCode,
+            ThoriumEncapsulateOperation(
+              fncOperation(TThoriumFunction(Entry^.Entry.Ptr), ATargetRegister),
+              ATargetRegister
+            )
+          );
         end;
         etHostCallable:
         begin
           Solution^.Writable := False;
           Solution^.State := vsAccessable;
+          AppendOperation(Solution^.GetCode,
+            ThoriumEncapsulateOperation(
+              xfncOperation(TThoriumHostFunctionBase(Entry^.Entry.Ptr), ATargetRegister),
+              ATargetRegister
+            )
+          );
+          AppendOperation(Solution^.SetCode,
+            ThoriumEncapsulateOperation(
+              xfncOperation(TThoriumHostFunctionBase(Entry^.Entry.Ptr), ATargetRegister),
+              ATargetRegister
+            )
+          );
         end;
         etProperty:
         begin
-          GenCodeToOperation(Solution^.GetCode, xpget(TThoriumLibraryProperty(Entry^.Entry.Ptr), ATargetRegister));
-          GenCodeToOperation(Solution^.SetCode, xpset(TThoriumLibraryProperty(Entry^.Entry.Ptr), ATargetRegister));
+          AppendOperation(Solution^.GetCode,
+            ThoriumEncapsulateOperation(
+              xpgetOperation(TThoriumLibraryProperty(Entry^.Entry.Ptr), ATargetRegister),
+              ATargetRegister
+            )
+          );
+          AppendOperation(Solution^.SetCode,
+            ThoriumEncapsulateOperation(
+              xpsetOperation(TThoriumLibraryProperty(Entry^.Entry.Ptr), ATargetRegister),
+              ATargetRegister
+            )
+          );
           Solution^.Writable := TThoriumLibraryProperty(Entry^.Entry.Ptr).GetStatic;
           Solution^.State := vsDynamic;
         end;
@@ -1110,6 +1174,8 @@ var
   Solution: PThoriumQualifiedIdentifier;
 begin
   Assert(FCurrentSym = tsIdentifier);
+
+  Assert(GetFreeRegister(trEXP, RegPreviousValue));
 
   Result.FinalType := nil;
   Result.GetCode := nil;
@@ -1251,6 +1317,7 @@ begin
     FCodeHook1 := OldCodeHook1;
     FCodeHook2 := OldCodeHook2;
     Entries.Free;
+    ReleaseRegister(RegPreviousValue);
   end;
 end;
 

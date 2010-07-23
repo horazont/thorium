@@ -491,8 +491,6 @@ type
     ResultType: IThoriumType;
     Casts: array [0..1] of TThoriumCastDescription;
     OperationInstruction: TThoriumOperationInstructionDescription;
-    // Does only need to be set for opFieldAccess and opIndexedAccess
-    TwoWayCanWrite: Boolean;
   end;
 
   TThoriumAssignmentDescription = record
@@ -516,6 +514,9 @@ type
     Instructions: TThoriumInstructionArray;
   end;
 
+  TThoriumGenericOperationRegister = (gorTarget, gorValue1, gorValue2);
+  TThoriumGenericOperationRegisters = set of TThoriumGenericOperationRegister;
+
   TThoriumGenericOperation = record
     Kind: TThoriumOperationDescriptionKind;
     Cast: TThoriumCastDescription;
@@ -525,7 +526,9 @@ type
     Custom: TThoriumCustomOperation;
 
     TargetRI, Value1RI, Value2RI: TThoriumRegisterID;
+    ClearRegisters: TThoriumGenericOperationRegisters;
   end;
+
   TThoriumOperationArray = array of TThoriumGenericOperation;
 
   { IThoriumType }
@@ -2149,7 +2152,8 @@ operator := (Input: TThoriumInstructionArray): TThoriumGenericOperation;
 function ThoriumEncapsulateOperation(const AOperation: TThoriumOperationDescription;
   const TargetRI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
   const Value1RI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
-  const Value2RI: TThoriumRegisterID = THORIUM_REGISTER_INVALID): TThoriumGenericOperation;
+  const Value2RI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
+  const ClearRegisters: TThoriumGenericOperationRegisters = []): TThoriumGenericOperation;
 
 implementation
 
@@ -3543,18 +3547,21 @@ begin
   Result.TargetRI := THORIUM_REGISTER_INVALID;
   Result.Value1RI := THORIUM_REGISTER_INVALID;
   Result.Value2RI := THORIUM_REGISTER_INVALID;
+  Result.ClearRegisters := [];
 end;
 
 function ThoriumEncapsulateOperation(
   const AOperation: TThoriumOperationDescription;
   const TargetRI: TThoriumRegisterID; const Value1RI: TThoriumRegisterID;
-  const Value2RI: TThoriumRegisterID): TThoriumGenericOperation;
+  const Value2RI: TThoriumRegisterID;
+  const ClearRegisters: TThoriumGenericOperationRegisters): TThoriumGenericOperation;
 begin
   Result.Kind := okOperation;
   Result.Operation := AOperation;
   Result.TargetRI := TargetRI;
   Result.Value1RI := Value1RI;
   Result.Value2RI := Value2RI;
+  Result.ClearRegisters := ClearRegisters;
 end;
 
 procedure ThoriumDumpInstructions(const AInstructions: TThoriumInstructionArray);
@@ -3645,7 +3652,7 @@ begin
     tiEXT: with TThoriumInstructionEXT(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(ExtendedType), ThoriumRegisterToStr(TRI)]);
 
     tiFNC: with TThoriumInstructionFNC(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
-    tiFNCE: with TThoriumInstructionFNCE(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
+    tiXFNC: with TThoriumInstructionXFNC(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
 
     tiCOPYR_S: with TThoriumInstructionCOPYR_S(AInstruction) do Result := Result + Format('%%%s %%sp($0x%.4x, $0x%.8x)', [ThoriumRegisterToStr(SRI), Scope, Offset]);
     tiCOPYR_ST: with TThoriumInstructionCOPYR_ST(AInstruction) do Result := Result + Format('%%s', [ThoriumRegisterToStr(SRI)]);
@@ -4944,7 +4951,6 @@ function TThoriumTypeString.CanPerformOperation(
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := False;
       Operation.OperationInstruction := OperationInstructionDescription(Instruction, AOp1, AOp2, ATarget);
-      Operation.TwoWayCanWrite := False;
     end
     else
       Result := False;
@@ -4962,7 +4968,6 @@ begin
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := False;
       Operation.OperationInstruction := OperationInstructionDescription(noop(0, 0, 0, 0), -1, -1, -1);
-      Operation.TwoWayCanWrite := False;
     end;
   end
   else if TheObject = nil then
@@ -8345,6 +8350,12 @@ begin
     else
       raise EThoriumCompilerException.CreateFmt('Cannot handle this kind of generic operation in AppendOperations: %s.', [GetEnumName(TypeInfo(TThoriumOperationDescriptionKind), Ord(AOperations[I].Kind))]);
     end;
+    if (gorTarget in AOperations[I].ClearRegisters) then
+      GenCode(clr(AOperations[I].TargetRI));
+    if (gorValue1 in AOperations[I].ClearRegisters) then
+      GenCode(clr(AOperations[I].Value1RI));
+    if (gorValue2 in AOperations[I].ClearRegisters) then
+      GenCode(clr(AOperations[I].Value2RI));
   end;
 end;
 
@@ -9184,7 +9195,7 @@ var
     InstructionSet3 = [tiSTRL, tiADDI, tiADDF, tiADDS, tiSUBI, tiSUBF, tiMULI,
       tiMULF, tiDIVI, tiDIVF, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR];
     InstructionSet4 = [tiCOPYS];
-    InstructionSet5 = [tiINT, tiFLT, tiEXT, tiFNC, tiFNCE, tiCOPYFS, tiXFGET,
+    InstructionSet5 = [tiINT, tiFLT, tiEXT, tiFNC, tiXFNC, tiCOPYFS, tiXFGET,
       tiXFSET];
     InstructionSet6 = [tiXFSET, tiXFGET];
   begin

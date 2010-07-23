@@ -376,7 +376,7 @@ type
     tiFLT_S, tiFLT,
     tiSTR_S, tiSTRL_S, tiSTR, tiSTRL,
     tiEXT_S, tiEXT,
-    tiFNC, tiFNCE,
+    tiFNC, tiXFNC,
     tiCOPYR_S, tiCOPYR_ST, tiCOPYR_FS, tiCOPYS_ST, tiCOPYFS, tiCOPYS, tiCOPYR,
     tiMOVES_S, tiMOVER_S, tiMOVER_ST, tiMOVER, tiMOVES, tiMOVEST, tiMOVER_FS, tiMOVEFS, tiMOVES_ST,
     tiPOP_S, tiPOPP_S,
@@ -560,7 +560,7 @@ type
     CodeLine: Cardinal;
   end;
 
-  TThoriumInstructionFNCE = record
+  TThoriumInstructionXFNC = record
     Instruction: TThoriumInstructionCode;
     {$ifdef ENDIAN_BIG}
     {$ifndef CPU64}
@@ -1736,7 +1736,7 @@ const
     'flt.s', 'flt',
     'str.s', 'strl.s', 'str', 'strl',
     'ext.s', 'ext',
-    'fnc', 'fnce',
+    'fnc', 'xfnc',
     'copyr.s', 'copyr.st', 'copyr.fs', 'copys.st', 'copyfs', 'copys', 'copyr',
     'moves.s', 'mover.s', 'mover.st', 'mover', 'moves', 'movest', 'mover.fs', 'movefs', 'moves_st',
     'pop.s', 'popp.s',
