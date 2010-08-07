@@ -179,6 +179,9 @@ const
 type
   EThoriumCompilerError = class (EThoriumCompilerException);
 
+  TThoriumDeclarationHandler = procedure (const AVisibility: TThoriumVisibilityLevel;
+      ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer) of object;
+
   { TThoriumDefaultScanner }
 
   TThoriumDefaultScanner = class (TObject)
@@ -220,16 +223,23 @@ type
        AInstruction: TThoriumInstruction): Integer; override;
     function Proceed(ExpectMask: TThoriumDefaultSymbols = []; ThrowError: Boolean = False): Boolean;
   protected
+    procedure ConstantDeclaration(const AVisibility: TThoriumVisibilityLevel;
+      ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+    procedure GenericDeclaration(const AStatic: Boolean; const AVisibility: TThoriumVisibilityLevel; var Offset: Integer);
     function Expression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function Factor(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
     function FindFilteredTableEntry(const Ident: String; AllowedKinds: TThoriumQualifiedIdentifierKinds; out Entry: TThoriumTableEntry; DropMultiple: Boolean = True; GetLast: Boolean = False): Boolean;
     procedure FilterTableEntries(Entries: TThoriumTableEntryResultList; AllowedKinds: TThoriumQualifiedIdentifierKinds);
+    procedure FunctionDeclaration(const AVisibility: TThoriumVisibilityLevel;
+      ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
     procedure Module;
     procedure PlaceStatic(const StaticValue: TThoriumValue; ATargetRegister: Word);
     function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
     function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
+    procedure VariableDeclaration(const AVisibility: TThoriumVisibilityLevel;
+      ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
   public
     function CompileFromStream(SourceStream: TStream;
        Flags: TThoriumCompilerFlags=[cfOptimize]): Boolean; override;
@@ -623,6 +633,80 @@ begin
     Result := ExpectSymbol(ExpectMask, ThrowError);
 end;
 
+procedure TThoriumDefaultCompiler.ConstantDeclaration(
+  const AVisibility: TThoriumVisibilityLevel; ATypeIdent,
+  AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+var
+  State: TThoriumValueState;
+  Value: TThoriumValue;
+  Entry: PThoriumTableEntry;
+  Creation: TThoriumCreateInstructionDescription;
+begin
+  ExpectSymbol([tsAssign]);
+  Proceed;
+  SimpleExpression(THORIUM_REGISTER_INVALID, State, @Value, ATypeIdent.FinalType);
+  if State <> vsStatic then
+    CompilerError('Static value needed.');
+  if not ATypeIdent.FinalType.CanCreate(Value, False, Creation) then
+    CompilerError('Cannot create such a value.');
+  GenCreation(Creation);
+  ExpectSymbol([tsSemicolon, tsComma]);
+
+  Entry := FTable.AddConstantIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType, Value);
+  Inc(Offset);
+  if AVisibility = vsPublic then
+    AddPublicVariable.AssignFromTableEntry(Entry^);
+end;
+
+procedure TThoriumDefaultCompiler.GenericDeclaration(const AStatic: Boolean;
+  const AVisibility: TThoriumVisibilityLevel; var Offset: Integer);
+var
+  TypeIdentifier, ValueIdentifier: TThoriumQualifiedIdentifier;
+  DeclarationHandler: TThoriumDeclarationHandler;
+begin
+  TypeIdentifier := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikType]);
+  ValueIdentifier := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared, ikPrototypedFunction]);
+
+  if ValueIdentifier.Kind = ikPrototypedFunction then
+  begin
+    if AStatic then
+      CompilerError('Functions cannot be static.');
+    Proceed([tsOpenBracket]);
+    FunctionDeclaration(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
+  end
+  else
+  begin
+    ExpectSymbol([tsOpenBracket, tsSemicolon, tsAssign, tsComma]);
+    if FCurrentSym = tsOpenBracket then
+    begin
+      if AStatic then
+        CompilerError('Functions cannot be static.');
+      FunctionDeclaration(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
+    end
+    else
+    begin
+      if AStatic then
+        DeclarationHandler := @ConstantDeclaration
+      else
+        DeclarationHandler := @VariableDeclaration;
+
+      repeat
+        if AStatic then
+          ExpectSymbol([tsAssign])
+        else
+          ExpectSymbol([tsSemicolon, tsComma, tsAssign]);
+        VariableDeclaration(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
+        ExpectSymbol([tsComma, tsSemicolon]);
+        if FCurrentSym = tsComma then
+        begin
+          Proceed([tsIdentifier]);
+          ValueIdentifier := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared]);
+        end;
+      until FCurrentSym = tsSemicolon;
+    end;
+  end;
+end;
+
 function TThoriumDefaultCompiler.Expression(ATargetRegister: Word;
   out AState: TThoriumValueState; AStaticValue: PThoriumValue;
   ATypeHint: IThoriumType): IThoriumType;
@@ -803,13 +887,37 @@ begin
   end;
 end;
 
+procedure TThoriumDefaultCompiler.FunctionDeclaration(
+  const AVisibility: TThoriumVisibilityLevel; ATypeIdent,
+  AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+var
+  ParamIndex: Integer;
+begin
+  if AValueIdent.Kind = ikPrototypedFunction then
+    CompilerError('Function prototyping is not supported yet.');
+  SaveTable;
+  FCurrentScope := THORIUM_STACK_SCOPE_PARAMETERS;
+  Proceed;
+  ParamIndex := 1;
+  while CurrentSym in [tsIdentifier, tsComma] do
+  begin
+    if ParamIndex > 1 then
+      ExpectSymbol([tsComma]);
+  end;
+end;
+
 procedure TThoriumDefaultCompiler.Module;
 var
   IsStatic: Boolean;
   Visibility: TThoriumVisibilityLevel;
+  NeedIdentifier: Boolean;
+  Offset: Integer;
 begin
+  FCurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
   IsStatic := False;
+  Offset := 0;
   Visibility := vsPrivate;
+  NeedIdentifier := False;
   while Proceed([tsLoadLibrary, tsLoadModule, tsIdentifier, tsPublic, tsStatic], False) do
   begin
     case FCurrentSym of
@@ -842,6 +950,13 @@ begin
         end
         else
           IsStatic := False;
+      end;
+      tsIdentifier:
+      begin
+        GenericDeclaration(IsStatic, Visibility, Offset);
+
+        IsStatic := False;
+        Visibility := vsPrivate;
       end;
     end;
   end;
@@ -1071,7 +1186,7 @@ var
             )
           );
           Solution^.Writable := TThoriumLibraryProperty(Entry^.Entry.Ptr).GetStatic;
-          Solution^.State := vsDynamic;
+          Solution^.State := vsAccessable;
         end;
         etLibraryConstant:
         begin
@@ -1159,7 +1274,7 @@ var
 
 var
   EntriesHandle: TThoriumTableEntryResults;
-  I: Integer;
+  I, J: Integer;
   Entry: PThoriumTableEntryResult;
 
   Operation, WriteOperation: TThoriumOperationDescription;
@@ -1210,6 +1325,27 @@ begin
       EnforceAccess(FCurrentSym);
       if Entries.Count = 0 then
         CompilerError('Illegal qualifier.');
+
+      // Replace the last set operation with the last get operation, as we need
+      // to operate on that result now, independant of whether it will be a
+      // set or get operation.
+      // Explanation:
+      //  SomeObject.SomeRecord.SomeField = 10;
+      //
+      //  To execute this, you would need to get SomeObject, and from that
+      //  SomeRecord as if you were going to read it. Only the last operation,
+      //  the one for SomeField, needs to be an actual writing one.
+      for I := 0 to Solutions.Count - 1 do
+      begin
+        Solution := Solutions[I];
+        J := Length(Solution^.GetCode);
+        if J = 0 then
+          Continue;
+        Solution^.GetCode[J-1].TargetRI := RegPreviousValue;
+        if Solution^.State in [vsDynamic] then
+          Solution^.GetCode[J-1].ClearRegisters := [gorTarget];
+        Solution^.SetCode[Length(Solution^.SetCode)-1] := Solution^.GetCode[J-1];
+      end;
 
       case FCurrentSym of
         tsDot:
@@ -1312,6 +1448,23 @@ begin
       end;
     end;
 
+    if Solutions.Count > 1 then
+    begin
+      CompilerError('Ambigous identifier.');
+      Exit;
+    end
+    else if Solutions.Count = 0 then
+    begin
+      CompilerError('Unresolvable identifier.');
+      Exit;
+    end
+    else
+      Result := Solutions[0]^;
+
+    for I := 0 to Solutions.Count - 1 do
+      Dispose(Solutions[I]);
+    Solutions.Clear;
+
   finally
     FCodeHook := OldCodeHook;
     FCodeHook1 := OldCodeHook1;
@@ -1384,6 +1537,35 @@ begin
   AState := State1;
   if AState = vsStatic then
     AStaticValue := Value1;
+end;
+
+procedure TThoriumDefaultCompiler.VariableDeclaration(
+  const AVisibility: TThoriumVisibilityLevel; ATypeIdent,
+  AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+var
+  State: TThoriumValueState;
+  Value: TThoriumValue;
+  Entry: PThoriumTableEntry;
+  Reg: TThoriumRegisterID;
+  Creation: TThoriumCreateInstructionDescription;
+begin
+  if FCurrentSym = tsAssign then
+  begin
+    SimpleExpression(THORIUM_REGISTER_INVALID, State, @Value, ATypeIdent.FinalType);
+    if State <> vsStatic then
+      CompilerError('Static value needed.');
+    if not ATypeIdent.FinalType.CanCreate(Value, False, Creation) then
+      CompilerError('Cannot create such a value.');
+    GenCreation(Creation);
+  end
+  else
+    State := vsDynamic;
+  ExpectSymbol([tsSemicolon, tsComma]);
+
+  Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType);
+  Inc(Offset);
+  if AVisibility = vsPublic then
+    AddPublicVariable.AssignFromTableEntry(Entry^);
 end;
 
 function TThoriumDefaultCompiler.CompileFromStream(SourceStream: TStream;

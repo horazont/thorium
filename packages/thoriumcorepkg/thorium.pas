@@ -1125,6 +1125,7 @@ type
     property StackPosition: Integer read FStackPosition;
     property TypeSpec: TThoriumType read FTypeSpec;
 
+    procedure AssignFromTableEntry(const ATableEntry: TThoriumTableEntry);
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
@@ -1707,10 +1708,10 @@ type
     procedure SetCapacity(NewCapacity: Integer);
   public
     property Count: Integer read FCount;
-    procedure AddConstantIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType; Value: TThoriumValue);
-    procedure AddVariableIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType);
-    procedure AddRegisterVariableIdentifier(Name: String; RegisterID: TThoriumRegisterID; TypeSpec: TThoriumType);
-    procedure AddFunctionIdentifier(Name: String; Func: TThoriumFunction);
+    function AddConstantIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType; Value: TThoriumValue): PThoriumTableEntry;
+    function AddVariableIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType): PThoriumTableEntry;
+    function AddRegisterVariableIdentifier(Name: String; RegisterID: TThoriumRegisterID; TypeSpec: IThoriumType): PThoriumTableEntry;
+    function AddFunctionIdentifier(Name: String; Func: TThoriumFunction): PThoriumTableEntry;
     procedure ClearTable;
     function ClearTableTo(NewCount: Integer): Integer;
     function FindIdentifier(Name: String; out Ident: TThoriumTableEntry): Boolean;
@@ -2148,6 +2149,8 @@ operator := (Input: TThoriumValue): TThoriumCompileTimeValue;
 operator := (Input: TThoriumCompileTimeValue): TThoriumValue;
 
 operator := (Input: TThoriumInstructionArray): TThoriumGenericOperation;
+
+operator := (Input: TThoriumValue): TThoriumInitialData;
 
 function ThoriumEncapsulateOperation(const AOperation: TThoriumOperationDescription;
   const TargetRI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
@@ -3548,6 +3551,11 @@ begin
   Result.Value1RI := THORIUM_REGISTER_INVALID;
   Result.Value2RI := THORIUM_REGISTER_INVALID;
   Result.ClearRegisters := [];
+end;
+
+operator := (Input: TThoriumValue): TThoriumInitialData;
+begin
+  Result.Int := Input.Int;
 end;
 
 function ThoriumEncapsulateOperation(
@@ -5573,6 +5581,18 @@ begin
   FIsStatic := False;
   FStackPosition := 0;
   FillByte(FTypeSpec, SizeOf(TThoriumType), 0);
+end;
+
+procedure TThoriumVariable.AssignFromTableEntry(
+  const ATableEntry: TThoriumTableEntry);
+begin
+  if not ATableEntry._Type in [etStatic, etVariable] then
+    raise EThoriumCompilerError.Create('Cannot assign a non-variable and non-static to a TThoriumVariable instance.');
+  if ATableEntry.Scope <> THORIUM_STACK_SCOPE_MODULEROOT then
+    raise EThoriumCompilerError.Create('Only moduleroot symbols can be assigned to TThoriumVariable instances.');
+  FStackPosition := ATableEntry.Offset;
+  FTypeSpec := ATableEntry.TypeSpec.GetInstance;
+  FIsStatic := ATableEntry._Type = etStatic;
 end;
 
 procedure TThoriumVariable.LoadFromStream(Stream: TStream);
@@ -7647,10 +7667,8 @@ begin
   FCapacity := NewCapacity;
 end;
 
-procedure TThoriumIdentifierTable.AddConstantIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType; Value: TThoriumValue);
+function TThoriumIdentifierTable.AddConstantIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType; Value: TThoriumValue): PThoriumTableEntry;
 // Adds an identifier declared as constant
-var
-  Rec: PThoriumTableEntry;
 begin
   raise Exception.Create('Reimplement');
   (*Rec := NewEntry;
@@ -7663,50 +7681,44 @@ begin
   Rec^.Value := ThoriumDuplicateValue(Value);*)
 end;
 
-procedure TThoriumIdentifierTable.AddVariableIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType);
+function TThoriumIdentifierTable.AddVariableIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType): PThoriumTableEntry;
 // Adds an identifier declared as variable
-var
-  Rec: PThoriumTableEntry;
 begin
-  Rec := NewEntry;
-  New(Rec^.Name);
-  Rec^.Name^ := Name;
-  Rec^.Scope := Scope;
-  Rec^._Type := etVariable;
-  Rec^.Offset := Offset;
-  Rec^.TypeSpec := TypeSpec;
+  Result := NewEntry;
+  New(Result^.Name);
+  Result^.Name^ := Name;
+  Result^.Scope := Scope;
+  Result^._Type := etVariable;
+  Result^.Offset := Offset;
+  Result^.TypeSpec := TypeSpec;
   WriteLn('This may need adaption [TThoriumIdentifierTable.AddVariableIdentifier]');
-  FillByte(Rec^.Value, SizeOf(TThoriumValue), 0);
+  FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 
-procedure TThoriumIdentifierTable.AddRegisterVariableIdentifier(Name: String;
-  RegisterID: TThoriumRegisterID; TypeSpec: TThoriumType);
+function TThoriumIdentifierTable.AddRegisterVariableIdentifier(Name: String;
+  RegisterID: TThoriumRegisterID; TypeSpec: IThoriumType): PThoriumTableEntry;
 // Adds an identifier declared as variable
-var
-  Rec: PThoriumTableEntry;
 begin
-  Rec := NewEntry;
-  New(Rec^.Name);
-  Rec^.Name^ := Name;
-  Rec^._Type := etRegisterVariable;
-  Rec^.Offset := RegisterID;
-  Rec^.TypeSpec := TypeSpec;
+  Result := NewEntry;
+  New(Result^.Name);
+  Result^.Name^ := Name;
+  Result^._Type := etRegisterVariable;
+  Result^.Offset := RegisterID;
+  Result^.TypeSpec := TypeSpec;
   WriteLn('This may need adaption [TThoriumIdentifierTable.AddRegisterVariableIdentifier]');
-  FillByte(Rec^.Value, SizeOf(TThoriumValue), 0);
+  FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 
-procedure TThoriumIdentifierTable.AddFunctionIdentifier(Name: String; Func: TThoriumFunction);
+function TThoriumIdentifierTable.AddFunctionIdentifier(Name: String; Func: TThoriumFunction): PThoriumTableEntry;
 // Adds an identifier declared as function
-var
-  Rec: PThoriumTableEntry;
 begin
-  Rec := NewEntry;
-  New(Rec^.Name);
-  Rec^.Name^ := Name;
-  Rec^.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-  Rec^._Type := etCallable;
-  Rec^.Offset := 0;
-  Rec^.TypeSpec := Func.FPrototypeIntf;
+  Result := NewEntry;
+  New(Result^.Name);
+  Result^.Name^ := Name;
+  Result^.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
+  Result^._Type := etCallable;
+  Result^.Offset := 0;
+  Result^.TypeSpec := Func.FPrototypeIntf;
   WriteLn('This may need adaption [TThoriumIdentifierTable.AddFunctionIdentifier]');
   FillByte(Rec^.Value, SizeOf(TThoriumValue), 0);
 end;
