@@ -54,10 +54,6 @@
         <Filename Value="Thorium_InstructionConstructors.inc"/>
         <Type Value="Binary"/>
       </Item7>
-      <Item8>
-        <Filename Value="thorium_objectinstructions.pas"/>
-        <UnitName Value="thorium_objectinstructions"/>
-      </Item8>
     </Files>
     <LazDoc Paths="/home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lazdoc/"/>
     <RequiredPkgs Count="1">
