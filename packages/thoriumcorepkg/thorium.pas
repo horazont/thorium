@@ -543,6 +543,7 @@ type
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
       const TheObject: IThoriumType = nil; const ExName: String = ''): Boolean;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue;
+    function DuplicateValue(const Input: TThoriumValue): TThoriumValue;
     function GetClassType: TClass;
     function GetInstance: TThoriumType;
     function GetName: String;
@@ -569,6 +570,7 @@ type
     procedure DoDecrement(var ASubject: TThoriumValue);
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
     function DoEvaluate(const AValue: Pointer): Integer;
+    procedure DoFree(var AValue: TThoriumValue);
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue;
     function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue;
     function DoGetStaticField(const AFieldID: QWord): TThoriumValue;
@@ -624,7 +626,7 @@ type
     function _Release : longint;stdcall;
   protected
     function GetNoneInitialData(out InitialData: TThoriumInitialData): Boolean; virtual;
-    function GetName: String; virtual;
+    function GetName: String; virtual; abstract;
     function GetTypeKind: TThoriumTypeKind; virtual; abstract;
     procedure RaiseMissingTheObject;
   public
@@ -663,6 +665,7 @@ type
     procedure DoDecrement(var ASubject: TThoriumValue); virtual; abstract;
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoEvaluate(const AValue: Pointer): Integer; virtual; abstract;
+    procedure DoFree(var AValue: TThoriumValue); virtual; abstract;
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue; virtual; abstract;
     function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoGetStaticField(const AFieldID: QWord): TThoriumValue; virtual; abstract;
@@ -690,6 +693,7 @@ type
   protected
     function GetTypeKind: TThoriumTypeKind; override;
   public
+    procedure DoFree(var AValue: TThoriumValue); override;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
   end;
 
@@ -697,6 +701,7 @@ type
 
   TThoriumTypeInteger = class (TThoriumTypeSimple)
   protected
+    function GetName: String; override;
     function GetNoneInitialData(out InitialData: TThoriumInitialData
        ): Boolean; override;
   public
@@ -744,6 +749,7 @@ type
 
   TThoriumTypeFloat = class (TThoriumTypeSimple)
   protected
+    function GetName: String; override;
     function GetNoneInitialData(out InitialData: TThoriumInitialData
        ): Boolean; override;
   public
@@ -772,6 +778,7 @@ type
 
   TThoriumTypeString = class (TThoriumTypeSimple)
   protected
+    function GetName: String; override;
     function GetNoneInitialData(out InitialData: TThoriumInitialData
        ): Boolean; override;
     function GetTypeKind: TThoriumTypeKind; override;
@@ -786,6 +793,7 @@ type
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
        override;
+    procedure DoFree(var AValue: TThoriumValue); override;
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
        ): TThoriumValue; override;
     function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue
@@ -3862,7 +3870,9 @@ end;
 
 procedure ThoriumFreeValue(var AValue: TThoriumValue);
 begin
-  raise Exception.Create('ThoriumFreeValue not implemented.');
+  if AValue.RTTI = nil then
+    Exit;
+  AValue.RTTI.DoFree(AValue);
 end;
 
 function InitialData(const Int: TThoriumInteger): TThoriumInitialData;
@@ -4280,11 +4290,6 @@ begin
   Result := False;
 end;
 
-function TThoriumType.GetName: String;
-begin
-//  Result := FName;
-end;
-
 procedure TThoriumType.RaiseMissingTheObject;
 begin
   raise EThoriumException.Create('Missing a valid TheObject parameter.');
@@ -4513,12 +4518,22 @@ begin
   Result := tkSimple;
 end;
 
+procedure TThoriumTypeSimple.DoFree(var AValue: TThoriumValue);
+begin
+  AValue.RTTI := nil;
+end;
+
 function TThoriumTypeSimple.IsEqualTo(const AnotherType: IThoriumType): Boolean;
 begin
   Result := AnotherType.GetClassType = ClassType;
 end;
 
 { TThoriumTypeInteger }
+
+function TThoriumTypeInteger.GetName: String;
+begin
+  Result := 'int';
+end;
 
 function TThoriumTypeInteger.GetNoneInitialData(out
   InitialData: TThoriumInitialData): Boolean;
@@ -4803,6 +4818,11 @@ end;
 
 { TThoriumTypeFloat }
 
+function TThoriumTypeFloat.GetName: String;
+begin
+  Result := 'float';
+end;
+
 function TThoriumTypeFloat.GetNoneInitialData(out
   InitialData: TThoriumInitialData): Boolean;
 begin
@@ -4958,6 +4978,11 @@ end;
 
 { TThoriumTypeString }
 
+function TThoriumTypeString.GetName: String;
+begin
+  Result := 'string';
+end;
+
 function TThoriumTypeString.GetNoneInitialData(out
   InitialData: TThoriumInitialData): Boolean;
 begin
@@ -5067,6 +5092,12 @@ begin
   Result.RTTI := Self;
   New(Result.Str);
   Result.Str^ := AValue.Str^ + BValue.Str^;
+end;
+
+procedure TThoriumTypeString.DoFree(var AValue: TThoriumValue);
+begin
+  Dispose(AValue.Str);
+  AValue.RTTI := nil;
 end;
 
 function TThoriumTypeString.DoGetField(const AValue: TThoriumValue;
@@ -7751,15 +7782,14 @@ end;
 function TThoriumIdentifierTable.AddConstantIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType; Value: TThoriumValue): PThoriumTableEntry;
 // Adds an identifier declared as constant
 begin
-  raise Exception.Create('Reimplement');
-  (*Rec := NewEntry;
-  New(Rec^.Name);
-  Rec^.Name^ := Name;
-  Rec^.Scope := Scope;
-  Rec^._Type := etStatic;
-  Rec^.Offset := Offset;
-  Rec^.TypeSpec := TypeSpec;
-  Rec^.Value := ThoriumDuplicateValue(Value);*)
+  Result := NewEntry;
+  New(Result^.Name);
+  Result^.Name^ := Name;
+  Result^.Scope := Scope;
+  Result^._Type := etStatic;
+  Result^.Offset := Offset;
+  Result^.TypeSpec := TypeSpec;
+  Result^.Value := TypeSpec.DuplicateValue(Value);
 end;
 
 function TThoriumIdentifierTable.AddParameterIdentifier(Name: String;
@@ -7781,7 +7811,6 @@ begin
   Result^._Type := etVariable;
   Result^.Offset := Offset;
   Result^.TypeSpec := TypeSpec;
-  WriteLn('This may need adaption [TThoriumIdentifierTable.AddVariableIdentifier]');
   FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 
@@ -7795,7 +7824,6 @@ begin
   Result^._Type := etRegisterVariable;
   Result^.Offset := RegisterID;
   Result^.TypeSpec := TypeSpec;
-  WriteLn('This may need adaption [TThoriumIdentifierTable.AddRegisterVariableIdentifier]');
   FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 
@@ -7809,7 +7837,6 @@ begin
   Result^._Type := etCallable;
   Result^.Offset := 0;
   Result^.TypeSpec := Func.FPrototypeIntf;
-  WriteLn('This may need adaption [TThoriumIdentifierTable.AddFunctionIdentifier]');
   FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 
@@ -7825,10 +7852,9 @@ begin
     ThoriumFreeValue(Entry^.Value);
     Entry^.Name^ := '';
     Dispose(Entry^.Name);
+    if (Entry^._Type = etCallable) then
+      TThoriumFunction(Entry^.Ptr).Free;
     Finalize(Entry);
-    raise Exception.Create('Evaluate whether this needs to be reimplemented (freeing of public function copies).');
-(*    if (Entry^._Type = etCallable) then
-      Entry^.TypeSpec.Free;*)
   end;
   FreeMem(FIdentifiers);
   FIdentifiers := nil;
@@ -7850,12 +7876,11 @@ begin
     ThoriumFreeValue(Entry^.Value);
     Entry^.Name^ := '';
     Dispose(Entry^.Name);
-    Finalize(Entry);
-    raise Exception.Create('Evaluate whether this needs to be reimplemented (freeing of public function copies).');
-    (*if (Entry^._Type = etFunction) then
-      Entry^.TypeSpec.Func.Free;*)
+    if (Entry^._Type = etCallable) then
+      TThoriumFunction(Entry^.Ptr).Free;
     if Entry^._Type <> etRegisterVariable then
       Inc(Result);
+    Finalize(Entry);
     Inc(Entry);
   end;
   FCount := NewCount;
@@ -7891,7 +7916,7 @@ procedure TThoriumIdentifierTable.ReadIdentifier(Index: Integer; out
 begin
   if (Index < 0) or (Index >= FCount) then
     raise EListError.CreateFmt('Table index (%d) out of bounds (%d..%d).', [Index, 0, FCount-1]);
-  Move(FIdentifiers[Index], Ident, SizeOf(TThoriumTableEntry));
+  Ident := FIdentifiers[Index];
 end;
 
 { TThoriumInstructions }
@@ -8621,7 +8646,7 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
   begin
     L := Length(Entries);
     SetLength(Entries, L+1);
-    Move(Match, Entries[L], SizeOf(TThoriumTableEntryResult));
+    Entries[L] := Match;
   end;
 
   procedure ScanOwnSymbolTable;
@@ -8719,6 +8744,7 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
         TypeSpec := Func.PrototypeIntf;
         Ptr := Func;
       end;
+      Append(Entries, Match);
     end;
     Prop := ALibrary.FindProperty(Ident);
     if Prop <> nil then
@@ -8730,6 +8756,7 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
         TypeSpec := Prop.GetType;
         Ptr := Prop;
       end;
+      Append(Entries, Match);
     end;
     Cons := ALibrary.FindConstant(Ident);
     if Cons <> nil then
@@ -8742,6 +8769,7 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
         // TypeSpec := ?
         Ptr := Cons;
       end;
+      Append(Entries, Match);
     end;
     HostType := ALibrary.FindHostType(Ident);
     if HostType <> nil then
@@ -8753,6 +8781,7 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
         TypeSpec := HostType;
         Ptr := HostType;
       end;
+      Append(Entries, Match);
     end;
   end;
 
@@ -8768,17 +8797,27 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
     begin
       Match.Entry._Type := etType;
       Match.Entry.TypeSpec := TThoriumTypeInteger.Create;
+      Append(Entries, Match);
     end
     else if Ident = 'string' then
     begin
       Match.Entry._Type := etType;
       Match.Entry.TypeSpec := TThoriumTypeString.Create;
+      Append(Entries, Match);
     end
     else if Ident = 'float' then
     begin
       Match.Entry._Type := etType;
       Match.Entry.TypeSpec := TThoriumTypeFloat.Create;
+      Append(Entries, Match);
+    end
+    else if Ident = 'void' then
+    begin
+      Match.Entry._Type := etType;
+      Match.Entry.TypeSpec := nil;
+      Append(Entries, Match);
     end;
+
   end;
 
 // Search all accessible modules and contexts for entries matching the
@@ -10236,13 +10275,12 @@ begin
 end;
 
 procedure TThoriumModule.Dump;
-(*var
+var
   I, J: Integer;
-  TypeSpec: TThoriumType;
-  Callable: TThoriumHostCallableBase;*)
+  TypeSpec: IThoriumType;
+  Callable: TThoriumHostCallableBase;
 begin
-  raise Exception.Create('Re-implement TThoriumModule.Dump');
-(*  WriteLn('Module: ', FName);
+  WriteLn('Module: ', FName);
   WriteLn('Code (', FOptimizedInstructions, ' removed by optimization): ');
   WriteLn(DumpCodeStr);
   //WriteLn('Optimized instructions: ', FOptimizedInstructions);
@@ -10252,22 +10290,22 @@ begin
     WriteLn(' EntryAddr   Header');
     for I := 0 to FPublicFunctions.Count - 1 do
     begin
-      with FPublicFunctions[I] do
+      with TThoriumFunction(FPublicFunctions[I]) do
       begin
         if not Prototype.HasReturnValue then
           Write('0x', IntToHex(EntryPoint, 8), '  void ')
         else
         begin
-          FReturnValues.GetParameterSpec(0, TypeSpec);
-          Write('0x', IntToHex(EntryPoint, 8), '  ', ThoriumTypeName(TypeSpec), ' ');
+          TypeSpec := Prototype.ReturnType;
+          Write('0x', IntToHex(EntryPoint, 8), '  ', TypeSpec.Name, ' ');
         end;
         Write(Name, '(');
-        for J := 0 to FParameters.Count - 1 do
+        for J := 0 to Prototype.Parameters.Count - 1 do
         begin
           if (J <> 0) then
             Write(', ');
-          FParameters.GetParameterSpec(J, TypeSpec);
-          Write(ThoriumTypeName(TypeSpec));
+          Prototype.Parameters.GetParameterSpec(J, TypeSpec);
+          Write(TypeSpec.Name);
         end;
         WriteLn(')');
       end;
@@ -10277,15 +10315,14 @@ begin
   begin
     //WriteLn('Exported variables:');
     WriteLn(' StackAddr   Flag    Name');
-    List := FPublicVariables.List;
     for I := 0 to FPublicVariables.Count - 1 do
     begin
-      with TThoriumVariable(List^[I]) do
+      with TThoriumVariable(FPublicVariables[I]) do
       begin
         if IsStatic then
-          WriteLn('0x', IntToHex(StackPosition, 8), '  static  ', ThoriumTypeName(TypeSpec), ' ', Name)
+          WriteLn('0x', IntToHex(StackPosition, 8), '  static  ', TypeSpec.Name, ' ', Name)
         else
-          WriteLn('0x', IntToHex(StackPosition, 8), '          ', ThoriumTypeName(TypeSpec), ' ', Name);
+          WriteLn('0x', IntToHex(StackPosition, 8), '          ', TypeSpec.Name, ' ', Name);
       end;
     end;
   end;
@@ -10296,7 +10333,7 @@ begin
     for I := 0 to FStringLibrary.Count - 1 do
       WriteLn('0x', IntToHex(I, 8), '  "', StringReplace(StringReplace(FStringLibrary[I], #10, '\n', [rfReplaceAll]), '"', '\"', [rfReplaceAll]), '"');
   end;
-  if FHostTypeUsage.Count > 0 then
+(*  if FHostTypeUsage.Count > 0 then
   begin
     //WriteLn('Extended type usage:');
     WriteLn(' Index       Flg   Type name');

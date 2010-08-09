@@ -273,7 +273,7 @@ begin
     if Sym in Mask then
       Result += SymbolToStr(Sym)+', ';
   if Length(Result) > 0 then
-    Delete(Result, Length(Result)-2, 2);
+    Delete(Result, Length(Result)-1, 2);
 end;
 
 function SymbolToOperation(A: TThoriumDefaultSymbol): TThoriumOperation;
@@ -327,7 +327,7 @@ begin
   FPosition := 0;
   FLine := 1;
   FX := 0;
-  FLastChar := #0;
+  FLastChar := #10;
 end;
 
 function TThoriumDefaultScanner.GetChar(out Ch: Char): Boolean;
@@ -387,6 +387,7 @@ begin
           Sym := I;
           Exit(True);
         end;
+      Exit(True);
     end;
 
     '(', ')', '[', ']', '{', '}', ';', ':', ',', '.':
@@ -543,6 +544,8 @@ begin
               SymStr := 'Invaid numerical value "0x"';
               Exit(False);
             end;
+            Sym := tsIntegerValue;
+            Exit(True);
           end;
           'b': // Binary value (not supported)
           begin
@@ -585,11 +588,14 @@ begin
     end;
   end;
   Result := False;
-  Sym := tsError;
-  if SymStr <> '' then
-    SymStr := 'Unknown token "'+SymStr+'".'
-  else
-    SymStr := 'Unknown token "'+Ch+'".';
+  if Sym <> tsError then
+  begin
+    Sym := tsError;
+    if SymStr <> '' then
+      SymStr := 'Unknown token "'+SymStr+'".'
+    else
+      SymStr := 'Unknown token "'+Ch+'".';
+  end;
 end;
 
 { TThoriumDefaultCompiler }
@@ -609,12 +615,14 @@ end;
 procedure TThoriumDefaultCompiler.CompilerError(const Msg: String; X, Y: Integer
   );
 begin
-  raise EThoriumCompilerError.CreateFmt('%d|%d: %s', [X, Y, Msg]);
+  raise EThoriumCompilerError.CreateFmt('(%d,%d): %s', [X, Y, Msg]);
 end;
 
 function TThoriumDefaultCompiler.ExpectSymbol(
   SymbolMask: TThoriumDefaultSymbols; ThrowError: Boolean): Boolean;
 begin
+  if FCurrentSym = tsError then
+    CompilerError('Scanner error: '+FCurrentStr);
   if SymbolMask = [] then
     Exit(True);
   Result := FCurrentSym in SymbolMask;
@@ -639,6 +647,8 @@ function TThoriumDefaultCompiler.Proceed(ExpectMask: TThoriumDefaultSymbols;
   ThrowError: Boolean): Boolean;
 begin
   Result := FScanner.NextSymbol(FCurrentSym, FCurrentStr);
+  if FCurrentSym = tsError then
+    CompilerError('Scanner error: '+FCurrentStr);
   if Result and (ExpectMask <> []) then
     Result := ExpectSymbol(ExpectMask, ThrowError);
 end;
@@ -705,7 +715,7 @@ begin
           ExpectSymbol([tsAssign])
         else
           ExpectSymbol([tsSemicolon, tsComma, tsAssign]);
-        VariableDeclaration(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
+        DeclarationHandler(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
         ExpectSymbol([tsComma, tsSemicolon]);
         if FCurrentSym = tsComma then
         begin
@@ -713,6 +723,8 @@ begin
           ValueIdentifier := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared]);
         end;
       until FCurrentSym = tsSemicolon;
+      ExpectSymbol([tsSemicolon]);
+      Proceed;
     end;
   end;
 end;
@@ -771,6 +783,9 @@ begin
       Result := TThoriumTypeInteger.Create;
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create integer value.');
+      AState := vsStatic;
+      AStaticValue := Result.DoCreate(InitialData);
+      Proceed;
     end;
     tsFloatValue:
     begin
@@ -778,6 +793,9 @@ begin
       Result := TThoriumTypeFloat.Create;
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create float value.');
+      AState := vsStatic;
+      AStaticValue := Result.DoCreate(InitialData);
+      Proceed;
     end;
     tsStringValue:
     begin
@@ -788,6 +806,9 @@ begin
       Result := TThoriumTypeString.Create;
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create string value.');
+      AState := vsStatic;
+      AStaticValue := Result.DoCreate(InitialData);
+      Proceed;
     end;
     tsIdentifier:
     begin
@@ -821,6 +842,8 @@ begin
       ExpectSymbol([tsCloseBracket]);
       Proceed;
     end;
+  else
+    CompilerError('Invalid factor (sym = '+GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(FCurrentSym))+')');
   end;
 end;
 
@@ -947,7 +970,7 @@ begin
     Inc(ParamIndex);
   end;
 
-  for I := High(Params) to Low(Params) do
+  for I := High(Params) downto Low(Params) do
   begin
     FTable.AddParameterIdentifier(Params[I].ParamName, FCurrentScope, I-Length(Params), Params[I].ParamType);
   end;
@@ -1002,9 +1025,13 @@ begin
       tsStatic:
       begin
         // Use default value for visibility
-        Visibility := vsPrivate;
         IsStatic := True;
         Proceed([tsIdentifier], True);
+
+        GenericDeclaration(IsStatic, Visibility, Offset);
+
+        IsStatic := False;
+        Visibility := vsPrivate;
       end;
       tsPublic, tsPrivate:
       begin
@@ -1020,6 +1047,11 @@ begin
         end
         else
           IsStatic := False;
+
+        GenericDeclaration(IsStatic, Visibility, Offset);
+
+        IsStatic := False;
+        Visibility := vsPrivate;
       end;
       tsIdentifier:
       begin
@@ -1030,7 +1062,7 @@ begin
       end;
     end;
   end;
-  ExpectSymbol([tsUnknown], True);
+  ExpectSymbol([tsNone], True);
 end;
 
 procedure TThoriumDefaultCompiler.PlaceStatic(const StaticValue: TThoriumValue;
@@ -1109,12 +1141,17 @@ begin
     GenCode(mover(THORIUM_REGISTER_C3, ATargetRegister));
   end;
 
-  if (State1 = vsStatic) and (AStaticValue = nil) then
+  if (State1 = vsStatic) then
   begin
-    PlaceStatic(Value1, ATargetRegister);
-    ThoriumFreeValue(Value1);
-    State1 := vsDynamic;
-    AStaticValue^ := Value1;
+    if (AStaticValue = nil) then
+    begin
+      PlaceStatic(Value1, ATargetRegister);
+      ThoriumFreeValue(Value1);
+      State1 := vsDynamic;
+      AStaticValue^ := Value1;
+    end
+    else
+      AStaticValue^ := Value1;
   end;
   AState := State1;
   ReleaseRegister(RegID2);
@@ -1375,6 +1412,7 @@ begin
   OldCodeHook1 := FCodeHook1;
   OldCodeHook2 := FCodeHook2;
   Entries := TThoriumTableEntryResultList.Create;
+  Solutions := TThoriumQualifiedIdentifierList.Create;
   try
     FindTableEntries(FCurrentStr, EntriesHandle);
     // Add items in reverse order as we walk through the list in reverse order
@@ -1386,9 +1424,28 @@ begin
 
     if Entries.Count = 0 then
     begin
+      if not (ikUndeclared in AllowedKinds) then
+        CompilerError('Undeclared identifier: '+Result.FullStr);
       Result.Kind := ikUndeclared;
+      Proceed;
       Exit;
     end;
+
+    if (AllowedKinds = [ikUndeclared, ikPrototypedFunction]) then
+    begin
+      // Must not attempt to resolve this identifier further, because it will
+      // look like a call.
+      if Entries.Count = 0 then
+      begin
+        Result.Kind := ikUndeclared;
+        Proceed;
+        Exit;
+      end
+      else
+        CompilerError('Prototyping not allowed yet.');
+    end;
+
+    FillSolutionList;
 
     while Proceed([tsDot, tsOpenSquareBracket, tsOpenBracket], False) do
     begin
@@ -1520,12 +1577,12 @@ begin
 
     if Solutions.Count > 1 then
     begin
-      CompilerError('Ambigous identifier.');
+      CompilerError('Ambigous identifier: '+Result.FullStr);
       Exit;
     end
     else if Solutions.Count = 0 then
     begin
-      CompilerError('Unresolvable identifier.');
+      CompilerError('Unresolvable identifier: '+Result.FullStr);
       Exit;
     end
     else
@@ -1573,7 +1630,7 @@ begin
       Proceed;
     end;
   else
-    ExpectSymbol([]);
+    ExpectSymbol([tsUnknown]);
   end;
 end;
 
@@ -1654,6 +1711,7 @@ var
 begin
   if FCurrentSym = tsAssign then
   begin
+    Proceed;
     SimpleExpression(THORIUM_REGISTER_INVALID, State, @Value, ATypeIdent.FinalType);
     if State <> vsStatic then
       CompilerError('Static value needed.');
@@ -1662,7 +1720,11 @@ begin
     GenCreation(Creation);
   end
   else
-    State := vsDynamic;
+  begin
+    if not ATypeIdent.FinalType.CanCreateNone(False, Creation) then
+      CompilerError('Need an initial value, as `None'' creation failed.');
+    GenCreation(Creation);
+  end;
   ExpectSymbol([tsSemicolon, tsComma]);
 
   Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType);
@@ -1678,8 +1740,6 @@ begin
   FScanner := TThoriumDefaultScanner.Create(SourceStream);
   try
     try
-      // Select the first symbol
-      Proceed;
       // Attempt to compile the module
       Module;
     finally

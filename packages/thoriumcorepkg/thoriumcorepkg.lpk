@@ -4,16 +4,22 @@
     <Name Value="thoriumcorepkg"/>
     <Author Value="Jonas Wielicki"/>
     <CompilerOptions>
-      <Version Value="8"/>
+      <Version Value="9"/>
       <SearchPaths>
         <UnitOutputDirectory Value="$(PkgDir)/lib/$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Parsing>
         <SyntaxOptions>
           <IncludeAssertionCode Value="True"/>
+          <UseAnsiStrings Value="False"/>
         </SyntaxOptions>
       </Parsing>
       <CodeGeneration>
+        <Checks>
+          <RangeChecks Value="True"/>
+          <StackChecks Value="True"/>
+        </Checks>
+        <VerifyObjMethodCallValidity Value="True"/>
         <Optimizations>
           <OptimizationLevel Value="0"/>
         </Optimizations>
