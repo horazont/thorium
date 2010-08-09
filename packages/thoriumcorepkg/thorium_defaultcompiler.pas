@@ -175,6 +175,15 @@ const
     '',
     ''
   );
+type
+
+  TThoriumDefaultStatementKind = (tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
+    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak);
+  TThoriumDefaultStatementKinds = set of TThoriumDefaultStatementKind;
+
+const
+  THORIUM_DEFAULT_ALL_STATEMENTS = [tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
+    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak];
 
 type
   EThoriumCompilerError = class (EThoriumCompilerException);
@@ -239,7 +248,7 @@ type
     function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
-    procedure Statement(var Offset: Integer);
+    procedure Statement(var Offset: Integer; const AllowedStatements: TThoriumDefaultStatementKinds = THORIUM_DEFAULT_ALL_STATEMENTS);
     function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
     procedure VariableDeclaration(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
@@ -1537,9 +1546,37 @@ begin
   end;
 end;
 
-procedure TThoriumDefaultCompiler.Statement(var Offset: Integer);
+procedure TThoriumDefaultCompiler.Statement(var Offset: Integer;
+  const AllowedStatements: TThoriumDefaultStatementKinds);
 begin
+  case FCurrentSym of
+    tsOpenCurlyBracket:
+    begin
+      // Begin a new instruction block
+      // { statement; [statement;] }
 
+      if not (tskBlock in AllowedStatements) then
+        CompilerError('Blocks are not allowed here.');
+      Proceed;
+
+      if FCurrentSym = tsCloseCurlyBracket then
+      begin
+        Proceed;
+        Exit;
+      end;
+
+      SaveTable;
+      Statement(Offset);
+      while FCurrentSym <> tsCloseCurlyBracket do
+        Statement(Offset);
+      RestoreTable(Offset);
+
+      ExpectSymbol([tsCloseCurlyBracket]);
+      Proceed;
+    end;
+  else
+    ExpectSymbol([]);
+  end;
 end;
 
 function TThoriumDefaultCompiler.Term(ATargetRegister: Word; out

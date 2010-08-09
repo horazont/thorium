@@ -3636,6 +3636,10 @@ begin
   Result.TargetRegisterOffset := ATargetRegister;
 end;
 
+function ThoriumValueToStr(const Value: TThoriumValue): String;
+begin
+  Result := 'Cannot convert yet.';
+end;
 
 function ThoriumMakeOOPEvent(ACode: Pointer; Userdata: Pointer): TMethod;
 begin
@@ -5677,6 +5681,30 @@ end;
 destructor TThoriumHostObjectType.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TThoriumHostObjectType.FindMethod(const AMethodName: String
+  ): TThoriumHostMethodBase;
+begin
+  Result := nil;
+end;
+
+function TThoriumHostObjectType.GetFieldID(const FieldIdent: String; out
+  ID: QWord): Boolean;
+begin
+  Result := False;
+end;
+
+function TThoriumHostObjectType.GetIndexType(const IndexType: IThoriumType; out
+  TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition): Boolean;
+begin
+  Result := False;
+end;
+
+function TThoriumHostObjectType.GetStaticFieldID(const FieldIdent: String; out
+  ID: QWord): Boolean;
+begin
+  Result := False;
 end;
 
 { TThoriumRTTIObjectType }
