@@ -171,6 +171,7 @@ type
     (* An exception thrown by the compiler. Should occur rarely and if, please
        notifiy the author! *)
     EThoriumCompilerException = class (EThoriumException);
+      EThoriumCompilerError = class (EThoriumCompilerException);
     (* This exception occurs during the verification phase of a loaded or
        compiled-for-dependency module. *)
     EThoriumVerificationException = class (EThoriumException);
@@ -1886,6 +1887,7 @@ type
   public
     function CompileFromStream(SourceStream: TStream; Flags: TThoriumCompilerFlags = [cfOptimize]): Boolean; virtual; abstract;
   end;
+  TThoriumCompilerClass = class of TThoriumCustomCompiler;
 
 {%ENDREGION}
 
@@ -1972,7 +1974,7 @@ type
     property PublicVariableCount: Integer read GetPublicVariableCount;
     property Thorium: TThorium read FThorium;
   public
-    function CompileFromStream(SourceStream: TStream;
+    function CompileFromStream(SourceStream: TStream; ACompiler: TThoriumCompilerClass;
       Flags: TThoriumCompilerFlags = [cfOptimize]): Boolean;
     procedure Dump;
     function DumpCodeStr: String;
@@ -2114,18 +2116,18 @@ type
     function GetModuleCount: Integer;
   protected
     procedure DoCompilerOutput(const Module: TThoriumModule; const Msg: String); virtual;
-    function DoRequireModule(const Name: String; NeededHash: PThoriumHash = nil): TThoriumModule; virtual;
+    function DoRequireModule(const Name: String; ACompiler: TThoriumCompilerClass; NeededHash: PThoriumHash = nil): TThoriumModule; virtual;
     function DoOpenModule(const ModuleName: String): TStream; virtual;
   public
     procedure ClearLibraries;
     procedure ClearModules;
     function FindLibrary(const Name: String): TThoriumLibrary;
-    function FindModule(const Name: String; AllowLoad: Boolean = True): TThoriumModule;
+    function FindModule(const Name: String; AllowLoad: Boolean = True; ACompiler: TThoriumCompilerClass = nil): TThoriumModule;
     function IndexOfModule(const AModule: TThoriumModule): Integer;
     procedure InitializeVirtualMachine;
     function LoadLibrary(const ALibrary: TThoriumLibraryClass): TThoriumLibrary;
-    function LoadModuleFromFile(AModuleName: String; NeededHash: PThoriumHash = nil): TThoriumModule;
-    function LoadModuleFromStream(AStream: TStream; AName: String = ''; NeededHash: PThoriumHash = nil): TThoriumModule;
+    function LoadModuleFromFile(AModuleName: String; ACompiler: TThoriumCompilerClass; NeededHash: PThoriumHash = nil): TThoriumModule;
+    function LoadModuleFromStream(AStream: TStream; ACompiler: TThoriumCompilerClass; AName: String = ''; NeededHash: PThoriumHash = nil): TThoriumModule;
     function NewModule(AName: String = ''): TThoriumModule;
     procedure ReleaseVirtualMachine;
   public
@@ -2174,8 +2176,8 @@ function ThoriumEncapsulateOperation(const AOperation: TThoriumOperationDescript
 
 implementation
 
-uses
-  Thorium_DefaultCompiler;
+(*uses
+  Thorium_DefaultCompiler;*)
 
 {$ifdef HookSIGUSR1}
 var
@@ -10213,13 +10215,13 @@ begin
 end;
 
 function TThoriumModule.CompileFromStream(SourceStream: TStream;
-  Flags: TThoriumCompilerFlags): Boolean;
+  ACompiler: TThoriumCompilerClass; Flags: TThoriumCompilerFlags): Boolean;
 var
-  Compiler: TThoriumDefaultCompiler;
+  Compiler: TThoriumCustomCompiler;
 begin
   Result := False;
   FCompiled := False;
-  Compiler := TThoriumDefaultCompiler.Create(Self);
+  Compiler := ACompiler.Create(Self);
   try
     Result := Compiler.CompileFromStream(SourceStream, Flags);
     if not Result then
@@ -10989,7 +10991,7 @@ begin
     FOnCompilerOutput(Self, Module, Msg);
 end;
 
-function TThorium.DoRequireModule(const Name: String; NeededHash: PThoriumHash = nil): TThoriumModule;
+function TThorium.DoRequireModule(const Name: String; ACompiler: TThoriumCompilerClass; NeededHash: PThoriumHash = nil): TThoriumModule;
 // Handle the OnRequireModule event.
 var
   ModuleHash: TThoriumHash;
@@ -11006,7 +11008,7 @@ begin
     end;
   end;
   if (Result = nil) then
-    Result := LoadModuleFromFile(Name, NeededHash);
+    Result := LoadModuleFromFile(Name, ACompiler, NeededHash);
 end;
 
 function TThorium.DoOpenModule(const ModuleName: String): TStream;
@@ -11074,7 +11076,7 @@ begin
   Result := nil;
 end;
 
-function TThorium.FindModule(const Name: String; AllowLoad: Boolean = True): TThoriumModule;
+function TThorium.FindModule(const Name: String; AllowLoad: Boolean = True; ACompiler: TThoriumCompilerClass = nil): TThoriumModule;
 var
   I: Integer;
 begin
@@ -11086,7 +11088,7 @@ begin
   end;
   if AllowLoad then
   begin
-    Result := DoRequireModule(Name);
+    Result := DoRequireModule(Name, ACompiler);
     Exit;
   end;
   Result := nil;
@@ -11114,7 +11116,7 @@ begin
   FHostLibraries.Add(Result);
 end;
 
-function TThorium.LoadModuleFromFile(AModuleName: String; NeededHash: PThoriumHash = nil): TThoriumModule;
+function TThorium.LoadModuleFromFile(AModuleName: String; ACompiler: TThoriumCompilerClass; NeededHash: PThoriumHash = nil): TThoriumModule;
 
   function StripExtension(const AFileName: String): String;
   var
@@ -11168,7 +11170,7 @@ begin
                 // if we can recompile without problems (i.e. NeededHash = nil).
                 SourceFS.Free;
                 SourceFS := TStringStream.Create(Buffer);
-                Result := LoadModuleFromStream(SourceFS, StripExtension(ChangedFileName), nil);
+                Result := LoadModuleFromStream(SourceFS, ACompiler, StripExtension(ChangedFileName), nil);
                 Result.FSourceFile := AModuleName + '.tss';
               end;
             finally
@@ -11178,7 +11180,7 @@ begin
 
           end;
         end;
-        Result := LoadModuleFromStream(FS, StripExtension(ChangedFileName), NeededHash);
+        Result := LoadModuleFromStream(FS, ACompiler, StripExtension(ChangedFileName), NeededHash);
       finally
         FS.Free;
       end;
@@ -11191,7 +11193,7 @@ begin
       begin
         FS := DoOpenModule(ChangedFileName);
         try
-          Result := LoadModuleFromStream(FS, StripExtension(ChangedFileName), NeededHash);
+          Result := LoadModuleFromStream(FS, ACompiler, StripExtension(ChangedFileName), NeededHash);
           Result.FSourceFile := AModuleName + '.tss';
         finally
           FS.Free;
@@ -11221,7 +11223,7 @@ begin
     if FS <> nil then
     begin
       try
-        Result := LoadModuleFromStream(FS, StripExtension(ChangedFileName), NeededHash);
+        Result := LoadModuleFromStream(FS, ACompiler, StripExtension(ChangedFileName), NeededHash);
         Result.FSourceFile := AModuleName + '.tss';
       finally
         FS.Free;
@@ -11247,7 +11249,7 @@ begin
   end;
 end;
 
-function TThorium.LoadModuleFromStream(AStream: TStream; AName: String = ''; NeededHash: PThoriumHash = nil): TThoriumModule;
+function TThorium.LoadModuleFromStream(AStream: TStream; ACompiler: TThoriumCompilerClass; AName: String = ''; NeededHash: PThoriumHash = nil): TThoriumModule;
 // Create a module, find out which kind of stuff is in the stream and then
 // load it.
 var
@@ -11277,7 +11279,7 @@ begin
       Inc(FAnonymousID);
     end;
     Result := TThoriumModule.Create(Self, AName);
-    if (not Result.CompileFromStream(AStream)) or (not Result.Compiled) then
+    if (not Result.CompileFromStream(AStream, ACompiler)) or (not Result.Compiled) then
     begin
       try
         raise EThoriumException.Create('Could not compile module '''+AName+''': "'+Result.LastCompilerError+'".');

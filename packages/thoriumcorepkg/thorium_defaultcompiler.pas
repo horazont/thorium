@@ -186,8 +186,6 @@ const
     tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak];
 
 type
-  EThoriumCompilerError = class (EThoriumCompilerException);
-
   TThoriumDeclarationHandler = procedure (const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer) of object;
 
