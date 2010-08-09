@@ -213,6 +213,8 @@ type
     FCurrentScope: Integer;
     FCurrentStr: String;
     FCurrentSym: TThoriumDefaultSymbol;
+    FCurrentReturnType: IThoriumType;
+    FCurrentFunctionTableStack: Integer;
     FScanner: TThoriumDefaultScanner;
   protected
     procedure CompilerError(const Msg: String); override;
@@ -237,6 +239,7 @@ type
     function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
+    procedure Statement(var Offset: Integer);
     function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
     procedure VariableDeclaration(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
@@ -890,20 +893,80 @@ end;
 procedure TThoriumDefaultCompiler.FunctionDeclaration(
   const AVisibility: TThoriumVisibilityLevel; ATypeIdent,
   AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+type
+  TParam = record
+    ParamName: String;
+    ParamType: IThoriumType;
+  end;
+  TParams = array of TParam;
+
 var
-  ParamIndex: Integer;
+  ParamIndex, I: Integer;
+  ParamTypeIdent, ParamIdent: TThoriumQualifiedIdentifier;
+  Func: TThoriumFunction;
+  Params: TParams;
+  LocalOffset: Integer;
+  CreationInstruction: TThoriumCreateInstructionDescription;
 begin
   if AValueIdent.Kind = ikPrototypedFunction then
     CompilerError('Function prototyping is not supported yet.');
+
+  Func := TThoriumFunction.Create(FModule);
+  FCurrentReturnType := ATypeIdent.FinalType;
+  Func.Prototype.ReturnType := FCurrentReturnType;
+  SetupFunction(Func, FInstructions.Count, AValueIdent.FullStr);
+  FTable.AddFunctionIdentifier(Func.Name, Func);
+
   SaveTable;
   FCurrentScope := THORIUM_STACK_SCOPE_PARAMETERS;
   Proceed;
   ParamIndex := 1;
-  while CurrentSym in [tsIdentifier, tsComma] do
+
+  while FCurrentSym in [tsIdentifier, tsComma] do
   begin
     if ParamIndex > 1 then
+    begin
       ExpectSymbol([tsComma]);
+      Proceed;
+    end;
+    ParamTypeIdent := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikType]);
+    ParamIdent := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared]);
+    SetLength(Params, ParamIndex);
+
+    Func.Prototype.Parameters.Add(ParamTypeIdent.FinalType);
+    Params[ParamIndex-1].ParamName := ParamIdent.FullStr;
+    Params[ParamIndex-1].ParamType := ParamIdent.FinalType;
+
+    Inc(ParamIndex);
   end;
+
+  for I := High(Params) to Low(Params) do
+  begin
+    FTable.AddParameterIdentifier(Params[I].ParamName, FCurrentScope, I-Length(Params), Params[I].ParamType);
+  end;
+
+  ExpectSymbol([tsCloseBracket]);
+  Proceed;
+
+  FCurrentScope := THORIUM_STACK_SCOPE_LOCAL;
+  FCurrentFunctionTableStack := FTableSizes.Count;
+
+  SaveTable;
+  Statement(LocalOffset);
+  FCurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+
+  RestoreTable(LocalOffset, True);
+  RestoreTable(LocalOffset, False);
+
+  if Func.Prototype.ReturnType <> nil then
+  begin
+    Func.Prototype.ReturnType.CanCreateNone(False, CreationInstruction);
+    GenCreation(CreationInstruction);
+  end;
+  GenCode(ret());
+
+  if AVisibility > vsPrivate then
+    FPublicFunctions.Add(Func.Duplicate);
 end;
 
 procedure TThoriumDefaultCompiler.Module;
@@ -1472,6 +1535,11 @@ begin
     Entries.Free;
     ReleaseRegister(RegPreviousValue);
   end;
+end;
+
+procedure TThoriumDefaultCompiler.Statement(var Offset: Integer);
+begin
+
 end;
 
 function TThoriumDefaultCompiler.Term(ATargetRegister: Word; out

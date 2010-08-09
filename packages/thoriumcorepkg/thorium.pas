@@ -538,6 +538,7 @@ type
       const AnotherType: IThoriumType = nil): Boolean;
     function CanCall: Boolean;
     function CanCreate(const InitialData: TThoriumInitialData; const ToRegister: Boolean; out Instruction: TThoriumCreateInstructionDescription): Boolean;
+    function CanCreateNone(const ToRegister: Boolean; out Instruction: TThoriumCreateInstructionDescription): Boolean;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
       const TheObject: IThoriumType = nil; const ExName: String = ''): Boolean;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue;
@@ -621,6 +622,7 @@ type
     function _AddRef : longint;stdcall;
     function _Release : longint;stdcall;
   protected
+    function GetNoneInitialData(out InitialData: TThoriumInitialData): Boolean; virtual;
     function GetName: String; virtual;
     function GetTypeKind: TThoriumTypeKind; virtual; abstract;
     procedure RaiseMissingTheObject;
@@ -631,6 +633,7 @@ type
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription; const AnotherType: IThoriumType = nil): Boolean; virtual;
     function CanCall: Boolean; virtual;
     function CanCreate(const InitialData: TThoriumInitialData; const ToRegister: Boolean; out Instruction: TThoriumCreateInstructionDescription): Boolean; virtual;
+    function CanCreateNone(const ToRegister: Boolean; out Instruction: TThoriumCreateInstructionDescription): Boolean; virtual;
     function CanPerformOperation(var Operation: TThoriumOperationDescription; const TheObject: IThoriumType = nil; const ExName: String = ''): Boolean; virtual;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; virtual; abstract;
     function DuplicateValue(const Input: TThoriumValue): TThoriumValue; virtual;
@@ -692,6 +695,9 @@ type
   { TThoriumTypeInteger }
 
   TThoriumTypeInteger = class (TThoriumTypeSimple)
+  protected
+    function GetNoneInitialData(out InitialData: TThoriumInitialData
+       ): Boolean; override;
   public
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
        const AnotherType: IThoriumType=nil): Boolean; override;
@@ -736,6 +742,9 @@ type
   { TThoriumTypeFloat }
 
   TThoriumTypeFloat = class (TThoriumTypeSimple)
+  protected
+    function GetNoneInitialData(out InitialData: TThoriumInitialData
+       ): Boolean; override;
   public
     function CanCreate(const InitialData: TThoriumInitialData;
        const ToRegister: Boolean; out
@@ -762,6 +771,8 @@ type
 
   TThoriumTypeString = class (TThoriumTypeSimple)
   protected
+    function GetNoneInitialData(out InitialData: TThoriumInitialData
+       ): Boolean; override;
     function GetTypeKind: TThoriumTypeKind; override;
   public
     function CanCreate(const InitialData: TThoriumInitialData;
@@ -1043,13 +1054,13 @@ type
 
     function GetCount: Integer;
   protected
-    procedure Add(AType: IThoriumType);
     procedure Clear;
     procedure Delete(AIndex: Integer);
     procedure Remove(AType: IThoriumType);
   public
     property Count: Integer read GetCount;
   public
+    procedure Add(AType: IThoriumType);
     function Duplicate: TThoriumParameters;
     procedure GetParameterSpec(const Index: Integer; out ParamSpec: IThoriumType);
     procedure LoadFromStream(Stream: TStream);
@@ -1709,6 +1720,7 @@ type
   public
     property Count: Integer read FCount;
     function AddConstantIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType; Value: TThoriumValue): PThoriumTableEntry;
+    function AddParameterIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType): PThoriumTableEntry;
     function AddVariableIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType): PThoriumTableEntry;
     function AddRegisterVariableIdentifier(Name: String; RegisterID: TThoriumRegisterID; TypeSpec: IThoriumType): PThoriumTableEntry;
     function AddFunctionIdentifier(Name: String; Func: TThoriumFunction): PThoriumTableEntry;
@@ -1868,6 +1880,8 @@ type
     procedure ResetState;
     procedure RestoreTable(var Offset: Integer; GenerateCode: Boolean = True);
     procedure SaveTable;
+    procedure SetupFunction(AFunction: TThoriumFunction;
+      const AEntryPoint: Integer; const AName: String);
     function TypeSpecByName(TypeName: String; out TypeSpec: IThoriumType): Boolean;
   public
     function CompileFromStream(SourceStream: TStream; Flags: TThoriumCompilerFlags = [cfOptimize]): Boolean; virtual; abstract;
@@ -4254,6 +4268,12 @@ begin
     Free;
 end;
 
+function TThoriumType.GetNoneInitialData(out InitialData: TThoriumInitialData
+  ): Boolean;
+begin
+  Result := False;
+end;
+
 function TThoriumType.GetName: String;
 begin
 //  Result := FName;
@@ -4288,6 +4308,16 @@ function TThoriumType.CanCreate(const InitialData: TThoriumInitialData;
   Instruction: TThoriumCreateInstructionDescription): Boolean;
 begin
   Result := False;
+end;
+
+function TThoriumType.CanCreateNone(const ToRegister: Boolean; out
+  Instruction: TThoriumCreateInstructionDescription): Boolean;
+var
+  Initial: TThoriumInitialData;
+begin
+  Result := GetNoneInitialData(Initial);
+  if Result then
+    Result := CanCreate(Initial, ToRegister, Instruction);
 end;
 
 function TThoriumType.CanPerformOperation(
@@ -4483,6 +4513,13 @@ begin
 end;
 
 { TThoriumTypeInteger }
+
+function TThoriumTypeInteger.GetNoneInitialData(out
+  InitialData: TThoriumInitialData): Boolean;
+begin
+  Result := True;
+  InitialData.Int := 0;
+end;
 
 function TThoriumTypeInteger.CanAssignTo(
   var Assignment: TThoriumAssignmentDescription; const AnotherType: IThoriumType
@@ -4760,6 +4797,13 @@ end;
 
 { TThoriumTypeFloat }
 
+function TThoriumTypeFloat.GetNoneInitialData(out
+  InitialData: TThoriumInitialData): Boolean;
+begin
+  Result := True;
+  InitialData.Flt := 0.0;
+end;
+
 function TThoriumTypeFloat.CanCreate(const InitialData: TThoriumInitialData;
   const ToRegister: Boolean; out
   Instruction: TThoriumCreateInstructionDescription): Boolean;
@@ -4907,6 +4951,13 @@ begin
 end;
 
 { TThoriumTypeString }
+
+function TThoriumTypeString.GetNoneInitialData(out
+  InitialData: TThoriumInitialData): Boolean;
+begin
+  Result := True;
+  InitialData.Int := -1;
+end;
 
 function TThoriumTypeString.GetTypeKind: TThoriumTypeKind;
 begin
@@ -5586,7 +5637,7 @@ end;
 procedure TThoriumVariable.AssignFromTableEntry(
   const ATableEntry: TThoriumTableEntry);
 begin
-  if not ATableEntry._Type in [etStatic, etVariable] then
+  if not (ATableEntry._Type in [etStatic, etVariable]) then
     raise EThoriumCompilerError.Create('Cannot assign a non-variable and non-static to a TThoriumVariable instance.');
   if ATableEntry.Scope <> THORIUM_STACK_SCOPE_MODULEROOT then
     raise EThoriumCompilerError.Create('Only moduleroot symbols can be assigned to TThoriumVariable instances.');
@@ -7681,6 +7732,15 @@ begin
   Rec^.Value := ThoriumDuplicateValue(Value);*)
 end;
 
+function TThoriumIdentifierTable.AddParameterIdentifier(Name: String;
+  Scope: Integer; Offset: Integer; TypeSpec: IThoriumType): PThoriumTableEntry;
+var
+  Val: TThoriumValue;
+begin
+  FillByte(Val, SizeOf(TThoriumValue), 0);
+  Result := AddConstantIdentifier(Name, Scope, Offset, TypeSpec, Val);
+end;
+
 function TThoriumIdentifierTable.AddVariableIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: IThoriumType): PThoriumTableEntry;
 // Adds an identifier declared as variable
 begin
@@ -7720,7 +7780,7 @@ begin
   Result^.Offset := 0;
   Result^.TypeSpec := Func.FPrototypeIntf;
   WriteLn('This may need adaption [TThoriumIdentifierTable.AddFunctionIdentifier]');
-  FillByte(Rec^.Value, SizeOf(TThoriumValue), 0);
+  FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 
 procedure TThoriumIdentifierTable.ClearTable;
@@ -9731,6 +9791,13 @@ end;
 procedure TThoriumCustomCompiler.SaveTable;
 begin
   FTableSizes.Push(FTable.Count);
+end;
+
+procedure TThoriumCustomCompiler.SetupFunction(AFunction: TThoriumFunction;
+  const AEntryPoint: Integer; const AName: String);
+begin
+  AFunction.FEntryPoint := AEntryPoint;
+  AFunction.FName := AName;
 end;
 
 function TThoriumCustomCompiler.TypeSpecByName(TypeName: String; out
