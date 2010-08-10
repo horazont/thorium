@@ -1672,23 +1672,54 @@ begin
           CompilerError('This cannot stand on the left side of an expression.');
         end;
       else
-        // Anything else will be an assignable thingy
-        ExpectSymbol([tsAssign]);
-        Proceed;
-        GetFreeRegister(trEXP, RegID2);
-        ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
-        Assignment.Casting := True;
-        ExpressionType.CanAssignTo(Assignment, Ident1.FinalType);
-        if Assignment.Cast.Needed then
-        begin
-          Assignment.Cast.Instruction.SRI := RegID2;
-          Assignment.Cast.Instruction.TRI := RegID1;
-          GenCode(TThoriumInstruction(Assignment.Cast.Instruction));
-        end
-        else
-          GenCode(mover(RegID2, RegID1));
-        AppendOperations(Ident1.SetCode);
-        ReleaseRegister(RegID2);
+        // Anything else will be an assignable thingy. Or it will just do
+        // nothing.
+        ExpectSymbol([tsAssign, tsSemicolon]);
+        case FCurrentSym of
+          tsAssign:
+          begin
+            if not (tskAssignment in AllowedStatements) then
+              CompilerError('Assignment is not allowed here.');
+            if not (Ident1.Writable) then
+              CompilerError('Cannot write to the left side.');
+            // Handle an assignment
+            Proceed;
+            // Allocate a register for the expression evaluation
+            GetFreeRegister(trEXP, RegID2);
+            ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
+            // Allow casting
+            Assignment.Casting := True;
+            // Check whether the expression result can be assigned to the ident
+            if not ExpressionType.CanAssignTo(Assignment, Ident1.FinalType) then
+              CompilerError('Cannot assign '+ExpressionType.Name+' to '+Ident1.FinalType.Name);
+            // Cast if neccessary
+            if Assignment.Cast.Needed then
+            begin
+              // Assign the registers to the cast instruction
+              Assignment.Cast.Instruction.SRI := RegID2;
+              Assignment.Cast.Instruction.TRI := RegID1;
+              // Generate the code
+              GenCode(TThoriumInstruction(Assignment.Cast.Instruction));
+            end
+            else
+            begin
+              // Move the expression result to the approprate register
+              GenCode(mover(RegID2, RegID1));
+            end;
+            AppendOperations(Ident1.SetCode);
+            // Release the expression register
+            if (ExpressionState = vsDynamic) and (ExpressionType.NeedsClear) then
+              GenCode(clr(RegID1));
+            ReleaseRegister(RegID2);
+          end;
+          tsSemicolon:
+          begin
+            // Get the value and delete it after that.
+            AppendOperations(Ident1.GetCode);
+            if (Ident1.State = vsDynamic) and (Ident1.FinalType.NeedsClear) then
+              GenCode(clr(RegID1));
+          end;
+        end;
       end;
       ReleaseRegister(RegID1);
     end;

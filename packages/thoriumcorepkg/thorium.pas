@@ -550,6 +550,7 @@ type
     function HasFieldAccess: Boolean;
     function HasIndexedAccess: Boolean;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean;
+    function NeedsClear: Boolean;
     function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean = True): Boolean;
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
     function DoBitAnd(const AValue, BValue: TThoriumValue): TThoriumValue;
@@ -646,6 +647,7 @@ type
     function GetClassType: TClass;
     function GetInstance: TThoriumType;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; virtual; abstract;
+    function NeedsClear: Boolean; virtual;
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoBitAnd(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoBitNot(const AValue: TThoriumValue): TThoriumValue; virtual; abstract;
@@ -790,6 +792,7 @@ type
        const TheObject: IThoriumType=nil; const ExName: String=''): Boolean; override;
     function HasIndexedAccess: Boolean; override;
     function HasFieldAccess: Boolean; override;
+    function NeedsClear: Boolean; override;
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
        override;
@@ -888,6 +891,7 @@ type
     procedure Delete(const AIndex: Integer);
     function IndexOf(const AName: String): Integer;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
+    function NeedsClear: Boolean; override;
     function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean=True
        ): Boolean; override;
   end;
@@ -915,6 +919,7 @@ type
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
+    function NeedsClear: Boolean; override;
   end;
 
     (* A set of values processable by Thorium representing the complete register
@@ -4401,6 +4406,11 @@ begin
   Result := Self;
 end;
 
+function TThoriumType.NeedsClear: Boolean;
+begin
+  Result := False;
+end;
+
 function TThoriumType.DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
   ): Boolean;
 begin
@@ -5091,6 +5101,11 @@ begin
   Result := True;
 end;
 
+function TThoriumTypeString.NeedsClear: Boolean;
+begin
+  Result := True;
+end;
+
 function TThoriumTypeString.DoAddition(const AValue, BValue: TThoriumValue
   ): TThoriumValue;
 begin
@@ -5333,6 +5348,11 @@ begin
   Result := True;
 end;
 
+function TThoriumTypeStruct.NeedsClear: Boolean;
+begin
+  Result := True;
+end;
+
 function TThoriumTypeStruct.UsesType(const AnotherType: IThoriumType;
   MayRecurse: Boolean): Boolean;
 var
@@ -5429,6 +5449,11 @@ begin
       (OtherInstance.FArrayDimensionMax <> FArrayDimensionMax) then
       Exit(False);
   end;
+  Result := True;
+end;
+
+function TThoriumTypeArray.NeedsClear: Boolean;
+begin
   Result := True;
 end;
 
