@@ -178,12 +178,12 @@ const
 type
 
   TThoriumDefaultStatementKind = (tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
-    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak);
+    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak, tskNullStatement);
   TThoriumDefaultStatementKinds = set of TThoriumDefaultStatementKind;
 
 const
   THORIUM_DEFAULT_ALL_STATEMENTS = [tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
-    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak];
+    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak, tskNullStatement];
 
 type
   TThoriumDeclarationHandler = procedure (const AVisibility: TThoriumVisibilityLevel;
@@ -248,6 +248,12 @@ type
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
     procedure Statement(var Offset: Integer; const AllowedStatements: TThoriumDefaultStatementKinds = THORIUM_DEFAULT_ALL_STATEMENTS);
+    procedure StatementDoWhile(var Offset: Integer);
+    procedure StatementFor(var Offset: Integer);
+    procedure StatementIdentifier(var Offset: Integer; const AllowedStatements: TThoriumDefaultStatementKinds);
+    procedure StatementIf(var Offset: Integer);
+    procedure StatementSwitch(var Offset: Integer);
+    procedure StatementWhile(var Offset: Integer);
     function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
     procedure VariableDeclaration(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
@@ -735,8 +741,54 @@ end;
 function TThoriumDefaultCompiler.Expression(ATargetRegister: Word;
   out AState: TThoriumValueState; AStaticValue: PThoriumValue;
   ATypeHint: IThoriumType): IThoriumType;
+var
+  Sym: TThoriumDefaultSymbol;
+  OperandType: IThoriumType;
+  Operation: TThoriumOperationDescription;
+  State1, State2: TThoriumValueState;
+  Value1, Value2: TThoriumValue;
+  RegID2: TThoriumRegisterID;
 begin
-  raise EThoriumCompilerException.Create('Expression not implemented.');
+  Result := SimpleExpression(ATargetRegister, State1, @Value1, ATypeHint);
+
+  while FCurrentSym in THORIUM_DEFAULT_RELATIONAL_OPERATOR do
+  begin
+    Sym := FCurrentSym;
+    Proceed;
+
+    OperandType := SimpleExpression(RegID2, State2, Value2, Result);
+
+    Operation.Operation := SymbolToOperation(Sym);
+    if not Result.CanPerformOperation(Operation, OperandType) then
+      CompilerError('Invalid operands for this operation.');
+
+    // Attempt to evaluate static values during compile time
+    if (State1 = vsStatic) and (State2 = vsStatic) then
+    begin
+      ResultValue := TThoriumType.PerformOperation(Value1, Operation, @Value2);
+      ThoriumFreeValue(Value1);
+      ThoriumFreeValue(Value2);
+      Value1 := ResultValue;
+      Continue;
+    end;
+
+    if State1 = vsStatic then
+    begin
+      PlaceStatic(Value1, ATargetRegister);
+      ThoriumFreeValue(Value1);
+    end;
+
+    if State2 = vsStatic then
+    begin
+      PlaceStatic(Value2, RegID2);
+      ThoriumFreeValue(Value2);
+    end;
+
+    ClaimRegister(THORIUM_REGISTER_C3);
+    GenOperation(Operation, THORIUM_REGISTER_C3, ATargetRegister, RegID2);
+    GenCode(mover(THORIUM_REGISTER_C3, ATargetRegister));
+    ReleaseRegister(THORIUM_REGISTER_C3);
+  end;
 end;
 
 function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
@@ -1146,8 +1198,10 @@ begin
       ThoriumFreeValue(Value2);
     end;
 
+    ClaimRegister(THORIUM_REGISTER_C3);
     GenOperation(Operation, THORIUM_REGISTER_C3, ATargetRegister, RegID2);
     GenCode(mover(THORIUM_REGISTER_C3, ATargetRegister));
+    ReleaseRegister(THORIUM_REGISTER_C3);
   end;
 
   if (State1 = vsStatic) then
@@ -1625,11 +1679,6 @@ procedure TThoriumDefaultCompiler.Statement(var Offset: Integer;
   const AllowedStatements: TThoriumDefaultStatementKinds);
 var
   NeedSemicolon: Boolean;
-  Ident1: TThoriumQualifiedIdentifier;
-  ExpressionType: IThoriumType;
-  ExpressionState: TThoriumValueState;
-  RegID1, RegID2: TThoriumRegisterID;
-  Assignment: TThoriumAssignmentDescription;
 begin
   case FCurrentSym of
     tsOpenCurlyBracket:
@@ -1659,74 +1708,144 @@ begin
     end;
     tsIdentifier:
     begin
-      // Identifier handling
-      GetFreeRegister(trEXP, RegID1);
-      Ident1 := SolveIdentifier(RegID1, [ikStatic, ikType, ikComplex, ikLibraryProperty, ikVariable]);
-      case Ident1.Kind of
-        ikType:
-        begin
-          CompilerError('Local declarations are still to-do.');
-        end;
-        ikStatic:
-        begin
-          CompilerError('This cannot stand on the left side of an expression.');
-        end;
-      else
-        // Anything else will be an assignable thingy. Or it will just do
-        // nothing.
-        ExpectSymbol([tsAssign, tsSemicolon]);
-        case FCurrentSym of
-          tsAssign:
-          begin
-            if not (tskAssignment in AllowedStatements) then
-              CompilerError('Assignment is not allowed here.');
-            if not (Ident1.Writable) then
-              CompilerError('Cannot write to the left side.');
-            // Handle an assignment
-            Proceed;
-            // Allocate a register for the expression evaluation
-            GetFreeRegister(trEXP, RegID2);
-            ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
-            // Allow casting
-            Assignment.Casting := True;
-            // Check whether the expression result can be assigned to the ident
-            if not ExpressionType.CanAssignTo(Assignment, Ident1.FinalType) then
-              CompilerError('Cannot assign '+ExpressionType.Name+' to '+Ident1.FinalType.Name);
-            // Cast if neccessary
-            if Assignment.Cast.Needed then
-            begin
-              // Assign the registers to the cast instruction
-              Assignment.Cast.Instruction.SRI := RegID2;
-              Assignment.Cast.Instruction.TRI := RegID1;
-              // Generate the code
-              GenCode(TThoriumInstruction(Assignment.Cast.Instruction));
-            end
-            else
-            begin
-              // Move the expression result to the approprate register
-              GenCode(mover(RegID2, RegID1));
-            end;
-            AppendOperations(Ident1.SetCode);
-            // Release the expression register
-            if (ExpressionState = vsDynamic) and (ExpressionType.NeedsClear) then
-              GenCode(clr(RegID1));
-            ReleaseRegister(RegID2);
-          end;
-          tsSemicolon:
-          begin
-            // Get the value and delete it after that.
-            AppendOperations(Ident1.GetCode);
-            if (Ident1.State = vsDynamic) and (Ident1.FinalType.NeedsClear) then
-              GenCode(clr(RegID1));
-          end;
-        end;
-      end;
-      ReleaseRegister(RegID1);
+      StatementIdentifier(Offset, AllowedStatements);
+      NeedSemicolon := True;
+    end;
+    tsIf:
+    begin
+      if not (tskIf in AllowedStatements) then
+        CompilerError('If statement not allowed here.');
+      StatementIf(Offset);
+      NeedSemicolon := False;
+    end;
+    tsFor:
+    begin
+      if not (tsFor in AllowedStatements) then
+        CompilerError('For statement not allowed here.');
+      StatementFor(Offset);
+      NeedSemicolon := False;
+    end;
+    tsWhile:
+    begin
+      if not (tskWhile in AllowedStatements) then
+        CompilerError('While statement not allowed here.');
+      StatementWhile(Offset);
+      NeedSemicolon := False;
+    end;
+    tsDo:
+    begin
+      if not (tskDoWhile in AllowedStatements) then
+        CompilerError('Do-While statement not allowed here.');
+      StatementDoWhile(Offset);
+      NeedSemicolon := False;
     end;
   end;
   if NeedSemicolon then
     ExpectSymbol([tsSemicolon]);
   Proceed;
+end;
+
+procedure TThoriumDefaultCompiler.StatementDoWhile(var Offset: Integer);
+begin
+
+end;
+
+procedure TThoriumDefaultCompiler.StatementFor(var Offset: Integer);
+begin
+
+end;
+
+procedure TThoriumDefaultCompiler.StatementIdentifier(var Offset: Integer;
+  const AllowedStatements: TThoriumDefaultStatementKinds);
+var
+  Ident1: TThoriumQualifiedIdentifier;
+  ExpressionType: IThoriumType;
+  ExpressionState: TThoriumValueState;
+  RegID1, RegID2: TThoriumRegisterID;
+  Assignment: TThoriumAssignmentDescription;
+begin
+  // Identifier handling
+  GetFreeRegister(trEXP, RegID1);
+  Ident1 := SolveIdentifier(RegID1, [ikStatic, ikType, ikComplex, ikLibraryProperty, ikVariable]);
+  case Ident1.Kind of
+    ikType:
+    begin
+      CompilerError('Local declarations are still to-do.');
+    end;
+    ikStatic:
+    begin
+      CompilerError('This cannot stand on the left side of an expression.');
+    end;
+  else
+    // So see what we can do with it.
+    ExpectSymbol([tsAssign, tsSemicolon]);
+    case FCurrentSym of
+      tsAssign:
+      begin
+        // Handle an assignment.
+        // [Ident1] = [Expression];
+        if not (tskAssignment in AllowedStatements) then
+          CompilerError('Assignment is not allowed here.');
+        if not (Ident1.Writable) then
+          CompilerError('Cannot write to the left side.');
+        // Handle an assignment
+        Proceed;
+        // Allocate a register for the expression evaluation
+        GetFreeRegister(trEXP, RegID2);
+        ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
+        // Allow casting
+        Assignment.Casting := True;
+        // Check whether the expression result can be assigned to the ident
+        if not ExpressionType.CanAssignTo(Assignment, Ident1.FinalType) then
+          CompilerError('Cannot assign '+ExpressionType.Name+' to '+Ident1.FinalType.Name);
+        // Cast if neccessary
+        if Assignment.Cast.Needed then
+        begin
+          // Assign the registers to the cast instruction
+          Assignment.Cast.Instruction.SRI := RegID2;
+          Assignment.Cast.Instruction.TRI := RegID1;
+          // Generate the code
+          GenCode(TThoriumInstruction(Assignment.Cast.Instruction));
+        end
+        else
+        begin
+          // Move the expression result to the approprate register
+          GenCode(mover(RegID2, RegID1));
+        end;
+        AppendOperations(Ident1.SetCode);
+        // Release the expression register
+        if (ExpressionState = vsDynamic) and (ExpressionType.NeedsClear) then
+          GenCode(clr(RegID1));
+        ReleaseRegister(RegID2);
+      end;
+      tsSemicolon:
+      begin
+        // Get the value and delete it after that. (null statement)
+        // [Ident1];
+        if not (tskNullStatement in AllowedStatements) then
+          CompilerError('Null-statement not allowed here.');
+        AppendOperations(Ident1.GetCode);
+        if (Ident1.State = vsDynamic) and (Ident1.FinalType.NeedsClear) then
+          GenCode(clr(RegID1));
+      end;
+    end;
+  end;
+  ReleaseRegister(RegID1);
+end;
+
+procedure TThoriumDefaultCompiler.StatementIf(var Offset: Integer);
+begin
+
+end;
+
+procedure TThoriumDefaultCompiler.StatementSwitch(var Offset: Integer);
+begin
+
+end;
+
+procedure TThoriumDefaultCompiler.StatementWhile(var Offset: Integer);
+begin
+
 end;
 
 function TThoriumDefaultCompiler.Term(ATargetRegister: Word; out
@@ -1778,12 +1897,14 @@ begin
       ThoriumFreeValue(Value2);
     end;
 
+    ClaimRegister(THORIUM_REGISTER_C3);
     GenOperation(Operation, THORIUM_REGISTER_C3, ATargetRegister, RegID2);
     if State1 = vsDynamic then
       GenCode(clr(ATargetRegister));
     if State2 = vsDynamic then
       GenCode(clr(RegID2));
     GenCode(mover(THORIUM_REGISTER_C3, ATargetRegister));
+    ReleaseRegister(THORIUM_REGISTER_C3);
     State1 := vsDynamic;
   end;
   ReleaseRegister(RegID2);

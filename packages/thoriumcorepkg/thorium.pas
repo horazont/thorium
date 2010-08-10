@@ -1812,6 +1812,9 @@ type
     destructor Destroy; override;
   private
     FStoredTypes: TInterfaceList;
+  private
+    function IsRegisterInUse(AID: TThoriumRegisterID): Boolean;
+    procedure SetRegisterInUse(AID: TThoriumRegisterID; AInUse: Boolean);
   protected
     FCodeHook: Boolean;
     FCodeHook1: PThoriumInstructionArray;
@@ -1861,6 +1864,7 @@ type
     procedure AppendOperation(var AOperations: TThoriumOperationArray; AOperation: TThoriumGenericOperation);
     procedure CompilerError(const Msg: String); virtual;
     procedure CompilerError(const Msg: String; X, Y: Integer); virtual;
+    procedure ClaimRegister(const ARegID: TThoriumRegisterID);
     procedure DumpState; virtual;
     function FindTableEntry(const Ident: String; out Entry: TThoriumTableEntry;
       out Module: TThoriumModule; RaiseError: Boolean = True; AllowFar: Boolean = True): Boolean; inline;
@@ -8340,6 +8344,25 @@ begin
   inherited Destroy;
 end;
 
+function TThoriumCustomCompiler.IsRegisterInUse(AID: TThoriumRegisterID
+  ): Boolean;
+begin
+  Result := (FRegisterUsage[AID div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (AID shl (AID mod THORIUM_REGISTER_MASK_BLOCK_SIZE)) <> 0);
+end;
+
+procedure TThoriumCustomCompiler.SetRegisterInUse(AID: TThoriumRegisterID;
+  AInUse: Boolean);
+var
+  Item: Word;
+begin
+  Item := FRegisterUsage[AID div THORIUM_REGISTER_MASK_BLOCK_SIZE];
+  if AInUse then
+    Item := Item or ((1 shl (AID mod THORIUM_REGISTER_MASK_BLOCK_SIZE)))
+  else
+    Item := Item and not (1 shl (AID mod THORIUM_REGISTER_MASK_BLOCK_SIZE));
+  FRegisterUsage[AID div THORIUM_REGISTER_MASK_BLOCK_SIZE] := Item;
+end;
+
 function TThoriumCustomCompiler.AddLibraryPropertyUsage(
   const AProp: TThoriumLibraryProperty): Integer;
 begin
@@ -8544,6 +8567,17 @@ begin
   else
     FLastError := Format('%s: %s', [FModule.FName, Msg]);
   FError := True;
+end;
+
+procedure TThoriumCustomCompiler.ClaimRegister(const ARegID: TThoriumRegisterID
+  );
+begin
+  if IsRegisterInUse(ARegID) then
+  begin
+    CompilerError('Manually claimed register already in use: '+ThoriumRegisterToStr(ARegID));
+    Exit;
+  end;
+  SetRegisterInUse(ARegID, True);
 end;
 
 procedure TThoriumCustomCompiler.DumpState;
@@ -8966,6 +9000,8 @@ var
   Instruction: TThoriumOperationInstructionDescription;
   Cast: TThoriumInstructionCAST;
 begin
+  ClaimRegister(THORIUM_REGISTER_C1);
+  ClaimRegister(THORIUM_REGISTER_C2);
   Instruction := AOperation.OperationInstruction;
   if Instruction.Value1RIOffset >= 0 then
     Instruction.Instruction.Reserved[Instruction.Value1RIOffset] := AValue1RI;
@@ -8990,6 +9026,8 @@ begin
     Instruction.Instruction.Reserved[Instruction.Value2RIOffset] := THORIUM_REGISTER_C2;
   end;
   Result := GenCode(TThoriumInstruction(Instruction.Instruction));
+  ReleaseRegister(THORIUM_REGISTER_C1);
+  ReleaseRegister(THORIUM_REGISTER_C2);
 end;
 
 function TThoriumCustomCompiler.GetCurrentTableStackPos: Integer;
