@@ -4551,6 +4551,8 @@ function TThoriumTypeInteger.CanAssignTo(
 begin
   if AnotherType.GetInstance is TThoriumTypeFloat then
   begin
+    if not Assignment.Casting then
+      Result := inherited;
     Assignment.Cast.Needed := True;
     Assignment.Cast.Instruction := TThoriumInstructionCAST(castif(0, 0));
   end

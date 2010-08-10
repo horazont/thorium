@@ -1157,7 +1157,6 @@ begin
       PlaceStatic(Value1, ATargetRegister);
       ThoriumFreeValue(Value1);
       State1 := vsDynamic;
-      AStaticValue^ := Value1;
     end
     else
       AStaticValue^ := Value1;
@@ -1226,18 +1225,21 @@ var
           end;
           if Entry^.Entry._Type = etStatic then
           begin
+            Solution^.Kind := ikStatic;
             Solution^.State := vsStatic;
             Solution^.Writable := False;
             Solution^.Value := Entry^.Entry.Value;
           end
           else
           begin
+            Solution^.Kind := ikVariable;
             Solution^.State := vsAccessable;
             Solution^.Writable := True;
           end;
         end;
         etRegisterVariable:
         begin
+          Solution^.Kind := ikVariable;
           AppendOperation(Solution^.GetCode,
             ThoriumEncapsulateOperation(
               moverOperation(Entry^.Entry.Offset, ATargetRegister),
@@ -1255,6 +1257,7 @@ var
         end;
         etCallable:
         begin
+          Solution^.Kind := ikStatic;
           Solution^.Writable := False;
           Solution^.State := vsAccessable;
           AppendOperation(Solution^.GetCode,
@@ -1272,6 +1275,7 @@ var
         end;
         etHostCallable:
         begin
+          Solution^.Kind := ikStatic;
           Solution^.Writable := False;
           Solution^.State := vsAccessable;
           AppendOperation(Solution^.GetCode,
@@ -1289,6 +1293,7 @@ var
         end;
         etProperty:
         begin
+          Solution^.Kind := ikLibraryProperty;
           AppendOperation(Solution^.GetCode,
             ThoriumEncapsulateOperation(
               xpgetOperation(TThoriumLibraryProperty(Entry^.Entry.Ptr), ATargetRegister),
@@ -1306,12 +1311,14 @@ var
         end;
         etLibraryConstant:
         begin
+          Solution^.Kind := ikStatic;
           Solution^.Writable := False;
           Solution^.State := vsStatic;
           Solution^.Value := TThoriumLibraryConstant(Entry^.Entry.Ptr).Value;
         end;
         etType:
         begin
+          Solution^.Kind := ikType;
           Solution^.Writable := False;
         end;
       end;
@@ -1595,7 +1602,10 @@ begin
       Exit;
     end
     else
+    begin
       Result := Solutions[0]^;
+      WriteLn(GetEnumName(TypeInfo(TThoriumQualifiedIdentifierKind), Ord(Result.Kind)));
+    end;
 
     for I := 0 to Solutions.Count - 1 do
       Dispose(Solutions[I]);
@@ -1613,6 +1623,13 @@ end;
 
 procedure TThoriumDefaultCompiler.Statement(var Offset: Integer;
   const AllowedStatements: TThoriumDefaultStatementKinds);
+var
+  NeedSemicolon: Boolean;
+  Ident1: TThoriumQualifiedIdentifier;
+  ExpressionType: IThoriumType;
+  ExpressionState: TThoriumValueState;
+  RegID1, RegID2: TThoriumRegisterID;
+  Assignment: TThoriumAssignmentDescription;
 begin
   case FCurrentSym of
     tsOpenCurlyBracket:
@@ -1638,10 +1655,47 @@ begin
 
       ExpectSymbol([tsCloseCurlyBracket]);
       Proceed;
+      NeedSemicolon := False;
     end;
-  else
-    ExpectSymbol([tsUnknown]);
+    tsIdentifier:
+    begin
+      // Identifier handling
+      GetFreeRegister(trEXP, RegID1);
+      Ident1 := SolveIdentifier(RegID1, [ikStatic, ikType, ikComplex, ikLibraryProperty, ikVariable]);
+      case Ident1.Kind of
+        ikType:
+        begin
+          CompilerError('Local declarations are still to-do.');
+        end;
+        ikStatic:
+        begin
+          CompilerError('This cannot stand on the left side of an expression.');
+        end;
+      else
+        // Anything else will be an assignable thingy
+        ExpectSymbol([tsAssign]);
+        Proceed;
+        GetFreeRegister(trEXP, RegID2);
+        ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
+        Assignment.Casting := True;
+        ExpressionType.CanAssignTo(Assignment, Ident1.FinalType);
+        if Assignment.Cast.Needed then
+        begin
+          Assignment.Cast.Instruction.SRI := RegID2;
+          Assignment.Cast.Instruction.TRI := RegID1;
+          GenCode(TThoriumInstruction(Assignment.Cast.Instruction));
+        end
+        else
+          GenCode(mover(RegID2, RegID1));
+        AppendOperations(Ident1.SetCode);
+        ReleaseRegister(RegID2);
+      end;
+      ReleaseRegister(RegID1);
+    end;
   end;
+  if NeedSemicolon then
+    ExpectSymbol([tsSemicolon]);
+  Proceed;
 end;
 
 function TThoriumDefaultCompiler.Term(ATargetRegister: Word; out
