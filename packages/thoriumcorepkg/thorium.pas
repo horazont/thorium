@@ -1139,11 +1139,11 @@ type
   private
     FIsStatic: Boolean;
     FStackPosition: Integer;
-    FTypeSpec: TThoriumType;
+    FTypeSpec: IThoriumType;
   public
     property IsStatic: Boolean read FIsStatic;
     property StackPosition: Integer read FStackPosition;
-    property TypeSpec: TThoriumType read FTypeSpec;
+    property TypeSpec: IThoriumType read FTypeSpec;
 
     procedure AssignFromTableEntry(const ATableEntry: TThoriumTableEntry);
     procedure LoadFromStream(Stream: TStream); override;
@@ -1805,6 +1805,8 @@ type
   public
     constructor Create(ATarget: TThoriumModule); virtual;
     destructor Destroy; override;
+  private
+    FStoredTypes: TInterfaceList;
   protected
     FCodeHook: Boolean;
     FCodeHook1: PThoriumInstructionArray;
@@ -1891,6 +1893,7 @@ type
     procedure SaveTable;
     procedure SetupFunction(AFunction: TThoriumFunction;
       const AEntryPoint: Integer; const AName: String);
+    procedure StoreType(AType: IThoriumType);
     function TypeSpecByName(TypeName: String; out TypeSpec: IThoriumType): Boolean;
   public
     function CompileFromStream(SourceStream: TStream; Flags: TThoriumCompilerFlags = [cfOptimize]): Boolean; virtual; abstract;
@@ -5679,7 +5682,7 @@ begin
   if ATableEntry.Scope <> THORIUM_STACK_SCOPE_MODULEROOT then
     raise EThoriumCompilerError.Create('Only moduleroot symbols can be assigned to TThoriumVariable instances.');
   FStackPosition := ATableEntry.Offset;
-  FTypeSpec := ATableEntry.TypeSpec.GetInstance;
+  FTypeSpec := ATableEntry.TypeSpec;
   FIsStatic := ATableEntry._Type = etStatic;
 end;
 
@@ -7852,6 +7855,7 @@ begin
     ThoriumFreeValue(Entry^.Value);
     Entry^.Name^ := '';
     Dispose(Entry^.Name);
+    Entry^.TypeSpec := nil;
     if (Entry^._Type = etCallable) then
       TThoriumFunction(Entry^.Ptr).Free;
     Finalize(Entry);
@@ -7876,6 +7880,7 @@ begin
     ThoriumFreeValue(Entry^.Value);
     Entry^.Name^ := '';
     Dispose(Entry^.Name);
+    Entry^.TypeSpec := nil;
     if (Entry^._Type = etCallable) then
       TThoriumFunction(Entry^.Ptr).Free;
     if Entry^._Type <> etRegisterVariable then
@@ -8296,12 +8301,15 @@ begin
   SigCurrModule := FModule;
   SigCurrCompiler := Self;
   {$endif}
+  FStoredTypes := TInterfaceList.Create;
 end;
 
 destructor TThoriumCustomCompiler.Destroy;
 begin
   FTableSizes.Free;
   FTable.Free;
+  FStoredTypes.Clear;
+  FStoredTypes.Free;
   inherited Destroy;
 end;
 
@@ -8817,7 +8825,6 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
       Match.Entry.TypeSpec := nil;
       Append(Entries, Match);
     end;
-
   end;
 
 // Search all accessible modules and contexts for entries matching the
@@ -9869,6 +9876,11 @@ begin
   AFunction.FName := AName;
 end;
 
+procedure TThoriumCustomCompiler.StoreType(AType: IThoriumType);
+begin
+  FStoredTypes.Add(AType);
+end;
+
 function TThoriumCustomCompiler.TypeSpecByName(TypeName: String; out
   TypeSpec: IThoriumType): Boolean;
 begin
@@ -10052,6 +10064,8 @@ begin
   FSourceFile := '';
   FInstructions.ClearCode;
   FStringLibrary.Clear;
+  for I := 0 to FPublicVariables.Count - 1 do
+    TThoriumVariable(FPublicVariables[I]).Free;
   FPublicVariables.Clear;
   for I := 0 to FPublicFunctions.Count - 1 do
     TThoriumFunction(FPublicFunctions[I]).Free;

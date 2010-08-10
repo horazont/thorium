@@ -222,6 +222,7 @@ type
     FCurrentSym: TThoriumDefaultSymbol;
     FCurrentReturnType: IThoriumType;
     FCurrentFunctionTableStack: Integer;
+    FCurrentFunc: TThoriumFunction;
     FScanner: TThoriumDefaultScanner;
   protected
     procedure CompilerError(const Msg: String); override;
@@ -727,6 +728,8 @@ begin
       Proceed;
     end;
   end;
+  TypeIdentifier.FinalType := nil;
+  ValueIdentifier.FinalType := nil;
 end;
 
 function TThoriumDefaultCompiler.Expression(ATargetRegister: Word;
@@ -785,6 +788,7 @@ begin
         CompilerError('Internal compiler error: Cannot create integer value.');
       AState := vsStatic;
       AStaticValue := Result.DoCreate(InitialData);
+      StoreType(Result);
       Proceed;
     end;
     tsFloatValue:
@@ -795,6 +799,7 @@ begin
         CompilerError('Internal compiler error: Cannot create float value.');
       AState := vsStatic;
       AStaticValue := Result.DoCreate(InitialData);
+      StoreType(Result);
       Proceed;
     end;
     tsStringValue:
@@ -808,6 +813,7 @@ begin
         CompilerError('Internal compiler error: Cannot create string value.');
       AState := vsStatic;
       AStaticValue := Result.DoCreate(InitialData);
+      StoreType(Result);
       Proceed;
     end;
     tsIdentifier:
@@ -942,6 +948,7 @@ begin
     CompilerError('Function prototyping is not supported yet.');
 
   Func := TThoriumFunction.Create(FModule);
+  FCurrentFunc := Func;
   FCurrentReturnType := ATypeIdent.FinalType;
   Func.Prototype.ReturnType := FCurrentReturnType;
   SetupFunction(Func, FInstructions.Count, AValueIdent.FullStr);
@@ -996,7 +1003,9 @@ begin
   GenCode(ret());
 
   if AVisibility > vsPrivate then
-    FPublicFunctions.Add(Func.Duplicate);
+    FPublicFunctions.Add(Func)
+  else
+    Func.Free;
 end;
 
 procedure TThoriumDefaultCompiler.Module;
@@ -1597,6 +1606,7 @@ begin
     FCodeHook1 := OldCodeHook1;
     FCodeHook2 := OldCodeHook2;
     Entries.Free;
+    Solutions.Free;
     ReleaseRegister(RegPreviousValue);
   end;
 end;
