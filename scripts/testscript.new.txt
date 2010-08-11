@@ -4,7 +4,5 @@ private float ghi = 10.0;
 
 public void main() 
 {
-  abc = 10;
-  ghi = 30.0;
-  abc;
+  abc = (1 != 1);
 }

@@ -470,6 +470,7 @@ begin
       else
       begin
         SymStr += Ch;
+        GetChar(Ch);
         for I := THORIUM_DEFAULT_FIRST_MULTICHARSYM to THORIUM_DEFAULT_LAST_MULTICHARSYM do
           if THORIUM_DEFAULT_SYMBOL_CODE[I] = SymStr then
           begin
@@ -654,6 +655,7 @@ function TThoriumDefaultCompiler.Proceed(ExpectMask: TThoriumDefaultSymbols;
   ThrowError: Boolean): Boolean;
 begin
   Result := FScanner.NextSymbol(FCurrentSym, FCurrentStr);
+  WriteLn('→ ', GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(FCurrentSym)));
   if FCurrentSym = tsError then
     CompilerError('Scanner error: '+FCurrentStr);
   if Result and (ExpectMask <> []) then
@@ -745,6 +747,7 @@ var
   Sym: TThoriumDefaultSymbol;
   OperandType: IThoriumType;
   Operation: TThoriumOperationDescription;
+  ResultValue: TThoriumValue;
   State1, State2: TThoriumValueState;
   Value1, Value2: TThoriumValue;
   RegID2: TThoriumRegisterID;
@@ -756,7 +759,7 @@ begin
     Sym := FCurrentSym;
     Proceed;
 
-    OperandType := SimpleExpression(RegID2, State2, Value2, Result);
+    OperandType := SimpleExpression(RegID2, State2, @Value2, Result);
 
     Operation.Operation := SymbolToOperation(Sym);
     if not Result.CanPerformOperation(Operation, OperandType) then
@@ -765,10 +768,15 @@ begin
     // Attempt to evaluate static values during compile time
     if (State1 = vsStatic) and (State2 = vsStatic) then
     begin
-      ResultValue := TThoriumType.PerformOperation(Value1, Operation, @Value2);
+      ResultValue.RTTI := TThoriumTypeInteger.Create;
+      if TThoriumType.PerformCmpOperation(Value1, Operation, @Value2) then
+        ResultValue.Int := 1
+      else
+        ResultValue.Int := 0;
       ThoriumFreeValue(Value1);
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
+      StoreType(Value1.RTTI);
       Continue;
     end;
 
@@ -784,11 +792,34 @@ begin
       ThoriumFreeValue(Value2);
     end;
 
-    ClaimRegister(THORIUM_REGISTER_C3);
-    GenOperation(Operation, THORIUM_REGISTER_C3, ATargetRegister, RegID2);
-    GenCode(mover(THORIUM_REGISTER_C3, ATargetRegister));
-    ReleaseRegister(THORIUM_REGISTER_C3);
+    GenOperation(Operation, THORIUM_REGISTER_INVALID, ATargetRegister, RegID2);
+    case Operation.Operation of
+      opCmpEqual:           GenCode(intb(ATargetRegister, THORIUM_OP_EQUAL));
+      opCmpNotEqual:        GenCode(intb(ATargetRegister, THORIUM_OP_NOTEQUAL));
+      opCmpGreater:         GenCode(intb(ATargetRegister, THORIUM_OP_GREATER));
+      opCmpGreaterOrEqual:  GenCode(intb(ATargetRegister, THORIUM_OP_GREATEREQUAL));
+      opCmpLessOrEqual:     GenCode(intb(ATargetRegister, THORIUM_OP_LESSEQUAL));
+    else
+      CompilerError('Invalid relational operator.');
+    end;
+    if not (Result.GetInstance is TThoriumTypeInteger) then
+      Result := TThoriumTypeInteger.Create;
+    State1 := vsDynamic;
   end;
+
+  if (State1 = vsStatic) then
+  begin
+    if (AStaticValue = nil) then
+    begin
+      PlaceStatic(Value1, ATargetRegister);
+      ThoriumFreeValue(Value1);
+      State1 := vsDynamic;
+    end
+    else
+      AStaticValue^ := Value1;
+  end;
+  AState := State1;
+  ReleaseRegister(RegID2);
 end;
 
 function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
@@ -896,7 +927,7 @@ begin
         end;
       end;
       // Pass through
-      Result := SimpleExpression(ATargetRegister, AState, @AStaticValue, ATypeHint);
+      Result := Expression(ATargetRegister, AState, @AStaticValue, ATypeHint);
       ExpectSymbol([tsCloseBracket]);
       Proceed;
     end;
@@ -1183,6 +1214,7 @@ begin
       ThoriumFreeValue(Value1);
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
+      StoreType(Value1.RTTI);
       Continue;
     end;
 
@@ -1202,6 +1234,8 @@ begin
     GenOperation(Operation, THORIUM_REGISTER_C3, ATargetRegister, RegID2);
     GenCode(mover(THORIUM_REGISTER_C3, ATargetRegister));
     ReleaseRegister(THORIUM_REGISTER_C3);
+
+    State1 := vsDynamic;
   end;
 
   if (State1 = vsStatic) then
@@ -1720,7 +1754,7 @@ begin
     end;
     tsFor:
     begin
-      if not (tsFor in AllowedStatements) then
+      if not (tskFor in AllowedStatements) then
         CompilerError('For statement not allowed here.');
       StatementFor(Offset);
       NeedSemicolon := False;
@@ -1881,6 +1915,7 @@ begin
       ThoriumFreeValue(Value1);
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
+      StoreType(Value1.RTTI);
       Continue;
     end;
 

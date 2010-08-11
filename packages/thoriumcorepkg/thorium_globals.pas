@@ -219,7 +219,7 @@ const
   // The amount of expression registers determine the maximum nesting level of
   // expressions. Each operator precedence level (+-, /*) and each nesting with
   // brackets cost one register.
-  THORIUM_REGISTER_C_COUNT = 2;
+  THORIUM_REGISTER_C_COUNT = 4;
   THORIUM_REGISTER_EXP_COUNT = 512;
   // The full amount of registers must not exceed 65535 and it is recommended
   // to keep the full amount below 512 to save memory and to improve the
@@ -1777,6 +1777,14 @@ const
 
   THORIUM_NOOPMARK_CALL = 1;
   THORIUM_NOOPMARK_INVALID_ACCESS = 2;
+
+const
+  THORIUM_OP_EQUAL = 0;
+  THORIUM_OP_NOTEQUAL = 1;
+  THORIUM_OP_GREATER = 2;
+  THORIUM_OP_LESS = 3;
+  THORIUM_OP_GREATEREQUAL = 4;
+  THORIUM_OP_LESSEQUAL = 5;
 
 {%ENDREGION}
 

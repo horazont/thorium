@@ -731,9 +731,22 @@ type
        override;
     function DoCast(const AValue: TThoriumValue; const TargetType: IThoriumType
        ): TThoriumValue; override;
-    procedure DoDecrement(var ASubject: TThoriumValue); override;
+    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
+       ): Boolean; override;
+    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean; override;
+    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
+       override;
     function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue;
        override;
+    procedure DoDecrement(var ASubject: TThoriumValue); override;
+    function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
+         override;
     procedure DoIncrement(var ASubject: TThoriumValue); override;
     function DoIntegerDivision(const AValue, BValue: TThoriumValue
        ): TThoriumValue; override;
@@ -4448,12 +4461,12 @@ begin
     opIncrement:
     begin
       Result := A;
-      DoIncrement(Result);
+      AValue.RTTI.DoIncrement(Result);
     end;
     opDecrement:
     begin
       Result := B;
-      DoDecrement(Result);
+      AValue.RTTI.DoDecrement(Result);
     end;
     (*opCmpEqual: Result := DoCmpEqual(A, B);
     opCmpNotEqual: Result := DoCmpNotEqual(A, B);
@@ -4462,31 +4475,31 @@ begin
     opCmpLess: Result := DoCmpLess(A, B);
     opCmpLessOrEqual: Result := DoCmpLessOrEqual(A, B);*)
 
-    opAddition: Result := DoAddition(A, B);
-    opSubtraction: Result := DoSubtraction(A, B);
-    opMultiplication: Result := DoMultiplication(A, B);
-    opDivision: Result := DoDivision(A, B);
-    opIntegerDivision: Result := DoIntegerDivision(A, B);
-    opModulus: Result := DoModulus(A, B);
+    opAddition: Result := AValue.RTTI.DoAddition(A, B);
+    opSubtraction: Result := AValue.RTTI.DoSubtraction(A, B);
+    opMultiplication: Result := AValue.RTTI.DoMultiplication(A, B);
+    opDivision: Result := AValue.RTTI.DoDivision(A, B);
+    opIntegerDivision: Result := AValue.RTTI.DoIntegerDivision(A, B);
+    opModulus: Result := AValue.RTTI.DoModulus(A, B);
 
-    opBitAnd: Result := DoBitAnd(A, B);
-    opBitOr: Result := DoBitOr(A, B);
-    opBitXor: Result := DoBitXor(A, B);
-    opBitShr: Result := DoBitShr(A, B);
-    opBitShl: Result := DoBitShl(A, B);
+    opBitAnd: Result := AValue.RTTI.DoBitAnd(A, B);
+    opBitOr: Result := AValue.RTTI.DoBitOr(A, B);
+    opBitXor: Result := AValue.RTTI.DoBitXor(A, B);
+    opBitShr: Result := AValue.RTTI.DoBitShr(A, B);
+    opBitShl: Result := AValue.RTTI.DoBitShl(A, B);
     opBitNot:
     begin
       Result := A;
-      DoBitNot(Result);
+      AValue.RTTI.DoBitNot(Result);
     end;
 
-    opLogicalAnd: Result := DoLogicalAnd(A, B);
-    opLogicalOr: Result := DoLogicalOr(A, B);
-    opLogicalXor: Result := DoLogicalXor(A, B);
+    opLogicalAnd: Result := AValue.RTTI.DoLogicalAnd(A, B);
+    opLogicalOr: Result := AValue.RTTI.DoLogicalOr(A, B);
+    opLogicalXor: Result := AValue.RTTI.DoLogicalXor(A, B);
     opLogicalNot:
     begin
       Result := A;
-      DoLogicalNot(Result);
+      AValue.RTTI.DoLogicalNot(Result);
     end;
   else
     raise EThoriumRuntimeException.CreateFmt('Invalid generic operation: %s.', [GetEnumName(TypeInfo(TThoriumOperation), Ord(Operation.Operation))]);
@@ -4511,12 +4524,12 @@ begin
       B := BValue^;
   end;
   case Operation.Operation of
-    opCmpEqual: Result := DoCmpEqual(A, B);
-    opCmpNotEqual: Result := DoCmpNotEqual(A, B);
-    opCmpGreater: Result := DoCmpGreater(A, B);
-    opCmpGreaterOrEqual: Result := DoCmpGreaterOrEqual(A, B);
-    opCmpLess: Result := DoCmpLess(A, B);
-    opCmpLessOrEqual: Result := DoCmpLessOrEqual(A, B);
+    opCmpEqual: Result := AValue.RTTI.DoCmpEqual(A, B);
+    opCmpNotEqual: Result := AValue.RTTI.DoCmpNotEqual(A, B);
+    opCmpGreater: Result := AValue.RTTI.DoCmpGreater(A, B);
+    opCmpGreaterOrEqual: Result := AValue.RTTI.DoCmpGreaterOrEqual(A, B);
+    opCmpLess: Result := AValue.RTTI.DoCmpLess(A, B);
+    opCmpLessOrEqual: Result := AValue.RTTI.DoCmpLessOrEqual(A, B);
   else
     raise EThoriumRuntimeException.CreateFmt('Invalid comparision operation: %s.', [GetEnumName(TypeInfo(TThoriumOperation), Ord(Operation.Operation))]);
   end;
@@ -4719,6 +4732,16 @@ begin
       opBitShr:
         if IntIntOp(_shr(0, 0, 0)) then
           Exit;
+
+      opCmpLessOrEqual, opCmpGreaterOrEqual, opCmpGreater, opCmpLess,
+      opCmpNotEqual, opCmpEqual:
+      begin
+        Operation.ResultType := nil;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        Operation.OperationInstruction := OperationInstructionDescription(cmpi(0, 0), 0, 1, -1);
+        Exit;
+      end;
     end;
   end;
   Result := inherited;
@@ -4785,9 +4808,70 @@ begin
     raise EThoriumRuntimeException.CreateFmt('Cannot cast %s to %s.', [Name, TargetType.Name]);
 end;
 
+function TThoriumTypeInteger.DoCmpEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeFloat then
+    Result := AValue.Int = BValue.Float
+  else
+    Result := AValue.Int = BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoCmpGreater(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeFloat then
+    Result := AValue.Int > BValue.Float
+  else
+    Result := AValue.Int > BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoCmpGreaterOrEqual(const AValue,
+  BValue: TThoriumValue): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeFloat then
+    Result := AValue.Int >= BValue.Float
+  else
+    Result := AValue.Int >= BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoCmpLess(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeFloat then
+    Result := AValue.Int < BValue.Float
+  else
+    Result := AValue.Int < BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoCmpLessOrEqual(const AValue,
+  BValue: TThoriumValue): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeFloat then
+    Result := AValue.Int <= BValue.Float
+  else
+    Result := AValue.Int <= BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoCmpNotEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeFloat then
+    Result := AValue.Int <> BValue.Float
+  else
+    Result := AValue.Int <> BValue.Int;
+end;
+
 procedure TThoriumTypeInteger.DoDecrement(var ASubject: TThoriumValue);
 begin
   ASubject.Int -= 1;
+end;
+
+function TThoriumTypeInteger.DoDivision(const AValue, BValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := TThoriumTypeFloat.Create;
+  Result.Float := AValue.Int / BValue.Int;
 end;
 
 function TThoriumTypeInteger.DoCreate(const InitialData: TThoriumInitialData
