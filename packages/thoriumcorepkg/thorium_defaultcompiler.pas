@@ -668,6 +668,7 @@ procedure TThoriumDefaultCompiler.ConstantDeclaration(
 var
   State: TThoriumValueState;
   Value: TThoriumValue;
+  InitialData: TThoriumInitialData;
   Entry: PThoriumTableEntry;
   Creation: TThoriumCreateInstructionDescription;
 begin
@@ -676,6 +677,10 @@ begin
   SimpleExpression(THORIUM_REGISTER_INVALID, State, @Value, ATypeIdent.FinalType);
   if State <> vsStatic then
     CompilerError('Static value needed.');
+  if Value.RTTI is TThoriumTypeString then
+    InitialData.Int := AddLibraryString(Value.Str^)
+  else
+    InitialData.Int := Value.Int;
   if not ATypeIdent.FinalType.CanCreate(Value, False, Creation) then
     CompilerError('Cannot create such a value.');
   GenCreation(Creation);
@@ -685,6 +690,7 @@ begin
   Inc(Offset);
   if AVisibility = vsPublic then
     AddPublicVariable.AssignFromTableEntry(Entry^);
+  ThoriumFreeValue(Value);
 end;
 
 procedure TThoriumDefaultCompiler.GenericDeclaration(const AStatic: Boolean;
@@ -777,6 +783,7 @@ begin
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
       StoreType(Value1.RTTI);
+      Result := TThoriumTypeInteger.Create;
       Continue;
     end;
 
@@ -895,7 +902,9 @@ begin
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create string value.');
       AState := vsStatic;
-      AStaticValue := Result.DoCreate(InitialData);
+      // Sadly, we need some static handling here.
+      AStaticValue.RTTI := Result.GetInstance;
+      AStaticValue.Str := NewStr(FCurrentStr);
       StoreType(Result);
       Proceed;
     end;
@@ -1956,6 +1965,7 @@ procedure TThoriumDefaultCompiler.VariableDeclaration(
 var
   State: TThoriumValueState;
   Value: TThoriumValue;
+  InitialData: TThoriumInitialData;
   Entry: PThoriumTableEntry;
   Reg: TThoriumRegisterID;
   Creation: TThoriumCreateInstructionDescription;
@@ -1966,8 +1976,16 @@ begin
     SimpleExpression(THORIUM_REGISTER_INVALID, State, @Value, ATypeIdent.FinalType);
     if State <> vsStatic then
       CompilerError('Static value needed.');
-    if not ATypeIdent.FinalType.CanCreate(Value, False, Creation) then
+    // Again, special handling for string!
+    if Value.RTTI is TThoriumTypeString then
+    begin
+      InitialData.Int := AddLibraryString(Value.Str^);
+    end
+    else
+      InitialData.Int := Value.Int;
+    if not ATypeIdent.FinalType.CanCreate(InitialData, False, Creation) then
       CompilerError('Cannot create such a value.');
+    ThoriumFreeValue(Value);
     GenCreation(Creation);
   end
   else

@@ -776,6 +776,17 @@ type
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
          override;
+    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
+       ): Boolean; override;
+    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean; override;
+    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
+       override;
     function DoCreate(const InitialData: TThoriumInitialData
          ): TThoriumValue; override;
     procedure DoDecrement(var ASubject: TThoriumValue); override;
@@ -808,6 +819,17 @@ type
     function NeedsClear: Boolean; override;
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
+       override;
+    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
+       ): Boolean; override;
+    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean; override;
+    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean;
+       override;
+    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
        override;
     procedure DoFree(var AValue: TThoriumValue); override;
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
@@ -4739,8 +4761,16 @@ begin
         Operation.ResultType := nil;
         Operation.Casts[0].Needed := False;
         Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(cmpi(0, 0), 0, 1, -1);
-        Exit;
+        if TheObject.GetInstance is TThoriumTypeInteger then
+        begin
+          Operation.OperationInstruction := OperationInstructionDescription(cmpi(0, 0), 0, 1, -1);
+          Exit;
+        end
+        else if TheObject.GetInstance is TThoriumTypeFloat then
+        begin
+          Operation.OperationInstruction := OperationInstructionDescription(cmpif(0, 0), 0, 1, -1);
+          Exit;
+        end;
       end;
     end;
   end;
@@ -5024,6 +5054,24 @@ begin
           Exit
         else if FltIntOp(divf(0, 0, 0)) then
           Exit;
+
+      opCmpLessOrEqual, opCmpGreaterOrEqual, opCmpGreater, opCmpLess,
+      opCmpNotEqual, opCmpEqual:
+      begin
+        Operation.ResultType := nil;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        if TheObject.GetInstance is TThoriumTypeInteger then
+        begin
+          Operation.OperationInstruction := OperationInstructionDescription(cmpfi(0, 0), 0, 1, -1);
+          Exit;
+        end
+        else if TheObject.GetInstance is TThoriumTypeFloat then
+        begin
+          Operation.OperationInstruction := OperationInstructionDescription(cmpf(0, 0), 0, 1, -1);
+          Exit;
+        end;
+      end;
     end;
   end;
   Result := inherited;
@@ -5034,6 +5082,60 @@ function TThoriumTypeFloat.DoAddition(const AValue, BValue: TThoriumValue
 begin
   Result.RTTI := Self;
   Result.Float := AValue.Float + BValue.Float;
+end;
+
+function TThoriumTypeFloat.DoCmpEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeInteger then
+    Result := AValue.Float = BValue.Int
+  else
+    Result := AValue.Float = BValue.Float;
+end;
+
+function TThoriumTypeFloat.DoCmpGreater(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeInteger then
+    Result := AValue.Float > BValue.Int
+  else
+    Result := AValue.Float > BValue.Float;
+end;
+
+function TThoriumTypeFloat.DoCmpGreaterOrEqual(const AValue,
+  BValue: TThoriumValue): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeInteger then
+    Result := AValue.Float >= BValue.Int
+  else
+    Result := AValue.Float >= BValue.Float;
+end;
+
+function TThoriumTypeFloat.DoCmpLess(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeInteger then
+    Result := AValue.Float < BValue.Int
+  else
+    Result := AValue.Float < BValue.Float;
+end;
+
+function TThoriumTypeFloat.DoCmpLessOrEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeInteger then
+    Result := AValue.Float <= BValue.Int
+  else
+    Result := AValue.Float <= BValue.Float;
+end;
+
+function TThoriumTypeFloat.DoCmpNotEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  if BValue.RTTI is TThoriumTypeInteger then
+    Result := AValue.Float <> BValue.Int
+  else
+    Result := AValue.Float <> BValue.Float;
 end;
 
 function TThoriumTypeFloat.DoCreate(const InitialData: TThoriumInitialData
@@ -5174,6 +5276,19 @@ begin
       opIndexedRead:
         if StrIndexOp(noop(0, 0, 0, 0), -1, -1, -1) then
           Exit;
+
+      opCmpEqual, opCmpGreater, opCmpGreaterOrEqual, opCmpLess,
+      opCmpLessOrEqual, opCmpNotEqual:
+      begin
+        if (TheObject.GetInstance is TThoriumTypeString) then
+        begin
+          Operation.ResultType := nil;
+          Operation.Casts[0].Needed := False;
+          Operation.Casts[1].Needed := False;
+          Operation.OperationInstruction := OperationInstructionDescription(cmps(0, 0), 0, 1, -1);
+          Exit;
+        end;
+      end;
     end;
   end;
   Result := inherited;
@@ -5200,6 +5315,42 @@ begin
   Result.RTTI := Self;
   New(Result.Str);
   Result.Str^ := AValue.Str^ + BValue.Str^;
+end;
+
+function TThoriumTypeString.DoCmpEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  Result := AValue.Str^ = BValue.Str^;
+end;
+
+function TThoriumTypeString.DoCmpGreater(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  Result := AValue.Str^ > BValue.Str^;
+end;
+
+function TThoriumTypeString.DoCmpGreaterOrEqual(const AValue,
+  BValue: TThoriumValue): Boolean;
+begin
+  Result := AValue.Str^ >= BValue.Str^;
+end;
+
+function TThoriumTypeString.DoCmpLess(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  Result := AValue.Str^ < BValue.Str^;
+end;
+
+function TThoriumTypeString.DoCmpLessOrEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  Result := AValue.Str^ <= BValue.Str^;
+end;
+
+function TThoriumTypeString.DoCmpNotEqual(const AValue, BValue: TThoriumValue
+  ): Boolean;
+begin
+  Result := AValue.Str^ <> BValue.Str^;
 end;
 
 procedure TThoriumTypeString.DoFree(var AValue: TThoriumValue);

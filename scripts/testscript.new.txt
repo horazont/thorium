@@ -1,8 +1,9 @@
 public int abc = 10;
 public static int def = 0x0123456789ABCDEF;
 private float ghi = 10.0;
+public string meow = "meow", cookie = "cookie";
 
 public void main() 
 {
-  abc = (1 != 1);
+
 }
