@@ -383,6 +383,7 @@ type
     tiCLR,
     tiCASTIF, tiCASTIE, tiCASTFE, tiCASTSE, tiCASTEI, tiCASTEF, tiCASTES, tiCASTE,
     tiCMPI, tiCMPIF, tiCMPIE, tiCMPF, tiCMPFI, tiCMPFE, tiCMPS, tiCMPSE, tiCMPE, tiCMPEI, tiCMPEF, tiCMPES,
+    tiEVALI,
     tiADDI, tiADDF, tiADDS,
     tiSUBI, tiSUBF,
     tiMULI, tiMULF,
@@ -990,6 +991,14 @@ type
     Op1: Word;
     Op2: Word;
     Reserved: array [0..9] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionEVALI = record
+    Instruction: TThoriumInstructionCode;
+    Op1: Word;
+    Reserved: array [0..10] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -1743,6 +1752,7 @@ const
     'clr',
     'castif', 'castie', 'castfe', 'castse', 'castei', 'castef','castes', 'caste',
     'cmpi', 'cmpif', 'cmpie', 'cmpf', 'cmpfi', 'cmpfe', 'cmps', 'cmpse', 'cmpe', 'cmpei', 'cmpef', 'cmpes',
+    'evali',
     'addi', 'addf', 'adds',
     'subi', 'subf',
     'muli', 'mulf',

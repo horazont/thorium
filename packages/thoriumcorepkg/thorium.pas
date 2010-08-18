@@ -423,6 +423,9 @@ type
   end;
 
   (* Only internally used. *)
+
+  { TThoriumIntList }
+
   TThoriumIntList = class (TObject)
     constructor Create;
     destructor Destroy; override;
@@ -443,6 +446,7 @@ type
     function AddEntry(Value: Integer): Integer;
     function FindValue(AValue: Integer): Integer;
     procedure DeleteEntry(AIndex: Integer);
+    procedure Clear;
   end;
 
   (* Only internally used. *)
@@ -570,7 +574,7 @@ type
     function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
     procedure DoDecrement(var ASubject: TThoriumValue);
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoEvaluate(const AValue: Pointer): Integer;
+    function DoEvaluate(const AValue: TThoriumValue): Boolean;
     procedure DoFree(var AValue: TThoriumValue);
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue;
     function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue;
@@ -666,7 +670,7 @@ type
     function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
     procedure DoDecrement(var ASubject: TThoriumValue); virtual; abstract;
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
-    function DoEvaluate(const AValue: Pointer): Integer; virtual; abstract;
+    function DoEvaluate(const AValue: TThoriumValue): Boolean; virtual; abstract;
     procedure DoFree(var AValue: TThoriumValue); virtual; abstract;
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue; virtual; abstract;
     function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue; virtual; abstract;
@@ -747,6 +751,7 @@ type
     procedure DoDecrement(var ASubject: TThoriumValue); override;
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
          override;
+    function DoEvaluate(const AValue: TThoriumValue): Boolean; override;
     procedure DoIncrement(var ASubject: TThoriumValue); override;
     function DoIntegerDivision(const AValue, BValue: TThoriumValue
        ): TThoriumValue; override;
@@ -1466,7 +1471,7 @@ type
        ): Boolean; override;
     procedure GetStaticFieldType(const AFieldID: QWord; out
        TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition); override;
-    function DoEvaluate(const AValue: Pointer): Integer; override;
+    function DoEvaluate(const AValue: TThoriumValue): Boolean; override;
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
        ): TThoriumValue; override;
     procedure DoSetField(const AValue: TThoriumValue;
@@ -1925,6 +1930,8 @@ type
     function GetHighestRegisterInUse: TThoriumRegisterID;
     function GetHookedInstructionPointerA(AIndex: Integer): PThoriumInstruction;
     function GetHookedInstructionPointerB(AIndex: Integer): PThoriumInstruction;
+    function GetInstruction(Address: TThoriumInstructionAddress): PThoriumInstruction;
+    function GetNextInstructionAddress: TThoriumInstructionAddress;
     function GetTableEntriesTo(StackPos: Integer): Integer;
     procedure FindRelocationTargets;
     function HasError: Boolean;
@@ -4161,10 +4168,10 @@ begin
 end;
 
 procedure TThoriumIntList.SetCapacity(NewCapacity: Integer);
-// Set the capacity to a given value. This does not allow to decrease the size
-// of the list.
+// Set the capacity to a given value. This does not allow to decrease the amount
+// of items currently stored in the list.
 begin
-  if NewCapacity <= FCapacity then
+  if (NewCapacity < FCount) or (NewCapacity = FCapacity) then
     Exit;
   ReAllocMem(FList, SizeOf(Integer)*NewCapacity);
   FCapacity := NewCapacity;
@@ -4235,6 +4242,12 @@ begin
     );
     //(AIndex - (FCount - 1)));
   Dec(FCount);
+end;
+
+procedure TThoriumIntList.Clear;
+begin
+  SetCount(0);
+  SetCapacity(FCapacity div 2);
 end;
 
 { TThoriumIntStack }
@@ -4772,6 +4785,14 @@ begin
           Exit;
         end;
       end;
+
+      opEvaluate:
+      begin
+        Operation.ResultType := nil;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        Operation.OperationInstruction := OperationInstructionDescription(evali(0), 0, -1, -1);
+      end;
     end;
   end;
   Result := inherited;
@@ -4902,6 +4923,11 @@ function TThoriumTypeInteger.DoDivision(const AValue, BValue: TThoriumValue
 begin
   Result.RTTI := TThoriumTypeFloat.Create;
   Result.Float := AValue.Int / BValue.Int;
+end;
+
+function TThoriumTypeInteger.DoEvaluate(const AValue: TThoriumValue): Boolean;
+begin
+  Result := AValue.Int <> 0;
 end;
 
 function TThoriumTypeInteger.DoCreate(const InitialData: TThoriumInitialData
@@ -6304,11 +6330,11 @@ begin
   end;
 end;
 
-function TThoriumRTTIObjectType.DoEvaluate(const AValue: Pointer): Integer;
+function TThoriumRTTIObjectType.DoEvaluate(const AValue: TThoriumValue): Boolean;
 begin
-  if AValue <> nil then
-    Exit(1);
-  Result := 0;
+  if AValue.HostObject <> nil then
+    Exit(True);
+  Result := False;
 end;
 
 function TThoriumRTTIObjectType.DoGetField(const AValue: TThoriumValue;
@@ -9332,6 +9358,30 @@ function TThoriumCustomCompiler.GetHookedInstructionPointerB(AIndex: Integer
   ): PThoriumInstruction;
 begin
   Result := @FCodeHook2^[AIndex];
+end;
+
+function TThoriumCustomCompiler.GetInstruction(
+  Address: TThoriumInstructionAddress): PThoriumInstruction;
+begin
+  if FCodeHook then
+  begin
+    if FCodeHook2 <> nil then
+    begin
+      CompilerError('Direct access to instructions in dual code hook mode not allowed.');
+      Exit(nil);
+    end;
+    Exit(@FCodeHook1^[Address]);
+  end
+  else
+    Exit(FInstructions.Instruction[Address]);
+end;
+
+function TThoriumCustomCompiler.GetNextInstructionAddress: TThoriumInstructionAddress;
+begin
+  if FCodeHook then
+    Result := Length(FCodeHook1^)
+  else
+    Result := FInstructions.Count;
 end;
 
 function TThoriumCustomCompiler.GetTableEntriesTo(StackPos: Integer): Integer;

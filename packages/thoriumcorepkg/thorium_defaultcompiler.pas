@@ -100,6 +100,8 @@ const
   THORIUM_DEFAULT_TERM_OPERATOR = [tsMultiply, tsDivide, tsDiv, tsMod, tsAnd, tsShl, tsShr];
   THORIUM_DEFAULT_EXPRESSION_OPEARTOR = [tsPlus, tsMinus, tsOr, tsXor];
   THORIUM_DEFAULT_RELATIONAL_OPERATOR = [tsLess, tsNotEqual, tsGreater, tsLessEqual, tsGreaterEqual, tsEqual];
+  THORIUM_DEFAULT_LOGICAL_TERM_OPERATOR = [tsAnd];
+  THORIUM_DEFAULT_LOGICAL_EXPRESSION_OPERATOR = [tsOr];
 
   THORIUM_DEFAULT_SYMBOL_CODE : array [TThoriumDefaultSymbol] of String = (
     '',
@@ -236,14 +238,17 @@ type
     procedure ConstantDeclaration(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
     procedure GenericDeclaration(const AStatic: Boolean; const AVisibility: TThoriumVisibilityLevel; var Offset: Integer);
-    function Expression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function Factor(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
     function FindFilteredTableEntry(const Ident: String; AllowedKinds: TThoriumQualifiedIdentifierKinds; out Entry: TThoriumTableEntry; DropMultiple: Boolean = True; GetLast: Boolean = False): Boolean;
     procedure FilterTableEntries(Entries: TThoriumTableEntryResultList; AllowedKinds: TThoriumQualifiedIdentifierKinds);
     procedure FunctionDeclaration(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+    procedure JumpingLogicalExpression(TrueJumps, FalseJumps: TThoriumIntList);
+    procedure JumpingLogicalTerm(TrueJumps, FalseJumps: TThoriumIntList);
+    procedure JumpingRelationalExpression(var TrueJump, FalseJump: TThoriumInstructionAddress);
     procedure Module;
     procedure PlaceStatic(const StaticValue: TThoriumValue; ATargetRegister: Word);
+    function RelationalExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
@@ -746,89 +751,6 @@ begin
   ValueIdentifier.FinalType := nil;
 end;
 
-function TThoriumDefaultCompiler.Expression(ATargetRegister: Word;
-  out AState: TThoriumValueState; AStaticValue: PThoriumValue;
-  ATypeHint: IThoriumType): IThoriumType;
-var
-  Sym: TThoriumDefaultSymbol;
-  OperandType: IThoriumType;
-  Operation: TThoriumOperationDescription;
-  ResultValue: TThoriumValue;
-  State1, State2: TThoriumValueState;
-  Value1, Value2: TThoriumValue;
-  RegID2: TThoriumRegisterID;
-begin
-  Result := SimpleExpression(ATargetRegister, State1, @Value1, ATypeHint);
-
-  while FCurrentSym in THORIUM_DEFAULT_RELATIONAL_OPERATOR do
-  begin
-    Sym := FCurrentSym;
-    Proceed;
-
-    OperandType := SimpleExpression(RegID2, State2, @Value2, Result);
-
-    Operation.Operation := SymbolToOperation(Sym);
-    if not Result.CanPerformOperation(Operation, OperandType) then
-      CompilerError('Invalid operands for this operation.');
-
-    // Attempt to evaluate static values during compile time
-    if (State1 = vsStatic) and (State2 = vsStatic) then
-    begin
-      ResultValue.RTTI := TThoriumTypeInteger.Create;
-      if TThoriumType.PerformCmpOperation(Value1, Operation, @Value2) then
-        ResultValue.Int := 1
-      else
-        ResultValue.Int := 0;
-      ThoriumFreeValue(Value1);
-      ThoriumFreeValue(Value2);
-      Value1 := ResultValue;
-      StoreType(Value1.RTTI);
-      Result := TThoriumTypeInteger.Create;
-      Continue;
-    end;
-
-    if State1 = vsStatic then
-    begin
-      PlaceStatic(Value1, ATargetRegister);
-      ThoriumFreeValue(Value1);
-    end;
-
-    if State2 = vsStatic then
-    begin
-      PlaceStatic(Value2, RegID2);
-      ThoriumFreeValue(Value2);
-    end;
-
-    GenOperation(Operation, THORIUM_REGISTER_INVALID, ATargetRegister, RegID2);
-    case Operation.Operation of
-      opCmpEqual:           GenCode(intb(ATargetRegister, THORIUM_OP_EQUAL));
-      opCmpNotEqual:        GenCode(intb(ATargetRegister, THORIUM_OP_NOTEQUAL));
-      opCmpGreater:         GenCode(intb(ATargetRegister, THORIUM_OP_GREATER));
-      opCmpGreaterOrEqual:  GenCode(intb(ATargetRegister, THORIUM_OP_GREATEREQUAL));
-      opCmpLessOrEqual:     GenCode(intb(ATargetRegister, THORIUM_OP_LESSEQUAL));
-    else
-      CompilerError('Invalid relational operator.');
-    end;
-    if not (Result.GetInstance is TThoriumTypeInteger) then
-      Result := TThoriumTypeInteger.Create;
-    State1 := vsDynamic;
-  end;
-
-  if (State1 = vsStatic) then
-  begin
-    if (AStaticValue = nil) then
-    begin
-      PlaceStatic(Value1, ATargetRegister);
-      ThoriumFreeValue(Value1);
-      State1 := vsDynamic;
-    end
-    else
-      AStaticValue^ := Value1;
-  end;
-  AState := State1;
-  ReleaseRegister(RegID2);
-end;
-
 function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
   out AState: TThoriumValueState; out AStaticValue: TThoriumValue;
   ATypeHint: IThoriumType): IThoriumType;
@@ -936,7 +858,7 @@ begin
         end;
       end;
       // Pass through
-      Result := Expression(ATargetRegister, AState, @AStaticValue, ATypeHint);
+      Result := RelationalExpression(ATargetRegister, AState, @AStaticValue, ATypeHint);
       ExpectSymbol([tsCloseBracket]);
       Proceed;
     end;
@@ -1100,6 +1022,224 @@ begin
     Func.Free;
 end;
 
+procedure TThoriumDefaultCompiler.JumpingLogicalExpression(TrueJumps,
+  FalseJumps: TThoriumIntList);
+(*
+  @parserContext: Expects current symbol to be a bracket or Factor compatible.
+*)
+var
+  Target: TThoriumInstructionAddress;
+  I: Integer;
+begin
+  Assert(TrueJumps <> nil);
+  Assert(FalseJumps <> nil);
+
+  if FCurrentSym = tsNot then
+  begin
+    // Thats tricky. This must only be parsed as logical not if it is followed
+    // by an opening bracket. In the other case, we MUST jump back one step in
+    // the parser, as it needs to be taken as bitwise not otherwise.
+    CompilerError('For that we need a parser stack.');
+  end;
+
+  if FCurrentSym = tsOpenBracket then
+  begin
+    Proceed;
+    JumpingLogicalExpression(TrueJumps, FalseJumps);
+    ExpectSymbol([tsCloseBracket]);
+    Proceed;
+  end
+  else
+    JumpingLogicalTerm(TrueJumps, FalseJumps);
+
+  while FCurrentSym in THORIUM_DEFAULT_LOGICAL_EXPRESSION_OPERATOR do
+  begin
+    case FCurrentSym of
+      tsOr:
+      begin
+        Target := GetNextInstructionAddress;
+        for I := 0 to FalseJumps.Count - 1 do
+          TThoriumInstructionJMP(GetInstruction(FalseJumps[I])^).NewAddress := Target;
+        FalseJumps.Clear;
+      end;
+    else
+      CompilerError('Unhandled logical operator.');
+    end;
+    Proceed;
+    JumpingLogicalTerm(TrueJumps, FalseJumps);
+  end;
+end;
+
+procedure TThoriumDefaultCompiler.JumpingLogicalTerm(TrueJumps,
+  FalseJumps: TThoriumIntList);
+(*
+  @parserContext: Expects current symbol to be a bracket or Factor compatible.
+*)
+var
+  SubTrueJump, SubFalseJump, Target: TThoriumInstructionAddress;
+  I: Integer;
+begin
+  Assert(TrueJumps <> nil);
+  Assert(FalseJumps <> nil);
+
+  if FCurrentSym = tsNot then
+  begin
+    // Thats tricky. This must only be parsed as logical not if it is followed
+    // by an opening bracket. In the other case, we MUST jump back one step in
+    // the parser, as it needs to be taken as bitwise not otherwise.
+    CompilerError('For that we need a parser stack.');
+  end;
+
+  if FCurrentSym = tsOpenBracket then
+  begin
+    Proceed;
+    JumpingLogicalExpression(TrueJumps, FalseJumps);
+    ExpectSymbol([tsCloseBracket]);
+    Proceed;
+  end
+  else
+  begin
+    JumpingRelationalExpression(SubTrueJump, SubFalseJump);
+    TrueJumps.AddEntry(SubTrueJump);
+    FalseJumps.AddEntry(SubFalseJump);
+  end;
+
+  while FCurrentSym in THORIUM_DEFAULT_LOGICAL_TERM_OPERATOR do
+  begin
+    case FCurrentSym of
+      tsAnd:
+      begin
+        Target := GetNextInstructionAddress;
+        for I := 0 to TrueJumps.Count - 1 do
+          TThoriumInstructionJMP(GetInstruction(TrueJumps[I])^).NewAddress := Target;
+        TrueJumps.Clear;
+      end;
+    else
+      CompilerError('Unhandled logical operator.');
+    end;
+    Proceed;
+    JumpingRelationalExpression(SubTrueJump, SubFalseJump);
+    TrueJumps.AddEntry(SubTrueJump);
+    FalseJumps.AddEntry(SubFalseJump);
+  end;
+end;
+
+procedure TThoriumDefaultCompiler.JumpingRelationalExpression(var TrueJump,
+  FalseJump: TThoriumInstructionAddress);
+var
+  Sym: TThoriumDefaultSymbol;
+  OperandType1, OperandType2: IThoriumType;
+  Operation: TThoriumOperationDescription;
+  ResultValue: TThoriumValue;
+  State1, State2: TThoriumValueState;
+  Value1, Value2: TThoriumValue;
+  RegID1, RegID2: TThoriumRegisterID;
+begin
+  GetFreeRegister(trEXP, RegID1);
+  OperandType1 := SimpleExpression(RegID1, State1, @Value1);
+
+  if FCurrentSym in THORIUM_DEFAULT_RELATIONAL_OPERATOR then
+  begin
+    Sym := FCurrentSym;
+    Proceed;
+
+    OperandType2 := SimpleExpression(RegID2, State2, @Value2);
+    Operation.Operation := SymbolToOperation(Sym);
+    if not OperandType1.CanPerformOperation(Operation, OperandType2) then
+      CompilerError('Invalid operands for this operation');
+
+    if (State1 = vsStatic) and (State2 = vsStatic) then
+    begin
+      if TThoriumType.PerformCmpOperation(Value1, Operation, @Value2) then
+      begin
+        TrueJump := GenCode(jmp(THORIUM_JMP_INVALID));
+        FalseJump := GenCode(jmp(THORIUM_JMP_INVALID));
+      end
+      else
+      begin
+        FalseJump := GenCode(jmp(THORIUM_JMP_INVALID));
+        TrueJump := GenCode(jmp(THORIUM_JMP_INVALID));
+      end;
+    end;
+
+    if State1 = vsStatic then
+    begin
+      PlaceStatic(Value1, RegID1);
+      ThoriumFreeValue(Value1);
+    end;
+
+    if State2 = vsStatic then
+    begin
+      PlaceStatic(Value2, RegID2);
+      ThoriumFreeValue(Value2);
+    end;
+
+    GenOperation(Operation, THORIUM_REGISTER_INVALID, RegID1, RegID2);
+    case Operation.Operation of
+      opCmpEqual:
+      begin
+        TrueJump := GenCode(je(THORIUM_JMP_INVALID));
+        FalseJump := GenCode(jne(THORIUM_JMP_INVALID));
+      end;
+      opCmpNotEqual:
+      begin
+        TrueJump := GenCode(jne(THORIUM_JMP_INVALID));
+        FalseJump := GenCode(je(THORIUM_JMP_INVALID));
+      end;
+      opCmpGreater:
+      begin
+        TrueJump := GenCode(jgt(THORIUM_JMP_INVALID));
+        FalseJump := GenCode(jle(THORIUM_JMP_INVALID));
+      end;
+      opCmpGreaterOrEqual:
+      begin
+        TrueJump := GenCode(jge(THORIUM_JMP_INVALID));
+        FalseJump := GenCode(jlt(THORIUM_JMP_INVALID));
+      end;
+      opCmpLess:
+      begin
+        TrueJump := GenCode(jlt(THORIUM_JMP_INVALID));
+        FalseJump := GenCode(jge(THORIUM_JMP_INVALID));
+      end;
+      opCmpLessOrEqual:
+      begin
+        TrueJump := GenCode(jle(THORIUM_JMP_INVALID));
+        FalseJump := GenCode(jgt(THORIUM_JMP_INVALID));
+      end;
+    else
+      CompilerError('Unhandled compare operation.');
+    end;
+    ReleaseRegister(RegID2);
+  end
+  else
+  begin
+    Operation.Operation := opEvaluate;
+    if not OperandType1.CanPerformOperation(Operation) then
+      CompilerError('Cannot evaluate '''+OperandType1.Name+''' to boolean.');
+
+    if State1 = vsStatic then
+    begin
+      if TThoriumType.PerformCmpOperation(Value1, Operation) then
+      begin
+        TrueJump := GenCode(jmp(THORIUM_JMP_INVALID));
+        FalseJump := GenCode(jmp(THORIUM_JMP_INVALID));
+      end
+      else
+      begin
+        FalseJump := GenCode(jmp(THORIUM_JMP_INVALID));
+        TrueJump := GenCode(jmp(THORIUM_JMP_INVALID));
+      end;
+    end
+    else
+    begin
+      GenOperation(Operation, THORIUM_REGISTER_INVALID, RegID1);
+      TrueJump := GenCode(jt(THORIUM_JMP_INVALID));
+      FalseJump := GenCode(jf(THORIUM_JMP_INVALID));
+    end;
+  end;
+  ReleaseRegister(RegID1);
+end;
+
 procedure TThoriumDefaultCompiler.Module;
 var
   IsStatic: Boolean;
@@ -1188,6 +1328,89 @@ begin
     Assert(StaticValue.RTTI.CanCreate(InitialData, True, CreationDescription));
   end;
   GenCreation(CreationDescription, ATargetRegister);
+end;
+
+function TThoriumDefaultCompiler.RelationalExpression(ATargetRegister: Word;
+  out AState: TThoriumValueState; AStaticValue: PThoriumValue;
+  ATypeHint: IThoriumType): IThoriumType;
+var
+  Sym: TThoriumDefaultSymbol;
+  OperandType: IThoriumType;
+  Operation: TThoriumOperationDescription;
+  ResultValue: TThoriumValue;
+  State1, State2: TThoriumValueState;
+  Value1, Value2: TThoriumValue;
+  RegID2: TThoriumRegisterID;
+begin
+  Result := SimpleExpression(ATargetRegister, State1, @Value1, ATypeHint);
+
+  while FCurrentSym in THORIUM_DEFAULT_RELATIONAL_OPERATOR do
+  begin
+    Sym := FCurrentSym;
+    Proceed;
+
+    OperandType := SimpleExpression(RegID2, State2, @Value2, Result);
+
+    Operation.Operation := SymbolToOperation(Sym);
+    if not Result.CanPerformOperation(Operation, OperandType) then
+      CompilerError('Invalid operands for this operation.');
+
+    // Attempt to evaluate static values during compile time
+    if (State1 = vsStatic) and (State2 = vsStatic) then
+    begin
+      ResultValue.RTTI := TThoriumTypeInteger.Create;
+      if TThoriumType.PerformCmpOperation(Value1, Operation, @Value2) then
+        ResultValue.Int := 1
+      else
+        ResultValue.Int := 0;
+      ThoriumFreeValue(Value1);
+      ThoriumFreeValue(Value2);
+      Value1 := ResultValue;
+      StoreType(Value1.RTTI);
+      Result := TThoriumTypeInteger.Create;
+      Continue;
+    end;
+
+    if State1 = vsStatic then
+    begin
+      PlaceStatic(Value1, ATargetRegister);
+      ThoriumFreeValue(Value1);
+    end;
+
+    if State2 = vsStatic then
+    begin
+      PlaceStatic(Value2, RegID2);
+      ThoriumFreeValue(Value2);
+    end;
+
+    GenOperation(Operation, THORIUM_REGISTER_INVALID, ATargetRegister, RegID2);
+    case Operation.Operation of
+      opCmpEqual:           GenCode(intb(ATargetRegister, THORIUM_OP_EQUAL));
+      opCmpNotEqual:        GenCode(intb(ATargetRegister, THORIUM_OP_NOTEQUAL));
+      opCmpGreater:         GenCode(intb(ATargetRegister, THORIUM_OP_GREATER));
+      opCmpGreaterOrEqual:  GenCode(intb(ATargetRegister, THORIUM_OP_GREATEREQUAL));
+      opCmpLessOrEqual:     GenCode(intb(ATargetRegister, THORIUM_OP_LESSEQUAL));
+    else
+      CompilerError('Invalid relational operator.');
+    end;
+    if not (Result.GetInstance is TThoriumTypeInteger) then
+      Result := TThoriumTypeInteger.Create;
+    State1 := vsDynamic;
+  end;
+
+  if (State1 = vsStatic) then
+  begin
+    if (AStaticValue = nil) then
+    begin
+      PlaceStatic(Value1, ATargetRegister);
+      ThoriumFreeValue(Value1);
+      State1 := vsDynamic;
+    end
+    else
+      AStaticValue^ := Value1;
+  end;
+  AState := State1;
+  ReleaseRegister(RegID2);
 end;
 
 function TThoriumDefaultCompiler.SimpleExpression(ATargetRegister: Word;
@@ -1629,7 +1852,7 @@ begin
 
           AttachHook;
           GetFreeRegister(trEXP, RegID1);
-          ExprType := Expression(RegID1, ExprState);
+          ExprType := RelationalExpression(RegID1, ExprState);
           FlushHook(False);
 
           Operation.Operation := opIndexedRead;
@@ -1826,19 +2049,19 @@ begin
       tsAssign:
       begin
         // Handle an assignment.
-        // [Ident1] = [Expression];
+        // [Ident1] = [RelationalExpression];
         if not (tskAssignment in AllowedStatements) then
           CompilerError('Assignment is not allowed here.');
         if not (Ident1.Writable) then
           CompilerError('Cannot write to the left side.');
         // Handle an assignment
         Proceed;
-        // Allocate a register for the expression evaluation
+        // Allocate a register for the RelationalExpression evaluation
         GetFreeRegister(trEXP, RegID2);
         ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
         // Allow casting
         Assignment.Casting := True;
-        // Check whether the expression result can be assigned to the ident
+        // Check whether the RelationalExpression result can be assigned to the ident
         if not ExpressionType.CanAssignTo(Assignment, Ident1.FinalType) then
           CompilerError('Cannot assign '+ExpressionType.Name+' to '+Ident1.FinalType.Name);
         // Cast if neccessary
@@ -1852,11 +2075,11 @@ begin
         end
         else
         begin
-          // Move the expression result to the approprate register
+          // Move the RelationalExpression result to the approprate register
           GenCode(mover(RegID2, RegID1));
         end;
         AppendOperations(Ident1.SetCode);
-        // Release the expression register
+        // Release the RelationalExpression register
         if (ExpressionState = vsDynamic) and (ExpressionType.NeedsClear) then
           GenCode(clr(RegID1));
         ReleaseRegister(RegID2);
@@ -1917,7 +2140,7 @@ begin
     if not Result.CanPerformOperation(Operation, OperandType) then
       CompilerError('Invalid operands for this operation.');
 
-    // Attempt to evaluate the expression during compilation
+    // Attempt to evaluate the RelationalExpression during compilation
     if (State1 = vsStatic) and (State2 = vsStatic) then
     begin
       ResultValue := TThoriumType.PerformOperation(Value1, Operation, @Value2);

@@ -673,6 +673,17 @@ begin
   end;
 end;
 
+function evali(AOp1: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionEVALI(Result) do
+  begin
+    Instruction := tiEVALI;
+    Op1 := AOp1;
+    CodeLine := 0;
+  end;
+end;
+
 function addi(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
@@ -1597,6 +1608,30 @@ begin
   with TThoriumInstructionJLE(Result) do
   begin
     Instruction := tiJLE;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+// These two are aliases which are used in expression evaluation. They may be
+// substitued later by actually distinct instructions.
+function jt(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJE(Result) do
+  begin
+    Instruction := tiJE;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+function jf(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJNE(Result) do
+  begin
+    Instruction := tiJNE;
     NewAddress := ANewAddress;
     CodeLine := 0;
   end;
