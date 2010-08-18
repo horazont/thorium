@@ -4565,6 +4565,7 @@ begin
     opCmpGreaterOrEqual: Result := AValue.RTTI.DoCmpGreaterOrEqual(A, B);
     opCmpLess: Result := AValue.RTTI.DoCmpLess(A, B);
     opCmpLessOrEqual: Result := AValue.RTTI.DoCmpLessOrEqual(A, B);
+    opEvaluate: Result := AValue.RTTI.DoEvaluate(AValue);
   else
     raise EThoriumRuntimeException.CreateFmt('Invalid comparision operation: %s.', [GetEnumName(TypeInfo(TThoriumOperation), Ord(Operation.Operation))]);
   end;
@@ -4688,6 +4689,14 @@ begin
         IntOp(_not(0));
       opNegate:
         IntOp(negi(0));
+      opEvaluate:
+      begin
+        Operation.ResultType := nil;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        Operation.OperationInstruction := OperationInstructionDescription(evali(0), 0, -1, -1);
+        Exit;
+      end;
     else
       Result := inherited;
     end;
@@ -4784,14 +4793,6 @@ begin
           Operation.OperationInstruction := OperationInstructionDescription(cmpif(0, 0), 0, 1, -1);
           Exit;
         end;
-      end;
-
-      opEvaluate:
-      begin
-        Operation.ResultType := nil;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(evali(0), 0, -1, -1);
       end;
     end;
   end;

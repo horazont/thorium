@@ -5,5 +5,13 @@ public string meow = "meow", cookie = "cookie";
 
 public void main() 
 {
-
+  if 10 == 20 {
+    abc = 1;
+  }
+  elseif 1 {
+    abc = 2;
+  }
+  else {
+    abc = 3;
+  }
 }

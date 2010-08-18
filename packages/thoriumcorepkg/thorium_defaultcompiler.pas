@@ -2,10 +2,19 @@ unit Thorium_DefaultCompiler;
 
 {$mode objfpc}{$H+}
 
+// If this is set, the parser will raise an exception when it encounters a
+// tsNone token.
+{$define DebugTokenLoop}
+
 interface
 
 uses
   Classes, SysUtils, Thorium, Thorium_Globals, Thorium_Utils, typinfo;
+
+{$ifdef DebugTokenLoop}
+const
+  MAX_NONES = 3;
+{$endif}
 
 type
   TThoriumDefaultSymbol = (
@@ -229,6 +238,7 @@ type
   protected
     procedure CompilerError(const Msg: String); override;
     procedure CompilerError(const Msg: String; X, Y: Integer); override;
+    procedure Debug_CurrentSym;
     function ExpectSymbol(SymbolMask: TThoriumDefaultSymbols; ThrowError: Boolean = True): Boolean;
     function GenCode(AInstruction: TThoriumInstruction): Integer; override;
     function GenCodeEx(var TargetArray: TThoriumInstructionArray;
@@ -268,6 +278,11 @@ type
   end;
 
 implementation
+
+{$ifdef DebugTokenLoop}
+var
+  NoneCount: Integer = 0;
+{$endif}
 
 {$I Thorium_InstructionConstructors.inc}
 
@@ -572,6 +587,11 @@ begin
             SymStr := 'Octal values are not supported';
             Exit(False);
           end;
+        else
+          // Just zero
+          Sym := tsIntegerValue;
+          SymStr := '0';
+          Exit(True);
         end;
       end
       else
@@ -631,6 +651,11 @@ begin
   raise EThoriumCompilerError.CreateFmt('(%d,%d): %s', [X, Y, Msg]);
 end;
 
+procedure TThoriumDefaultCompiler.Debug_CurrentSym;
+begin
+  WriteLn(GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(FCurrentSym)));
+end;
+
 function TThoriumDefaultCompiler.ExpectSymbol(
   SymbolMask: TThoriumDefaultSymbols; ThrowError: Boolean): Boolean;
 begin
@@ -660,7 +685,16 @@ function TThoriumDefaultCompiler.Proceed(ExpectMask: TThoriumDefaultSymbols;
   ThrowError: Boolean): Boolean;
 begin
   Result := FScanner.NextSymbol(FCurrentSym, FCurrentStr);
-  WriteLn('→ ', GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(FCurrentSym)));
+  Write('→ ');
+  Debug_CurrentSym;
+  {$ifdef DebugTokenLoop}
+  if FCurrentSym = tsNone then
+  begin
+    Inc(NoneCount);
+    if NoneCount >= MAX_NONES then
+      CompilerError('Ran into tsNone');
+  end;
+  {$endif}
   if FCurrentSym = tsError then
     CompilerError('Scanner error: '+FCurrentStr);
   if Result and (ExpectMask <> []) then
@@ -1140,6 +1174,7 @@ begin
 
   if FCurrentSym in THORIUM_DEFAULT_RELATIONAL_OPERATOR then
   begin
+    GetFreeRegister(trEXP, RegID2);
     Sym := FCurrentSym;
     Proceed;
 
@@ -1160,6 +1195,8 @@ begin
         FalseJump := GenCode(jmp(THORIUM_JMP_INVALID));
         TrueJump := GenCode(jmp(THORIUM_JMP_INVALID));
       end;
+      ReleaseRegister(RegID2);
+      Exit;
     end;
 
     if State1 = vsStatic then
@@ -1958,14 +1995,17 @@ begin
 
       if FCurrentSym = tsCloseCurlyBracket then
       begin
+        WriteLn('early out statement block');
         Proceed;
         Exit;
       end;
 
       SaveTable;
+      WriteLn('enter statement block');
       Statement(Offset);
       while FCurrentSym <> tsCloseCurlyBracket do
         Statement(Offset);
+      WriteLn('leave statement block');
       RestoreTable(Offset);
 
       ExpectSymbol([tsCloseCurlyBracket]);
@@ -2005,10 +2045,18 @@ begin
       StatementDoWhile(Offset);
       NeedSemicolon := False;
     end;
+    tsSemicolon:
+    begin
+      NeedSemicolon := True;
+    end;
+  else
+    ExpectSymbol([tsUnknown]);
   end;
   if NeedSemicolon then
+  begin
     ExpectSymbol([tsSemicolon]);
-  Proceed;
+    Proceed;
+  end;
 end;
 
 procedure TThoriumDefaultCompiler.StatementDoWhile(var Offset: Integer);
@@ -2100,8 +2148,53 @@ begin
 end;
 
 procedure TThoriumDefaultCompiler.StatementIf(var Offset: Integer);
-begin
 
+  procedure SetupJumps(AList: TThoriumIntList; ATarget: TThoriumInstructionAddress);
+  var
+    I: Integer;
+  begin
+    for I := 0 to AList.Count - 1 do
+      TThoriumInstructionJMP(GetInstruction(AList[I])^).NewAddress := ATarget;
+  end;
+
+var
+  TrueJumps, FalseJumps, JumpsOut: TThoriumIntList;
+begin
+  Proceed;
+  TrueJumps := TThoriumIntList.Create;
+  FalseJumps := TThoriumIntList.Create;
+  JumpsOut := TThoriumIntList.Create;
+  try
+    JumpingLogicalExpression(TrueJumps, FalseJumps);
+    SetupJumps(TrueJumps, GetNextInstructionAddress);
+    Statement(Offset, THORIUM_DEFAULT_ALL_STATEMENTS);
+    JumpsOut.AddEntry(GenCode(jmp(THORIUM_JMP_INVALID)));
+    SetupJumps(FalseJumps, GetNextInstructionAddress);
+
+    while FCurrentSym = tsElseIf do
+    begin
+      Proceed;
+      TrueJumps.Clear;
+      FalseJumps.Clear;
+      JumpingLogicalExpression(TrueJumps, FalseJumps);
+      SetupJumps(TrueJumps, GetNextInstructionAddress);
+      Statement(Offset, THORIUM_DEFAULT_ALL_STATEMENTS);
+      JumpsOut.AddEntry(GenCode(jmp(THORIUM_JMP_INVALID)));
+      SetupJumps(FalseJumps, GetNextInstructionAddress);
+    end;
+
+    if FCurrentSym = tsElse then
+    begin
+      Proceed;
+      Statement(Offset, THORIUM_DEFAULT_ALL_STATEMENTS);
+    end;
+
+    SetupJumps(JumpsOut, GetNextInstructionAddress);
+  finally
+    JumpsOut.Free;
+    FalseJumps.Free;
+    TrueJumps.Free;
+  end;
 end;
 
 procedure TThoriumDefaultCompiler.StatementSwitch(var Offset: Integer);
