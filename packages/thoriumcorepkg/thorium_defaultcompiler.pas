@@ -244,6 +244,7 @@ type
     function GenCodeEx(var TargetArray: TThoriumInstructionArray;
        AInstruction: TThoriumInstruction): Integer; override;
     function Proceed(ExpectMask: TThoriumDefaultSymbols = []; ThrowError: Boolean = False): Boolean;
+    procedure SetupJumps(AList: TThoriumIntList; ATarget: TThoriumInstructionAddress);
   protected
     procedure ConstantDeclaration(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
@@ -262,7 +263,9 @@ type
     function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
-    procedure Statement(var Offset: Integer; const AllowedStatements: TThoriumDefaultStatementKinds = THORIUM_DEFAULT_ALL_STATEMENTS);
+    procedure Statement(var Offset: Integer;
+      const AllowedStatements: TThoriumDefaultStatementKinds = THORIUM_DEFAULT_ALL_STATEMENTS;
+      DisableSemicolon: Boolean = False);
     procedure StatementDoWhile(var Offset: Integer);
     procedure StatementFor(var Offset: Integer);
     procedure StatementIdentifier(var Offset: Integer; const AllowedStatements: TThoriumDefaultStatementKinds);
@@ -270,8 +273,11 @@ type
     procedure StatementSwitch(var Offset: Integer);
     procedure StatementWhile(var Offset: Integer);
     function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
-    procedure VariableDeclaration(const AVisibility: TThoriumVisibilityLevel;
+    procedure VariableDeclarationCBC(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+    procedure VariableDeclaration(const AVisibility: TThoriumVisibilityLevel;
+      ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer;
+      const ARegID: TThoriumRegisterID = THORIUM_REGISTER_INVALID);
   public
     function CompileFromStream(SourceStream: TStream;
        Flags: TThoriumCompilerFlags=[cfOptimize]): Boolean; override;
@@ -701,6 +707,15 @@ begin
     Result := ExpectSymbol(ExpectMask, ThrowError);
 end;
 
+procedure TThoriumDefaultCompiler.SetupJumps(AList: TThoriumIntList;
+  ATarget: TThoriumInstructionAddress);
+var
+  I: Integer;
+begin
+  for I := 0 to AList.Count - 1 do
+    TThoriumInstructionJMP(GetInstruction(AList[I])^).NewAddress := ATarget;
+end;
+
 procedure TThoriumDefaultCompiler.ConstantDeclaration(
   const AVisibility: TThoriumVisibilityLevel; ATypeIdent,
   AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
@@ -762,7 +777,7 @@ begin
       if AStatic then
         DeclarationHandler := @ConstantDeclaration
       else
-        DeclarationHandler := @VariableDeclaration;
+        DeclarationHandler := @VariableDeclarationCBC;
 
       repeat
         if AStatic then
@@ -1979,7 +1994,8 @@ begin
 end;
 
 procedure TThoriumDefaultCompiler.Statement(var Offset: Integer;
-  const AllowedStatements: TThoriumDefaultStatementKinds);
+  const AllowedStatements: TThoriumDefaultStatementKinds;
+  DisableSemicolon: Boolean);
 var
   NeedSemicolon: Boolean;
 begin
@@ -2043,7 +2059,7 @@ begin
       if not (tskDoWhile in AllowedStatements) then
         CompilerError('Do-While statement not allowed here.');
       StatementDoWhile(Offset);
-      NeedSemicolon := False;
+      NeedSemicolon := True;
     end;
     tsSemicolon:
     begin
@@ -2052,7 +2068,7 @@ begin
   else
     ExpectSymbol([tsUnknown]);
   end;
-  if NeedSemicolon then
+  if NeedSemicolon and not DisableSemicolon then
   begin
     ExpectSymbol([tsSemicolon]);
     Proceed;
@@ -2060,13 +2076,103 @@ begin
 end;
 
 procedure TThoriumDefaultCompiler.StatementDoWhile(var Offset: Integer);
+var
+  PreStatement: TThoriumInstructionAddress;
+  TrueJumps, FalseJumps: TThoriumIntList;
 begin
+  TrueJumps := TThoriumIntList.Create;
+  FalseJumps := TThoriumIntList.Create;
+  try
+    PreStatement := GetNextInstructionAddress;
 
+    Proceed;
+    Statement(Offset);
+    ExpectSymbol([tsWhile]);
+    Proceed;
+    JumpingLogicalExpression(TrueJumps, FalseJumps);
+    SetupJumps(TrueJumps, PreStatement);
+    SetupJumps(FalseJumps, GetNextInstructionAddress);
+  finally
+    FalseJumps.Free;
+    TrueJumps.Free;
+  end;
 end;
 
 procedure TThoriumDefaultCompiler.StatementFor(var Offset: Integer);
-begin
+var
+  UseBrackets: Boolean;
+  TypeIdent, Ident: TThoriumQualifiedIdentifier;
+  RegID: TThoriumRegisterID;
+  OldHook: Boolean;
+  OldHook1, OldHook2: PThoriumInstructionArray;
+  AfterLoopCode: TThoriumInstructionArray;
 
+  PreLoop: TThoriumInstructionAddress;
+  TrueJumps, FalseJumps: TThoriumIntList;
+begin
+  Proceed;
+  if FCurrentSym = tsOpenBracket then
+  begin
+    UseBrackets := True;
+    Proceed;
+  end;
+
+  TypeIdent := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikType]);
+  Ident := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared, ikNoFar]);
+
+  SaveTable;
+  GetFreeRegister(trEXP, RegID);
+  VariableDeclaration(vsPrivate, TypeIdent, Ident, Offset, RegID);
+
+  if not ExpectSymbol([tsSemicolon]) then
+    Exit;
+  Proceed;
+
+  TrueJumps := TThoriumIntList.Create;
+  FalseJumps := TThoriumIntList.Create;
+  try
+    PreLoop := GetNextInstructionAddress;
+    JumpingLogicalExpression(TrueJumps, FalseJumps);
+
+    if not ExpectSymbol([tsSemicolon]) then
+      Exit;
+    Proceed;
+
+    OldHook := FCodeHook;
+    OldHook1 := FCodeHook1;
+    OldHook2 := FCodeHook2;
+    try
+      FCodeHook := True;
+      FCodeHook1 := @AfterLoopCode;
+      FCodeHook2 := nil;
+
+      Statement(Offset, [tskAssignment], True);
+    finally
+      FCodeHook := OldHook;
+      FCodeHook1 := OldHook1;
+      FCodeHook2 := OldHook2;
+    end;
+
+    ExpectSymbol([tsCloseBracket]);
+    Proceed;
+
+    SetupJumps(TrueJumps, GetNextInstructionAddress);
+
+    Statement(Offset);
+
+    AppendCode(AfterLoopCode);
+
+    GenCode(jmp(PreLoop));
+
+    SetupJumps(FalseJumps, GetNextInstructionAddress);
+
+    RestoreTable(Offset);
+
+    ReleaseRegister(RegID);
+  finally
+    FalseJumps.Free;
+    TrueJumps.Free;
+  end;
 end;
 
 procedure TThoriumDefaultCompiler.StatementIdentifier(var Offset: Integer;
@@ -2148,15 +2254,6 @@ begin
 end;
 
 procedure TThoriumDefaultCompiler.StatementIf(var Offset: Integer);
-
-  procedure SetupJumps(AList: TThoriumIntList; ATarget: TThoriumInstructionAddress);
-  var
-    I: Integer;
-  begin
-    for I := 0 to AList.Count - 1 do
-      TThoriumInstructionJMP(GetInstruction(AList[I])^).NewAddress := ATarget;
-  end;
-
 var
   TrueJumps, FalseJumps, JumpsOut: TThoriumIntList;
 begin
@@ -2203,8 +2300,26 @@ begin
 end;
 
 procedure TThoriumDefaultCompiler.StatementWhile(var Offset: Integer);
+var
+  PreCondition, PostStatements: TThoriumInstructionAddress;
+  TrueJumps, FalseJumps: TThoriumIntList;
 begin
+  TrueJumps := TThoriumIntList.Create;
+  FalseJumps := TThoriumIntList.Create;
+  try
+    PreCondition := GetNextInstructionAddress;
+    Proceed;
+    JumpingLogicalExpression(TrueJumps, FalseJumps);
+    SetupJumps(TrueJumps, GetNextInstructionAddress);
 
+    Statement(Offset);
+    GenCode(jmp(PreCondition));
+    PostStatements := GetNextInstructionAddress;
+    SetupJumps(FalseJumps, PostStatements);
+  finally
+    FalseJumps.Free;
+    TrueJumps.Free;
+  end;
 end;
 
 function TThoriumDefaultCompiler.Term(ATargetRegister: Word; out
@@ -2275,9 +2390,18 @@ begin
     AStaticValue := Value1;
 end;
 
-procedure TThoriumDefaultCompiler.VariableDeclaration(
+procedure TThoriumDefaultCompiler.VariableDeclarationCBC(
   const AVisibility: TThoriumVisibilityLevel; ATypeIdent,
   AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+// CallBack Compatible (thus CBC) variant of VariableDeclaration
+begin
+  VariableDeclaration(AVisibility, ATypeIdent, AValueIdent, Offset);
+end;
+
+procedure TThoriumDefaultCompiler.VariableDeclaration(
+  const AVisibility: TThoriumVisibilityLevel; ATypeIdent,
+  AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer;
+  const ARegID: TThoriumRegisterID);
 var
   State: TThoriumValueState;
   Value: TThoriumValue;
@@ -2299,23 +2423,32 @@ begin
     end
     else
       InitialData.Int := Value.Int;
-    if not ATypeIdent.FinalType.CanCreate(InitialData, False, Creation) then
+    if not ATypeIdent.FinalType.CanCreate(InitialData, ARegID <> THORIUM_REGISTER_INVALID, Creation) then
       CompilerError('Cannot create such a value.');
     ThoriumFreeValue(Value);
-    GenCreation(Creation);
+    GenCreation(Creation, ARegID);
   end
   else
   begin
-    if not ATypeIdent.FinalType.CanCreateNone(False, Creation) then
+    if not ATypeIdent.FinalType.CanCreateNone(ARegID <> THORIUM_REGISTER_INVALID, Creation) then
       CompilerError('Need an initial value, as `None'' creation failed.');
-    GenCreation(Creation);
+    GenCreation(Creation, ARegID);
   end;
   ExpectSymbol([tsSemicolon, tsComma]);
 
-  Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType);
-  Inc(Offset);
-  if AVisibility = vsPublic then
-    AddPublicVariable.AssignFromTableEntry(Entry^);
+  if ARegID <> THORIUM_REGISTER_INVALID then
+  begin
+    Entry := FTable.AddRegisterVariableIdentifier(AValueIdent.FullStr, ARegID, ATypeIdent.FinalType);
+    if AVisibility = vsPublic then
+      CompilerError('Register variables cannot be public.');
+  end
+  else
+  begin
+    Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType);
+    Inc(Offset);
+    if AVisibility = vsPublic then
+      AddPublicVariable.AssignFromTableEntry(Entry^);
+  end;
 end;
 
 function TThoriumDefaultCompiler.CompileFromStream(SourceStream: TStream;
