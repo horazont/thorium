@@ -37,7 +37,7 @@ uses
 
 {%REGION 'Versioning'}
 const
-  THORIUM_FILE_VERSION = 14;
+  THORIUM_FILE_VERSION = 15;
 
   THORIUM_MAJOR_VERSION : Word = 1;
   THORIUM_MINOR_VERSION : Word = 0;
@@ -414,11 +414,16 @@ type
     tiXCALL,
     tiXCALL_M,
     tiRET,
-    tiNOOP
+    tiNOOP,
+    tiEmbeddedHint
   );
   // ! REMEMBER ! to also increase the file format version by one, since the
   // instruction indicies have changed when you change something above.
 
+const
+  THORIUM_JMP_INSTRUCTIONS = [tiJMP, tiJE, tiJNE, tiJGT, tiJGE, tiJLT, tiJLE];
+
+type
   // Thorium instructions need to be packed to word-size to make them
   // equal-sized. The smallest chunk of data in an instruction is word-sized.
   {$PACKRECORDS 2}
@@ -1724,6 +1729,14 @@ type
     CodeLine: Cardinal;
   end;
 
+  TThoriumInstructionEmbeddedHint = record
+    Instruction: TThoriumInstructionCode;
+    Data: array [0..22] of Char;
+    NullByte: Byte;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
   TThoriumInstruction = record
     Instruction: TThoriumInstructionCode;
     Parameter1: Int64;
@@ -1782,7 +1795,8 @@ const
     'xcall',
     'xcall.m',
     'ret',
-    'noop'
+    'noop',
+    '.'
   );
 
   THORIUM_NOOPMARK_CALL = 1;

@@ -1713,6 +1713,18 @@ begin
   end;
 end;
 
+function EmbeddedHint(AStr: String): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionEmbeddedHint(Result) do
+  begin
+    Instruction := tiEmbeddedHint;
+    if Length(AStr) > Length(Data) then
+      raise EThoriumCompilerException.Create('Data is longer than allowed for embedded hint.');
+    Move(AStr[1], Data[0], Length(AStr));
+  end;
+end;
+
 procedure NewNonCastOperation(var Operation: TThoriumOperationDescription);
 begin
   Operation.ResultType := nil;

@@ -111,7 +111,7 @@ interface
 
 uses
   Classes, SysUtils, thorium_globals, thorium_utils, typinfo, Variants, md5,
-  contnrs, fgl
+  contnrs, fgl, Math
   {$ifdef HookSIGUSR1}
     , BaseUnix
   {$endif}
@@ -1125,7 +1125,7 @@ type
 
   (* A base class for any symbol published by a module. *)
   TThoriumPublicValue = class (TObject)
-    constructor Create(AModule: TThoriumModule); virtual;
+    constructor Create(AModule: TThoriumModule; AName: String); virtual;
   private
     FModule: TThoriumModule;
     FName: String;
@@ -1143,7 +1143,7 @@ type
      a temporary object by the compiler to store information about the current
      function. *)
   TThoriumFunction = class (TThoriumPublicValue, IThoriumType)
-    constructor Create(AModule: TThoriumModule); override;
+    constructor Create(AModule: TThoriumModule; AName: String); override;
     destructor Destroy; override;
   private
     FEntryPoint: Integer;
@@ -1180,7 +1180,7 @@ type
 
   (* A variable published by a module. *)
   TThoriumVariable = class (TThoriumPublicValue)
-    constructor Create(AModule: TThoriumModule); override;
+    constructor Create(AModule: TThoriumModule; AName: String); override;
   private
     FIsStatic: Boolean;
     FStackPosition: Integer;
@@ -1844,6 +1844,17 @@ type
   TThoriumModules = specialize TFPGList<TThoriumModule>;
   TThoriumLibraries = specialize TFPGList<TThoriumLibrary>;
 
+  TThoriumCompilerBreakContext = class (TObject)
+  private
+    FJumpList: TThoriumIntList;
+    FTableTarget: Integer;
+  public
+    property JumpList: TThoriumIntList read FJumpList write FJumpList;
+    property TableTarget: Integer read FTableTarget write FTableTarget;
+  end;
+  TThoriumCompilerBreakContextList = specialize TFPGList<TThoriumCompilerBreakContext>;
+  TThoriumIntListList = specialize TFPGList<TThoriumIntList>;
+
   { TThoriumCustomCompiler }
 
   TThoriumCustomCompiler = class (TObject)
@@ -1856,6 +1867,7 @@ type
     function IsRegisterInUse(AID: TThoriumRegisterID): Boolean;
     procedure SetRegisterInUse(AID: TThoriumRegisterID; AInUse: Boolean);
   protected
+    FBreakContexts: TThoriumCompilerBreakContextList;
     FCodeHook: Boolean;
     FCodeHook1: PThoriumInstructionArray;
     FCodeHook2: PThoriumInstructionArray;
@@ -1868,6 +1880,7 @@ type
     FLastError: String;
     FLibPropUsage: TFPList;
     FLibPropRelocations: TFPList;
+    FJumps: TThoriumIntList;
     FModule: TThoriumModule;
     FOptimizedInstructions: LongInt;
     FPublicFunctions: TThoriumFunctions;
@@ -1896,7 +1909,7 @@ type
     function AddHostTypeUsageToRelocate(const AType: TThoriumHostObjectType; const AOffset: ptruint): Integer;
     function AddHostFunctionUsage(const AFunc: TThoriumHostCallableBase): Integer;
     function AddHostFunctionUsageToRelocate(const AFunc: TThoriumHostCallableBase; const AOffset: ptruint): Integer;
-    function AddPublicVariable: TThoriumVariable;
+    function AddPublicVariable(AName: String): TThoriumVariable;
     function AppendCode(ACodeArray: TThoriumInstructionArray): Integer;
     function AppendCodeEx(const ASource: TThoriumInstructionArray; var ADest: TThoriumInstructionArray): Integer;
     function AppendCodeToOperation(const ASource: TThoriumInstructionArray; var AOperations: TThoriumOperationArray): Integer;
@@ -1906,11 +1919,14 @@ type
     procedure CompilerError(const Msg: String; X, Y: Integer); virtual;
     procedure ClaimRegister(const ARegID: TThoriumRegisterID);
     procedure DumpState; virtual;
+    procedure EmbedHint(const S: String);
+    procedure EmbedMetadata(const S: String);
     function FindTableEntry(const Ident: String; out Entry: TThoriumTableEntry;
       out Module: TThoriumModule; RaiseError: Boolean = True; AllowFar: Boolean = True): Boolean; inline;
     procedure FindTableEntries(const Ident: String;
       var Entries: TThoriumTableEntryResults);
     procedure ForceNewCustomOperation(var OperationArray: TThoriumOperationArray);
+    function GenBreak: Integer;
     function GenCode(AInstruction: TThoriumInstruction): Integer; virtual; abstract;
     function GenCode(AInstruction: TThoriumInstruction; ACodeLine: Cardinal): Integer;
     function GenCodeEx(var TargetArray: TThoriumInstructionArray;
@@ -1925,6 +1941,7 @@ type
       const ATargetRI: Word = THORIUM_REGISTER_INVALID;
       const AValue1RI: Word = THORIUM_REGISTER_INVALID;
       const AValue2RI: Word = THORIUM_REGISTER_INVALID): Integer;
+    function GetBreakContext: TThoriumCompilerBreakContext;
     function GetCurrentTableStackPos: Integer;
     function GetFreeRegister(Kind: TThoriumRegisterKind; out RegisterID: TThoriumRegisterID; ThrowError: Boolean = True): Boolean;
     function GetHighestRegisterInUse: TThoriumRegisterID;
@@ -1938,6 +1955,8 @@ type
     procedure LoadLibrary(const LibName: String);
     procedure LoadModule(const ModName: String);
     procedure OptimizeCode;
+    function PopBreakContext: TThoriumIntList;
+    procedure PushBreakContext;
     procedure ReleaseRegister(ID: TThoriumRegisterID);
     procedure ResetState;
     procedure RestoreTable(var Offset: Integer; GenerateCode: Boolean = True);
@@ -2000,7 +2019,6 @@ type
     function AddHostTypeUsageToRelocate(const AType: TThoriumHostObjectType; const AOffset: ptruint): Integer;
     function AddHostFunctionUsage(const AFunc: TThoriumHostCallableBase): Integer;
     function AddHostFunctionUsageToRelocate(const AFunc: TThoriumHostCallableBase; const AOffset: ptruint): Integer;
-    function AddPublicVariable: TThoriumVariable;
     procedure ClearAll;
     function GetLibraryString(Index: Integer): String;
     function GetLibraryStringCount: Integer;
@@ -3861,6 +3879,8 @@ begin
     tiRET:;
 
     tiNOOP: with TThoriumInstructionNOOP(AInstruction) do Result := Result + Format('0x%.16x 0x%.16x 0x%.16x', [Parameter1, Parameter2, Parameter3], THORIUM_NUMBER_FORMAT);
+
+    tiEmbeddedHint: with TThoriumInstructionEmbeddedHint(AInstruction) do Result := '.'+StrPas(@Data[0]);
   else
     Result := 'error';
   end;
@@ -5812,11 +5832,11 @@ end;
 
 { TThoriumPublicValue }
 
-constructor TThoriumPublicValue.Create(AModule: TThoriumModule);
+constructor TThoriumPublicValue.Create(AModule: TThoriumModule; AName: String);
 begin
   inherited Create;
   FModule := AModule;
-  FName := '';
+  FName := AName;
 end;
 
 procedure TThoriumPublicValue.LoadFromStream(Stream: TStream);
@@ -5831,9 +5851,9 @@ end;
 
 { TThoriumFunction }
 
-constructor TThoriumFunction.Create(AModule: TThoriumModule);
+constructor TThoriumFunction.Create(AModule: TThoriumModule; AName: String);
 begin
-  inherited Create(AModule);
+  inherited Create(AModule, AName);
   FEntryPoint := -1;
   //FEventCapsules := TFPObjectHashTable.CreateWith(50, @RSHash);
   FNestingLevel := -1;
@@ -5892,8 +5912,7 @@ end;
 
 function TThoriumFunction.Duplicate: TThoriumFunction;
 begin
-  Result := TThoriumFunction.Create(FModule);
-  Result.FName := FName;
+  Result := TThoriumFunction.Create(FModule, FName);
   Result.FEntryPoint := FEntryPoint;
   Result.FNestingLevel := FNestingLevel;
   Result.FPrototyped := False;
@@ -5959,9 +5978,9 @@ end;
 
 { TThoriumVariable }
 
-constructor TThoriumVariable.Create(AModule: TThoriumModule);
+constructor TThoriumVariable.Create(AModule: TThoriumModule; AName: String);
 begin
-  inherited Create(AModule);
+  inherited Create(AModule, AName);
   FIsStatic := False;
   FStackPosition := 0;
   FillByte(FTypeSpec, SizeOf(TThoriumType), 0);
@@ -8273,13 +8292,14 @@ end;
 
 procedure TThoriumInstructions.SetPosition(NewPosition: TThoriumInstructionAddress);
 // Sets the position of the next instruction. Is useful for switch-case-state-
-// ments. When moving around, make shure that any jump commands are corrected
+// ments. When moving around, make sure that any jump commands are corrected
 // accordingly
 var
   I, List: Integer;
   CurrList: TThoriumIntList;
   Instr: PThoriumInstruction;
 begin
+  WriteLn('NewPosition > FCount: ', NewPosition, ' > ', FCount, ' => ', NewPosition > FCount);
   if NewPosition > FCount then
     Exit;
   if FPosition <> FCount then
@@ -8288,7 +8308,7 @@ begin
     Inc(Instr, 0);
     for I := 0 to FCount - 1 do
     begin
-      if Instr^.Instruction in [tiJMP, tiJE, tiJNE, tiJLT, tiJGT, tiJLE, tiJGE] then
+      if Instr^.Instruction in THORIUM_JMP_INSTRUCTIONS then
       begin
         if TThoriumInstructionJMP(Instr^).NewAddress >= FSetPosition then
           TThoriumInstructionJMP(Instr^).NewAddress := TThoriumInstructionJMP(Instr^).NewAddress + FInserted;
@@ -8306,8 +8326,10 @@ begin
       end;
     end;
     for I := 0 to FAddressPointers.Count - 1 do
+    begin
       if PThoriumInstructionAddress(FAddressPointers[I])^ >= FSetPosition then
         PThoriumInstructionAddress(FAddressPointers[I])^ += FInserted;
+    end;
     FInserted := 0;
   end;
   FPosition := NewPosition;
@@ -8595,10 +8617,16 @@ begin
   SigCurrCompiler := Self;
   {$endif}
   FStoredTypes := TInterfaceList.Create;
+  FBreakContexts := TThoriumCompilerBreakContextList.Create;
+  FJumps := TThoriumIntList.Create;
+  FInstructions.RegisterAddressList(FJumps);
 end;
 
 destructor TThoriumCustomCompiler.Destroy;
 begin
+  FInstructions.UnRegisterAddressList(FJumps);
+  FJumps.Free;
+  FBreakContexts.Free;
   FTableSizes.Free;
   FTable.Free;
   FStoredTypes.Clear;
@@ -8728,9 +8756,9 @@ begin
   Result := FHostFuncRelocations.Add(Info);
 end;
 
-function TThoriumCustomCompiler.AddPublicVariable: TThoriumVariable;
+function TThoriumCustomCompiler.AddPublicVariable(AName: String): TThoriumVariable;
 begin
-  Result := TThoriumVariable.Create(FModule);
+  Result := TThoriumVariable.Create(FModule, AName);
   FPublicVariables.Add(Result);
 end;
 
@@ -8845,6 +8873,43 @@ end;
 procedure TThoriumCustomCompiler.DumpState;
 begin
 
+end;
+
+procedure TThoriumCustomCompiler.EmbedHint(const S: String);
+begin
+  try
+    GenCode(EmbeddedHint(S));
+  except
+    on E: EThoriumCompilerException do
+    begin
+      CompilerError(E.Message);
+      Exit;
+    end
+    else
+      raise;
+  end;
+end;
+
+procedure TThoriumCustomCompiler.EmbedMetadata(const S: String);
+var
+  BlockCount: Integer;
+  Block: String;
+  I: Integer;
+  Remain: Integer;
+begin
+  SetLength(Block, 20);
+  DivMod(Length(S), 20, BlockCount, Remain);
+  for I := 0 to BlockCount - 1 do
+  begin
+    Move(S[1 + I * 20], Block[1], 20);
+    EmbedHint('$ '+Block);
+  end;
+  if Remain > 0 then
+  begin
+    FillByte(Block[1], 20, 0);
+    Move(S[1 + BlockCount * 20], Block[1], Remain);
+    EmbedHint('$ '+Block);
+  end;
 end;
 
 function TThoriumCustomCompiler.FindTableEntry(const Ident: String; out
@@ -9189,6 +9254,42 @@ begin
   end;
 end;
 
+function TThoriumCustomCompiler.GenBreak: Integer;
+var
+  StackCount, I: Integer;
+  Ctx: TThoriumCompilerBreakContext;
+  Ident: TThoriumTableEntry;
+begin
+  Ctx := GetBreakContext;
+  if Ctx = nil then
+  begin
+    CompilerError('Nothing to break here.');
+    Exit(THORIUM_JMP_INVALID);
+  end;
+
+  StackCount := 0;
+  for I := FTable.Count - 1 downto Ctx.FTableTarget + 1 do
+  begin
+    FTable.ReadIdentifier(I, Ident);
+    case Ident._Type of
+      etVariable, etStatic:
+      begin
+        Inc(StackCount);
+      end;
+
+      etRegisterVariable:
+      begin
+        if Ident.TypeSpec.NeedsClear then
+          GenCode(clr(Ident.Offset));
+      end;
+    end;
+  end;
+  if StackCount > 0 then
+    GenCode(pop_s(StackCount));
+  Result := GenCode(jmp(0));
+  Ctx.JumpList.AddEntry(Result);
+end;
+
 function TThoriumCustomCompiler.GenCode(AInstruction: TThoriumInstruction; ACodeLine: Cardinal): Integer;
 begin
   if FCodeHook then
@@ -9208,6 +9309,8 @@ begin
   begin
     AInstruction.CodeLine := ACodeLine;
     Result := FInstructions.AppendCode(AInstruction);
+    if AInstruction.Instruction in THORIUM_JMP_INSTRUCTIONS then
+      FJumps.AddEntry(Result);
   end;
 end;
 
@@ -9290,6 +9393,14 @@ begin
   Result := GenCode(TThoriumInstruction(Instruction.Instruction));
   ReleaseRegister(THORIUM_REGISTER_C1);
   ReleaseRegister(THORIUM_REGISTER_C2);
+end;
+
+function TThoriumCustomCompiler.GetBreakContext: TThoriumCompilerBreakContext;
+begin
+  if FBreakContexts.Count = 0 then
+    Exit(nil)
+  else
+    Exit(FBreakContexts[FBreakContexts.Count - 1]);
 end;
 
 function TThoriumCustomCompiler.GetCurrentTableStackPos: Integer;
@@ -9382,7 +9493,7 @@ begin
   if FCodeHook then
     Result := Length(FCodeHook1^)
   else
-    Result := FInstructions.Count;
+    Result := FInstructions.Position;
 end;
 
 function TThoriumCustomCompiler.GetTableEntriesTo(StackPos: Integer): Integer;
@@ -10184,6 +10295,37 @@ begin
   end;
 end;
 
+function TThoriumCustomCompiler.PopBreakContext: TThoriumIntList;
+var
+  I: Integer;
+  Ctx: TThoriumCompilerBreakContext;
+begin
+  I := FBreakContexts.Count;
+  if I = 0 then
+  begin
+    CompilerError('Break context stack underflow.');
+    Exit(nil);
+  end
+  else
+  begin
+    Dec(I);
+    Ctx := FBreakContexts[I];
+    Result := Ctx.JumpList;
+    Ctx.Free;
+    FBreakContexts.Delete(I);
+  end;
+end;
+
+procedure TThoriumCustomCompiler.PushBreakContext;
+var
+  Context: TThoriumCompilerBreakContext;
+begin
+  Context := TThoriumCompilerBreakContext.Create;
+  Context.JumpList := TThoriumIntList.Create;
+  Context.TableTarget := FTable.Count - 1;
+  FBreakContexts.Add(Context);
+end;
+
 procedure TThoriumCustomCompiler.ReleaseRegister(ID: TThoriumRegisterID);
 begin
   FRegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] := FRegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] xor (FRegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (ID mod THORIUM_REGISTER_MASK_BLOCK_SIZE)));
@@ -10399,12 +10541,6 @@ begin
   Info^.ObjectIndex := AddHostFunctionUsage(AFunc);
   Info^.ByteOffset := AOffset;
   Result := FHostFuncRelocations.Add(Info);
-end;
-
-function TThoriumModule.AddPublicVariable: TThoriumVariable;
-begin
-  Result := TThoriumVariable.Create(Self);
-  FPublicVariables.Add(Result);
 end;
 
 procedure TThoriumModule.ClearAll;

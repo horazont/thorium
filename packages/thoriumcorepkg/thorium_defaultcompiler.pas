@@ -228,6 +228,8 @@ type
   public
     constructor Create(ATarget: TThoriumModule); override;
   private
+    FBreakList: TThoriumJumpList;
+    FBreakOffsetTarget: Integer;
     FCurrentScope: Integer;
     FCurrentStr: String;
     FCurrentSym: TThoriumDefaultSymbol;
@@ -358,7 +360,7 @@ end;
 constructor TThoriumDefaultScanner.Create;
 begin
   FPosition := 0;
-  FLine := 1;
+  FLine := 0;
   FX := 0;
   FLastChar := #10;
 end;
@@ -726,6 +728,7 @@ var
   Entry: PThoriumTableEntry;
   Creation: TThoriumCreateInstructionDescription;
 begin
+  EmbedHint('const');
   ExpectSymbol([tsAssign]);
   Proceed;
   SimpleExpression(THORIUM_REGISTER_INVALID, State, @Value, ATypeIdent.FinalType);
@@ -743,7 +746,7 @@ begin
   Entry := FTable.AddConstantIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType, Value);
   Inc(Offset);
   if AVisibility = vsPublic then
-    AddPublicVariable.AssignFromTableEntry(Entry^);
+    AddPublicVariable(AValueIdent.FullStr).AssignFromTableEntry(Entry^);
   ThoriumFreeValue(Value);
 end;
 
@@ -753,6 +756,7 @@ var
   TypeIdentifier, ValueIdentifier: TThoriumQualifiedIdentifier;
   DeclarationHandler: TThoriumDeclarationHandler;
 begin
+  WriteLn('declaration with: ', Ord(AVisibility));
   TypeIdentifier := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikType]);
   ValueIdentifier := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared, ikPrototypedFunction]);
 
@@ -1010,7 +1014,7 @@ begin
   if AValueIdent.Kind = ikPrototypedFunction then
     CompilerError('Function prototyping is not supported yet.');
 
-  Func := TThoriumFunction.Create(FModule);
+  Func := TThoriumFunction.Create(FModule, AValueIdent.FullStr);
   FCurrentFunc := Func;
   FCurrentReturnType := ATypeIdent.FinalType;
   Func.Prototype.ReturnType := FCurrentReturnType;
@@ -1051,9 +1055,11 @@ begin
   FCurrentScope := THORIUM_STACK_SCOPE_LOCAL;
   FCurrentFunctionTableStack := FTableSizes.Count;
 
+  EmbedHint('func:start');
   SaveTable;
   Statement(LocalOffset);
   FCurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+  EmbedHint('func:end');
 
   RestoreTable(LocalOffset, True);
   RestoreTable(LocalOffset, False);
@@ -1304,7 +1310,8 @@ begin
   Offset := 0;
   Visibility := vsPrivate;
   NeedIdentifier := False;
-  while Proceed([tsLoadLibrary, tsLoadModule, tsIdentifier, tsPublic, tsStatic], False) do
+  Proceed;
+  while ExpectSymbol([tsLoadLibrary, tsLoadModule, tsIdentifier, tsPublic, tsPrivate, tsStatic], False) do
   begin
     case FCurrentSym of
       tsLoadModule:
@@ -1398,6 +1405,7 @@ begin
 
   while FCurrentSym in THORIUM_DEFAULT_RELATIONAL_OPERATOR do
   begin
+    GetFreeRegister(trEXP, RegID2);
     Sym := FCurrentSym;
     Proceed;
 
@@ -1448,6 +1456,8 @@ begin
     if not (Result.GetInstance is TThoriumTypeInteger) then
       Result := TThoriumTypeInteger.Create;
     State1 := vsDynamic;
+
+    ReleaseRegister(RegID2);
   end;
 
   if (State1 = vsStatic) then
@@ -1462,7 +1472,6 @@ begin
       AStaticValue^ := Value1;
   end;
   AState := State1;
-  ReleaseRegister(RegID2);
 end;
 
 function TThoriumDefaultCompiler.SimpleExpression(ATargetRegister: Word;
@@ -2065,6 +2074,21 @@ begin
     begin
       NeedSemicolon := True;
     end;
+    tsSwitch:
+    begin
+      if not (tskSwitch in AllowedStatements) then
+        CompilerError('Switch statement not allowed here.');
+      StatementSwitch(Offset);
+      NeedSemicolon := False;
+    end;
+    tsBreak:
+    begin
+      if not (tskBreak in AllowedStatements) then
+        CompilerError('Break statement is not allowed here.');
+      GenBreak;
+      Proceed;
+      NeedSemicolon := True;
+    end;
   else
     ExpectSymbol([tsUnknown]);
   end;
@@ -2077,22 +2101,31 @@ end;
 
 procedure TThoriumDefaultCompiler.StatementDoWhile(var Offset: Integer);
 var
-  PreStatement: TThoriumInstructionAddress;
-  TrueJumps, FalseJumps: TThoriumIntList;
+  PreStatement, PostLoop: TThoriumInstructionAddress;
+  TrueJumps, FalseJumps, BreakJumps: TThoriumIntList;
 begin
+  BreakJumps := nil;
   TrueJumps := TThoriumIntList.Create;
   FalseJumps := TThoriumIntList.Create;
   try
     PreStatement := GetNextInstructionAddress;
 
+    EmbedHint('do-while');
     Proceed;
+    PushBreakContext;
     Statement(Offset);
+    BreakJumps := PopBreakContext;
+    EmbedHint('do-while:while');
+
     ExpectSymbol([tsWhile]);
     Proceed;
     JumpingLogicalExpression(TrueJumps, FalseJumps);
     SetupJumps(TrueJumps, PreStatement);
-    SetupJumps(FalseJumps, GetNextInstructionAddress);
+    PostLoop := GetNextInstructionAddress;
+    SetupJumps(FalseJumps, PostLoop);
+    SetupJumps(BreakJumps, PostLoop);
   finally
+    BreakJumps.Free;
     FalseJumps.Free;
     TrueJumps.Free;
   end;
@@ -2107,8 +2140,8 @@ var
   OldHook1, OldHook2: PThoriumInstructionArray;
   AfterLoopCode: TThoriumInstructionArray;
 
-  PreLoop: TThoriumInstructionAddress;
-  TrueJumps, FalseJumps: TThoriumIntList;
+  PreLoop, PostLoop: TThoriumInstructionAddress;
+  TrueJumps, FalseJumps, BreakJumps: TThoriumIntList;
 begin
   Proceed;
   if FCurrentSym = tsOpenBracket then
@@ -2121,7 +2154,9 @@ begin
   Ident := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared, ikNoFar]);
 
   SaveTable;
+  PushBreakContext;
   GetFreeRegister(trEXP, RegID);
+  EmbedHint('for:init');
   VariableDeclaration(vsPrivate, TypeIdent, Ident, Offset, RegID);
 
   if not ExpectSymbol([tsSemicolon]) then
@@ -2130,7 +2165,9 @@ begin
 
   TrueJumps := TThoriumIntList.Create;
   FalseJumps := TThoriumIntList.Create;
+  BreakJumps := nil;
   try
+    EmbedHint('for:cond');
     PreLoop := GetNextInstructionAddress;
     JumpingLogicalExpression(TrueJumps, FalseJumps);
 
@@ -2146,6 +2183,7 @@ begin
       FCodeHook1 := @AfterLoopCode;
       FCodeHook2 := nil;
 
+      EmbedHint('for:loopcmd');
       Statement(Offset, [tskAssignment], True);
     finally
       FCodeHook := OldHook;
@@ -2158,18 +2196,24 @@ begin
 
     SetupJumps(TrueJumps, GetNextInstructionAddress);
 
+    EmbedHint('for:body');
     Statement(Offset);
+    BreakJumps := PopBreakContext;
 
     AppendCode(AfterLoopCode);
 
     GenCode(jmp(PreLoop));
 
-    SetupJumps(FalseJumps, GetNextInstructionAddress);
+    PostLoop := GetNextInstructionAddress;
+    SetupJumps(FalseJumps, PostLoop);
+    SetupJumps(BreakJumps, PostLoop);
 
     RestoreTable(Offset);
 
     ReleaseRegister(RegID);
+    EmbedHint('for:end');
   finally
+    BreakJumps.Free;
     FalseJumps.Free;
     TrueJumps.Free;
   end;
@@ -2178,7 +2222,7 @@ end;
 procedure TThoriumDefaultCompiler.StatementIdentifier(var Offset: Integer;
   const AllowedStatements: TThoriumDefaultStatementKinds);
 var
-  Ident1: TThoriumQualifiedIdentifier;
+  Ident1, Ident2: TThoriumQualifiedIdentifier;
   ExpressionType: IThoriumType;
   ExpressionState: TThoriumValueState;
   RegID1, RegID2: TThoriumRegisterID;
@@ -2190,11 +2234,15 @@ begin
   case Ident1.Kind of
     ikType:
     begin
-      CompilerError('Local declarations are still to-do.');
-    end;
-    ikStatic:
-    begin
-      CompilerError('This cannot stand on the left side of an expression.');
+      EmbedHint('local');
+      // Local declaration
+      // [Ident1] [Ident2] ( = expression)? (, [Ident2] ( = expression)?)*;
+      repeat
+        Ident2 := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikNoFar, ikUndeclared]);
+        ExpectSymbol([tsAssign, tsSemicolon, tsComma]);
+        VariableDeclaration(vsPrivate, Ident1, Ident2, Offset);
+        ExpectSymbol([tsSemicolon, tsComma]);
+      until FCurrentSym <> tsComma;
     end;
   else
     // So see what we can do with it.
@@ -2202,6 +2250,7 @@ begin
     case FCurrentSym of
       tsAssign:
       begin
+        EmbedHint('assignment');
         // Handle an assignment.
         // [Ident1] = [RelationalExpression];
         if not (tskAssignment in AllowedStatements) then
@@ -2240,6 +2289,7 @@ begin
       end;
       tsSemicolon:
       begin
+        EmbedHint('call|null');
         // Get the value and delete it after that. (null statement)
         // [Ident1];
         if not (tskNullStatement in AllowedStatements) then
@@ -2262,9 +2312,12 @@ begin
   FalseJumps := TThoriumIntList.Create;
   JumpsOut := TThoriumIntList.Create;
   try
+    EmbedHint('if:cond');
     JumpingLogicalExpression(TrueJumps, FalseJumps);
     SetupJumps(TrueJumps, GetNextInstructionAddress);
-    Statement(Offset, THORIUM_DEFAULT_ALL_STATEMENTS);
+
+    EmbedHint('if:body');
+    Statement(Offset);
     JumpsOut.AddEntry(GenCode(jmp(THORIUM_JMP_INVALID)));
     SetupJumps(FalseJumps, GetNextInstructionAddress);
 
@@ -2273,8 +2326,12 @@ begin
       Proceed;
       TrueJumps.Clear;
       FalseJumps.Clear;
+
+      EmbedHint('if:elif:cond');
       JumpingLogicalExpression(TrueJumps, FalseJumps);
       SetupJumps(TrueJumps, GetNextInstructionAddress);
+
+      EmbedHint('if:elif:body');
       Statement(Offset, THORIUM_DEFAULT_ALL_STATEMENTS);
       JumpsOut.AddEntry(GenCode(jmp(THORIUM_JMP_INVALID)));
       SetupJumps(FalseJumps, GetNextInstructionAddress);
@@ -2282,6 +2339,7 @@ begin
 
     if FCurrentSym = tsElse then
     begin
+      EmbedHint('if:else');
       Proceed;
       Statement(Offset, THORIUM_DEFAULT_ALL_STATEMENTS);
     end;
@@ -2295,28 +2353,156 @@ begin
 end;
 
 procedure TThoriumDefaultCompiler.StatementSwitch(var Offset: Integer);
+var
+  SwitchRegID, CaseRegID: TThoriumRegisterID;
+  SwitchType, CaseType: IThoriumType;
+  SwitchState, CaseState: TThoriumValueState;
+  CaseValue: TThoriumValue;
+  Operation: TThoriumOperationDescription;
+  OldHook: Boolean;
+  OldHook1, OldHook2: PThoriumInstructionArray;
+  ComparisionBuffer: TThoriumInstructionArray;
+  HasDefault: Boolean;
+  PreStatements, PostStatements, DefaultPos: TThoriumInstructionAddress;
+  BreakJumps: TThoriumIntList;
 begin
+  if FCodeHook then
+    CompilerError('Cannot create a switch statement here.');
 
+  GetFreeRegister(trEXP, SwitchRegID);
+  GetFreeRegister(trEXP, CaseRegID);
+
+  SaveTable;
+
+  ExpectSymbol([tsSwitch]);
+  Proceed;
+
+  EmbedHint('switch:expression');
+  SwitchType := RelationalExpression(SwitchRegID, SwitchState);
+
+  ExpectSymbol([tsOpenCurlyBracket]);
+  Proceed;
+
+  PreStatements := GetNextInstructionAddress;
+
+  PushBreakContext;
+
+  while FCurrentSym = tsCase do
+  begin
+    Proceed;
+    OldHook := FCodeHook;
+    OldHook1 := FCodeHook1;
+    OldHook2 := FCodeHook2;
+    try
+      FCodeHook := True;
+      FCodeHook1 := @ComparisionBuffer;
+      FCodeHook2 := nil;
+
+      EmbedHint('switch:case:cmp');
+      CaseType := RelationalExpression(CaseRegID, CaseState, @CaseValue, SwitchType);
+      if CaseState <> vsStatic then
+        CompilerError('Illegal value for case statement (must be static).');
+
+      Operation.Operation := opCmpEqual;
+      if not SwitchType.CanPerformOperation(Operation, CaseType) then
+        CompilerError('Cannot compare '''+SwitchType.Name+''' and '''+CaseType.Name+''' for equality.');
+
+      PlaceStatic(CaseValue, CaseRegID);
+
+      GenOperation(Operation, THORIUM_REGISTER_INVALID, SwitchRegID, CaseRegID);
+      // Force the usage of FInstructions.Position
+      GenCode(je(FInstructions.Position));
+
+      if CaseType.NeedsClear then
+      begin
+        GenCode(clr(CaseRegID));
+        ThoriumFreeValue(CaseValue);
+      end;
+
+    finally
+      FCodeHook2 := OldHook2;
+      FCodeHook1 := OldHook1;
+      FCodeHook := OldHook;
+    end;
+
+    ExpectSymbol([tsColon]);
+    Proceed;
+
+    EmbedHint('switch:case:body');
+    while not (FCurrentSym in [tsCase, tsCloseCurlyBracket, tsDefault]) do
+      Statement(Offset);
+  end;
+
+  if FCurrentSym = tsDefault then
+  begin
+    HasDefault := True;
+    DefaultPos := GetNextInstructionAddress;
+    Proceed([tsColon]);
+    Proceed;
+    EmbedHint('switch:default');
+    while not (FCurrentSym in [tsCloseCurlyBracket]) do
+      Statement(Offset);
+  end
+  else
+    HasDefault := False;
+
+  ExpectSymbol([tsCloseCurlyBracket]);
+  Proceed;
+
+  PostStatements := GetNextInstructionAddress;
+  FInstructions.AddInstructionPointer(@PostStatements);
+
+  FInstructions.Position := PreStatements;
+  AppendCode(ComparisionBuffer);
+  if HasDefault then
+    GenCode(jmp(DefaultPos))
+  else
+    GenCode(jmp(PostStatements));
+  FInstructions.Position := FInstructions.Count;
+  FInstructions.RemoveInstructionPointer(@PostStatements);
+
+  BreakJumps := PopBreakContext;
+  SetupJumps(BreakJumps, GetNextInstructionAddress);
+
+  if (SwitchState = vsDynamic) and (SwitchType.NeedsClear) then
+    GenCode(clr(SwitchRegID));
+
+  EmbedHint('switch:end');
+
+  RestoreTable(Offset);
+
+  ReleaseRegister(CaseRegID);
+  ReleaseRegister(SwitchRegID);
 end;
 
 procedure TThoriumDefaultCompiler.StatementWhile(var Offset: Integer);
 var
   PreCondition, PostStatements: TThoriumInstructionAddress;
-  TrueJumps, FalseJumps: TThoriumIntList;
+  TrueJumps, FalseJumps, BreakJumps: TThoriumIntList;
 begin
+  BreakJumps := nil;
   TrueJumps := TThoriumIntList.Create;
   FalseJumps := TThoriumIntList.Create;
   try
     PreCondition := GetNextInstructionAddress;
     Proceed;
+    EmbedHint('while');
     JumpingLogicalExpression(TrueJumps, FalseJumps);
     SetupJumps(TrueJumps, GetNextInstructionAddress);
 
+    EmbedHint('while:body');
+    PushBreakContext;
     Statement(Offset);
+    BreakJumps := PopBreakContext;
+
+    EmbedHint('while:end');
+
     GenCode(jmp(PreCondition));
     PostStatements := GetNextInstructionAddress;
     SetupJumps(FalseJumps, PostStatements);
+    SetupJumps(BreakJumps, PostStatements);
   finally
+    BreakJumps.Free;
     FalseJumps.Free;
     TrueJumps.Free;
   end;
@@ -2410,6 +2596,7 @@ var
   Reg: TThoriumRegisterID;
   Creation: TThoriumCreateInstructionDescription;
 begin
+  EmbedHint('var');
   if FCurrentSym = tsAssign then
   begin
     Proceed;
@@ -2447,7 +2634,7 @@ begin
     Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType);
     Inc(Offset);
     if AVisibility = vsPublic then
-      AddPublicVariable.AssignFromTableEntry(Entry^);
+      AddPublicVariable(AValueIdent.FullStr).AssignFromTableEntry(Entry^);
   end;
 end;
 
@@ -2458,6 +2645,8 @@ begin
   FScanner := TThoriumDefaultScanner.Create(SourceStream);
   try
     try
+      // Embed some compiler metadata
+      EmbedMetadata('compiler=th234.sotecware.net');
       // Attempt to compile the module
       Module;
     finally
