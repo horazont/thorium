@@ -8152,6 +8152,7 @@ begin
   Result^._Type := etCallable;
   Result^.Offset := 0;
   Result^.TypeSpec := Func.FPrototypeIntf;
+  Result^.Ptr := Func;
   FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 

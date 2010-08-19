@@ -721,6 +721,9 @@ end;
 procedure TThoriumDefaultCompiler.ConstantDeclaration(
   const AVisibility: TThoriumVisibilityLevel; ATypeIdent,
   AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
+(*
+  @parserContext: Expects tsAssign and after that a valid static expression.
+*)
 var
   State: TThoriumValueState;
   Value: TThoriumValue;
@@ -731,22 +734,34 @@ begin
   EmbedHint('const');
   ExpectSymbol([tsAssign]);
   Proceed;
+
+  // Parse initial value
   SimpleExpression(THORIUM_REGISTER_INVALID, State, @Value, ATypeIdent.FinalType);
+  // Make sure it's static - statics cannot be initialized with dynamic values
   if State <> vsStatic then
     CompilerError('Static value needed.');
+
+  // Special handling for strings, as they use the library
   if Value.RTTI is TThoriumTypeString then
     InitialData.Int := AddLibraryString(Value.Str^)
   else
     InitialData.Int := Value.Int;
-  if not ATypeIdent.FinalType.CanCreate(Value, False, Creation) then
-    CompilerError('Cannot create such a value.');
-  GenCreation(Creation);
-  ExpectSymbol([tsSemicolon, tsComma]);
 
+  // Fetch the creation instruction
+  if not ATypeIdent.FinalType.CanCreate(Value, False, Creation) then
+    CompilerError('Cannot create a value of '''+ATypeIdent.FinalType.Name+'''.');
+  GenCreation(Creation);
+
+  // Add an entry to the identifier table
   Entry := FTable.AddConstantIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType, Value);
+  // Increase the table offset
   Inc(Offset);
+
+  // If its public, also add a copy to the public table
   if AVisibility = vsPublic then
     AddPublicVariable(AValueIdent.FullStr).AssignFromTableEntry(Entry^);
+
+  // Free the initial value afterwards.
   ThoriumFreeValue(Value);
 end;
 
@@ -756,40 +771,51 @@ var
   TypeIdentifier, ValueIdentifier: TThoriumQualifiedIdentifier;
   DeclarationHandler: TThoriumDeclarationHandler;
 begin
-  WriteLn('declaration with: ', Ord(AVisibility));
+  // Parse the two identifiers neccessary for a valid declaration
   TypeIdentifier := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikType]);
   ValueIdentifier := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared, ikPrototypedFunction]);
 
+  // Check whether its a prototyped function
   if ValueIdentifier.Kind = ikPrototypedFunction then
   begin
+    // Just to annoy the user, we could also just ignore it ;)
     if AStatic then
       CompilerError('Functions cannot be static.');
     Proceed([tsOpenBracket]);
+    // Parse the function declaration
     FunctionDeclaration(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
   end
   else
   begin
     ExpectSymbol([tsOpenBracket, tsSemicolon, tsAssign, tsComma]);
+    // Check whether it is a function declaration
     if FCurrentSym = tsOpenBracket then
     begin
+      // Again, just annoy the user
       if AStatic then
         CompilerError('Functions cannot be static.');
+      // Parse the function declaration
       FunctionDeclaration(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
     end
     else
     begin
+      // Use the appropriate handler for constants / variables
       if AStatic then
         DeclarationHandler := @ConstantDeclaration
       else
         DeclarationHandler := @VariableDeclarationCBC;
 
+      // Now parse the declarations
       repeat
         if AStatic then
           ExpectSymbol([tsAssign])
         else
           ExpectSymbol([tsSemicolon, tsComma, tsAssign]);
+        // Call the handler to parse the declaration
         DeclarationHandler(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
+        // Ensure validity
         ExpectSymbol([tsComma, tsSemicolon]);
+        // If another will follow, we need to parse another value.
         if FCurrentSym = tsComma then
         begin
           Proceed([tsIdentifier]);
@@ -816,7 +842,7 @@ var
   Identifier: TThoriumQualifiedIdentifier;
 begin
   case FCurrentSym of
-    tsMinus:
+    tsMinus: // Negate the value
     begin
       GetFreeRegister(trEXP, Reg);
       try
@@ -839,26 +865,34 @@ begin
         ReleaseRegister(Reg);
       end;
     end;
-    tsPlus:
+    tsPlus: // Skip
     begin
       Proceed;
       // Just ignore it
       Exit(Factor(ATargetRegister, AState, AStaticValue, ATypeHint));
     end;
-    tsIntegerValue:
+    tsIntegerValue: // Return that value
     begin
+      // Read the value to an initial dataset
       InitialData.Int := StrToInt64(FCurrentStr);
+      // Create the type
+      { TODO : Avoid explicit type usage. }
       Result := TThoriumTypeInteger.Create;
+      // Get the creation instruction
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create integer value.');
+      // But return it statically
       AState := vsStatic;
       AStaticValue := Result.DoCreate(InitialData);
+      // Make sure the type is not freed prematurely
       StoreType(Result);
       Proceed;
     end;
     tsFloatValue:
     begin
+      // See tsIntegerValue for details
       InitialData.Flt := StrToFloat(FCurrentStr, THORIUM_NUMBER_FORMAT);
+      { TODO : Avoid explicit type usage. }
       Result := TThoriumTypeFloat.Create;
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create float value.');
@@ -869,10 +903,12 @@ begin
     end;
     tsStringValue:
     begin
+      // Special handling for string as it uses the string library.
       if FCurrentStr <> '' then
         InitialData.Int := AddLibraryString(FCurrentStr)
       else
         InitialData.Int := -1;
+      { TODO : Avoid explicit type usage. }
       Result := TThoriumTypeString.Create;
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create string value.');
@@ -885,31 +921,41 @@ begin
     end;
     tsIdentifier:
     begin
+      // Resolve an identifier and return it appropriately
       Identifier := SolveIdentifier(ATargetRegister, [ikComplex, ikLibraryProperty, ikPrototypedFunction, ikStatic, ikVariable]);
+      // Use the state and type of the identifier
       AState := Identifier.State;
       Result := Identifier.FinalType;
       if (AState = vsStatic) then
+      begin
+        // Adapt static value
         AStaticValue := Identifier.Value
+      end
       else
       begin
         if AState = vsStatic then
           AState := vsAccessable;
+        // Append the code to read that identifier
         AppendOperations(Identifier.GetCode);
       end;
     end;
     tsOpenBracket:
     begin
       Proceed;
+      { TODO : Handle typecasting, if any. }
+      (*
       if FCurrentSym = tsIdentifier then
       begin
         if FindFilteredTableEntry(FCurrentStr, [ikType], TableEntry) then
         begin
+
           // Type name. We should probably do cast handling here.
           // Problems:
           // * Make sure that the following symbol is a closing bracket
           // * Rewind to previous symbol if not.
         end;
       end;
+      *)
       // Pass through
       Result := RelationalExpression(ATargetRegister, AState, @AStaticValue, ATypeHint);
       ExpectSymbol([tsCloseBracket]);
@@ -928,35 +974,43 @@ var
   Entries: TThoriumTableEntryResultList;
   I: Integer;
 begin
+  // Initialize a result list
   Entries := TThoriumTableEntryResultList.Create;
   try
+    // Fetch the table entries
     FindTableEntries(Ident, EntriesHandle);
+    // Store pointers to them in the result list for easier handling
     for I := 0 to High(EntriesHandle) do
       Entries.Add(@EntriesHandle[I]);
 
+    // Filter them
     FilterTableEntries(Entries, AllowedKinds);
 
+    // Return false if none is found
     if Entries.Count = 0 then
       Exit(False)
     else if Entries.Count = 1 then
     begin
-      Move(Entries[0]^, Entry, SizeOf(TThoriumTableEntry));
+      // True if exactly one is found
+      Entry := Entries[0]^;
       Exit(True);
     end
     else
     begin
+      // Raise an exception if multiple are found and DropMultiple is disabled
       if not DropMultiple then
         raise EThoriumCompilerException.Create('Ambigous identifier.')
       else
       begin
+        // Or return the appropriate entry
         if GetLast then
         begin
-          Move(Entries[Entries.Count - 1]^, Entry, SizeOf(TThoriumTableEntry));
+          Entry := Entries[Entries.Count - 1]^;
           Exit(True);
         end
         else
         begin
-          Move(Entries[0]^, Entry, SizeOf(TThoriumTableEntry));
+          Entry := Entries[0]^;
           Exit(True);
         end;
       end;
@@ -974,7 +1028,7 @@ var
   Entry: PThoriumTableEntryResult;
   I: Integer;
 begin
-  // Filter
+  // Filter table entries depending on their kind
   I := Entries.Count-1;
   while I >= 0 do
   begin
@@ -1014,11 +1068,13 @@ begin
   if AValueIdent.Kind = ikPrototypedFunction then
     CompilerError('Function prototyping is not supported yet.');
 
+  // Create a function instance
   Func := TThoriumFunction.Create(FModule, AValueIdent.FullStr);
   FCurrentFunc := Func;
   FCurrentReturnType := ATypeIdent.FinalType;
   Func.Prototype.ReturnType := FCurrentReturnType;
   SetupFunction(Func, FInstructions.Count, AValueIdent.FullStr);
+  // Add the function to the public table
   FTable.AddFunctionIdentifier(Func.Name, Func);
 
   SaveTable;
@@ -1026,17 +1082,22 @@ begin
   Proceed;
   ParamIndex := 1;
 
+  // Parse the parameters
   while FCurrentSym in [tsIdentifier, tsComma] do
   begin
+    // Expect comma for every parameter except the first
     if ParamIndex > 1 then
     begin
       ExpectSymbol([tsComma]);
       Proceed;
     end;
+    // Get the parameter identifiers
     ParamTypeIdent := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikType]);
-    ParamIdent := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared]);
+    ParamIdent := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared, ikNoFar]);
+    // Increase the array's size
     SetLength(Params, ParamIndex);
 
+    // Add the parameter to the function's parameter list
     Func.Prototype.Parameters.Add(ParamTypeIdent.FinalType);
     Params[ParamIndex-1].ParamName := ParamIdent.FullStr;
     Params[ParamIndex-1].ParamType := ParamIdent.FinalType;
@@ -1044,6 +1105,7 @@ begin
     Inc(ParamIndex);
   end;
 
+  // Add the parameters to the local table, in reverse order
   for I := High(Params) downto Low(Params) do
   begin
     FTable.AddParameterIdentifier(Params[I].ParamName, FCurrentScope, I-Length(Params), Params[I].ParamType);
@@ -1052,6 +1114,7 @@ begin
   ExpectSymbol([tsCloseBracket]);
   Proceed;
 
+  // Setup scoop and table stack
   FCurrentScope := THORIUM_STACK_SCOPE_LOCAL;
   FCurrentFunctionTableStack := FTableSizes.Count;
 
@@ -1061,9 +1124,12 @@ begin
   FCurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
   EmbedHint('func:end');
 
+  // Restore the table - one time for the things happening in the statement and
+  // one time for the parameters
   RestoreTable(LocalOffset, True);
   RestoreTable(LocalOffset, False);
 
+  // Ensure a return value is created
   if Func.Prototype.ReturnType <> nil then
   begin
     Func.Prototype.ReturnType.CanCreateNone(False, CreationInstruction);
@@ -1071,10 +1137,9 @@ begin
   end;
   GenCode(ret());
 
+  // If public, add the function to the global function table.
   if AVisibility > vsPrivate then
-    FPublicFunctions.Add(Func)
-  else
-    Func.Free;
+    FPublicFunctions.Add(Func.Duplicate);
 end;
 
 procedure TThoriumDefaultCompiler.JumpingLogicalExpression(TrueJumps,
@@ -1097,6 +1162,8 @@ begin
     CompilerError('For that we need a parser stack.');
   end;
 
+  // Catch any opening bracket to avoid inefficient handling by Factor or
+  // something
   if FCurrentSym = tsOpenBracket then
   begin
     Proceed;
@@ -1105,14 +1172,22 @@ begin
     Proceed;
   end
   else
+  begin
+    // Otherwise, parse the first term
     JumpingLogicalTerm(TrueJumps, FalseJumps);
+  end;
 
+  // And after that any further terms
   while FCurrentSym in THORIUM_DEFAULT_LOGICAL_EXPRESSION_OPERATOR do
   begin
     case FCurrentSym of
       tsOr:
       begin
+        // Connect them with the correct operator
         Target := GetNextInstructionAddress;
+        // This is OR. That means, if any operand is true, the whole expression
+        // is true. So we will only redirect the false jumps to the next
+        // expression. True jumps will be returned for the user.
         for I := 0 to FalseJumps.Count - 1 do
           TThoriumInstructionJMP(GetInstruction(FalseJumps[I])^).NewAddress := Target;
         FalseJumps.Clear;
@@ -1121,6 +1196,7 @@ begin
       CompilerError('Unhandled logical operator.');
     end;
     Proceed;
+    // Read the next term
     JumpingLogicalTerm(TrueJumps, FalseJumps);
   end;
 end;
@@ -1154,17 +1230,24 @@ begin
   end
   else
   begin
+    // Read the relational expression with jumping extension
     JumpingRelationalExpression(SubTrueJump, SubFalseJump);
+    // And add the jumps
     TrueJumps.AddEntry(SubTrueJump);
     FalseJumps.AddEntry(SubFalseJump);
   end;
 
+  // Read more expressions
   while FCurrentSym in THORIUM_DEFAULT_LOGICAL_TERM_OPERATOR do
   begin
     case FCurrentSym of
       tsAnd:
       begin
         Target := GetNextInstructionAddress;
+        // Handle the AND operator. AND means: if any operand is false, the
+        // whole expression is false. So we will only redirect the true jumps
+        // to the next expressions. False jumps will be left untouched for
+        // handling by the caller.
         for I := 0 to TrueJumps.Count - 1 do
           TThoriumInstructionJMP(GetInstruction(TrueJumps[I])^).NewAddress := Target;
         TrueJumps.Clear;
@@ -1173,6 +1256,7 @@ begin
       CompilerError('Unhandled logical operator.');
     end;
     Proceed;
+    // Parse moar.
     JumpingRelationalExpression(SubTrueJump, SubFalseJump);
     TrueJumps.AddEntry(SubTrueJump);
     FalseJumps.AddEntry(SubFalseJump);
@@ -1208,11 +1292,13 @@ begin
     begin
       if TThoriumType.PerformCmpOperation(Value1, Operation, @Value2) then
       begin
+        // First the true-jump so that the false-jump is never reached.
         TrueJump := GenCode(jmp(THORIUM_JMP_INVALID));
         FalseJump := GenCode(jmp(THORIUM_JMP_INVALID));
       end
       else
       begin
+        // First the false-jump so that the true-jump is never reached.
         FalseJump := GenCode(jmp(THORIUM_JMP_INVALID));
         TrueJump := GenCode(jmp(THORIUM_JMP_INVALID));
       end;
@@ -1232,6 +1318,7 @@ begin
       ThoriumFreeValue(Value2);
     end;
 
+    // Perform a real comparision and place the jumps accordingly.
     GenOperation(Operation, THORIUM_REGISTER_INVALID, RegID1, RegID2);
     case Operation.Operation of
       opCmpEqual:
@@ -1271,10 +1358,12 @@ begin
   end
   else
   begin
+    // If there is no other operand, we need to evaluate this one standalone
     Operation.Operation := opEvaluate;
     if not OperandType1.CanPerformOperation(Operation) then
       CompilerError('Cannot evaluate '''+OperandType1.Name+''' to boolean.');
 
+    // Handle that during compile time
     if State1 = vsStatic then
     begin
       if TThoriumType.PerformCmpOperation(Value1, Operation) then
@@ -1290,7 +1379,10 @@ begin
     end
     else
     begin
+      // Create a real comparision instruction and the jumps
       GenOperation(Operation, THORIUM_REGISTER_INVALID, RegID1);
+      // These are just "je" and "jne" at the moment. Maybe this will change
+      // later.
       TrueJump := GenCode(jt(THORIUM_JMP_INVALID));
       FalseJump := GenCode(jf(THORIUM_JMP_INVALID));
     end;
@@ -1375,6 +1467,7 @@ begin
     raise EThoriumCompilerException.Create('Cannot handle static values which are not simple or string.');
   if StaticValue.RTTI is TThoriumTypeString then
   begin
+    // Special handling for string again
     if StaticValue.Str^ <> '' then
       InitialData.Int := AddLibraryString(StaticValue.Str^)
     else
@@ -1383,9 +1476,11 @@ begin
   end
   else
   begin
+    // This must work for any type except string
     InitialData.Int := StaticValue.Int;
     Assert(StaticValue.RTTI.CanCreate(InitialData, True, CreationDescription));
   end;
+  // Create the value to the specified register
   GenCreation(CreationDescription, ATargetRegister);
 end;
 
