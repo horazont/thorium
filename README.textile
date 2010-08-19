@@ -3,6 +3,13 @@ h1. Thorium Scripting Language
 Thorium is a powerful embedded scripting language written in FreePascal.
 It features a pluggable compiler and typing system, and ships with easy and fast import of host classes using RTTI. It also allows to call host methods and functions _without the need for wrapper functions_, thus saving the developer (that is you) the time to write these.
 
+h2. Branches
+
+h3. Th232
+
+This branch is about a core rewrite of Thorium. It will allow much more variation in typing and a fully pluggable compiler model. In explicit, you can easily write your own compiler. The new typing model moved the debt of code generation from the compiler to the types, which makes it unneccessary to know all the instructions the virtual machine supports.
+This makes compiler development a lot easier, thus allowing developers to create their own syntax variations for Thorium or even adding completely new language elements.
+
 h2. Want to know more?
 
 This page is not quite helpful yet. If you are able to read german, you may want to have a look at "this thread in the DGL forum":http://www.delphigl.com/forum/viewtopic.php?f=13&t=7570 where I regularily post information about the current development.
