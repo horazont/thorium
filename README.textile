@@ -4,6 +4,7 @@ Thorium is a powerful embedded scripting language written in FreePascal.
 It features a pluggable compiler and typing system, and ships with easy and fast import of host classes using RTTI. It also allows to call host methods and functions _without the need for wrapper functions_, thus saving the developer (that is you) the time to write these.
 
 h2. Want to know more?
+
 This page is not quite helpful yet. If you are able to read german, you may want to have a look at "this thread in the DGL forum":http://www.delphigl.com/forum/viewtopic.php?f=13&t=7570 where I regularily post information about the current development.
 
 If you have questions, comments, feature requests about Thorium or if you want to participate in development you may also contact me:
