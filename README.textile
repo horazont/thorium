@@ -1,0 +1,4 @@
+h1. Thorium Scripting Language
+
+Thorium is a powerful embedded scripting language written in FreePascal.
+It features a pluggable compiler and typing system, and ships with easy and fast import of host classes using RTTI. It also allows to call host methods and functions _without the need for wrapper functions_, thus saving the developer (that is you) the time to write these.
