@@ -1,8 +1,8 @@
+loadlibrary core.std.io
+
 public int abc = 10;
 public static int def = 0x0123456789ABCDEF;
 private float ghi = 10.0;
-public string meow = "meow", cookie = "cookie";
-int jkl = 20;
 
 public void main() 
 {
@@ -16,3 +16,6 @@ public void main()
       abc = 20;
   }
 }
+
+public string meow = "meow", cookie = "cookie";
+int jkl = 20;

@@ -230,6 +230,8 @@ type
   private
     FBreakList: TThoriumJumpList;
     FBreakOffsetTarget: Integer;
+    FHadGlobalVariable: Boolean;
+    FLastGlobalJump: TThoriumInstructionAddress;
     FCurrentScope: Integer;
     FCurrentStr: String;
     FCurrentSym: TThoriumDefaultSymbol;
@@ -260,6 +262,8 @@ type
     procedure JumpingLogicalTerm(TrueJumps, FalseJumps: TThoriumIntList);
     procedure JumpingRelationalExpression(var TrueJump, FalseJump: TThoriumInstructionAddress);
     procedure Module;
+    function ParseLibraryName: String;
+    function ParseModuleName: String;
     procedure PlaceStatic(const StaticValue: TThoriumValue; ATargetRegister: Word);
     function RelationalExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
     function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
@@ -782,6 +786,15 @@ begin
     if AStatic then
       CompilerError('Functions cannot be static.');
     Proceed([tsOpenBracket]);
+
+    // Setup the declaration jump if neccessary
+    if FHadGlobalVariable then
+    begin
+      EmbedHint('initjump');
+      FLastGlobalJump := GenCode(jmp(THORIUM_JMP_EXIT));
+      FHadGlobalVariable := False;
+    end;
+
     // Parse the function declaration
     FunctionDeclaration(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
   end
@@ -794,11 +807,25 @@ begin
       // Again, just annoy the user
       if AStatic then
         CompilerError('Functions cannot be static.');
+
+      // Setup the declaration jump if neccessary
+      if FHadGlobalVariable then
+      begin
+        FLastGlobalJump := GenCode(jmp(THORIUM_JMP_EXIT));
+        FHadGlobalVariable := False;
+      end;
+
       // Parse the function declaration
       FunctionDeclaration(AVisibility, TypeIdentifier, ValueIdentifier, Offset);
     end
     else
     begin
+      if not FHadGlobalVariable then
+      begin
+        TThoriumInstructionJMP(GetInstruction(FLastGlobalJump)^).NewAddress := GetNextInstructionAddress;
+        FHadGlobalVariable := True;
+      end;
+
       // Use the appropriate handler for constants / variables
       if AStatic then
         DeclarationHandler := @ConstantDeclaration
@@ -992,7 +1019,7 @@ begin
     else if Entries.Count = 1 then
     begin
       // True if exactly one is found
-      Entry := Entries[0]^;
+      Entry := Entries[0]^.Entry;
       Exit(True);
     end
     else
@@ -1005,12 +1032,12 @@ begin
         // Or return the appropriate entry
         if GetLast then
         begin
-          Entry := Entries[Entries.Count - 1]^;
+          Entry := Entries[Entries.Count - 1]^.Entry;
           Exit(True);
         end
         else
         begin
-          Entry := Entries[0]^;
+          Entry := Entries[0]^.Entry;
           Exit(True);
         end;
       end;
@@ -1396,6 +1423,8 @@ var
   Visibility: TThoriumVisibilityLevel;
   NeedIdentifier: Boolean;
   Offset: Integer;
+  LastJump: TThoriumInstructionAddress;
+  HadVariable: Boolean;
 begin
   FCurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
   IsStatic := False;
@@ -1403,16 +1432,20 @@ begin
   Visibility := vsPrivate;
   NeedIdentifier := False;
   Proceed;
+  FHadGlobalVariable := False;
+  FLastGlobalJump := GenCode(jmp(THORIUM_JMP_EXIT));
   while ExpectSymbol([tsLoadLibrary, tsLoadModule, tsIdentifier, tsPublic, tsPrivate, tsStatic], False) do
   begin
     case FCurrentSym of
       tsLoadModule:
       begin
-        // ToDo: Load module
+        Proceed;
+        LoadModule(ParseModuleName);
       end;
       tsLoadLibrary:
       begin
-        // ToDo: Load library
+        Proceed;
+        LoadLibrary(ParseLibraryName);
       end;
       tsStatic:
       begin
@@ -1454,7 +1487,38 @@ begin
       end;
     end;
   end;
+  if FHadGlobalVariable then
+  begin
+    GenCode(jmp(THORIUM_JMP_EXIT));
+  end;
   ExpectSymbol([tsNone], True);
+end;
+
+function TThoriumDefaultCompiler.ParseLibraryName: String;
+begin
+  ExpectSymbol([tsStringValue, tsIdentifier]);
+  if FCurrentSym = tsStringValue then
+  begin
+    Result := FCurrentStr;
+    Proceed;
+  end
+  else if FCurrentSym = tsIdentifier then
+  begin
+    Result := FCurrentStr;
+    Proceed;
+    while FCurrentSym in [tsIdentifier, tsDot] do
+    begin
+      Result += FCurrentStr;
+      Proceed;
+    end;
+  end;
+end;
+
+function TThoriumDefaultCompiler.ParseModuleName: String;
+begin
+  ExpectSymbol([tsStringValue, tsIdentifier]);
+  Result := FCurrentStr;
+  Proceed;
 end;
 
 procedure TThoriumDefaultCompiler.PlaceStatic(const StaticValue: TThoriumValue;

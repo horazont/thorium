@@ -63,6 +63,8 @@ begin
   {$endif}
 
   Engine := TThorium.Create;
+  Engine.LoadLibrary(TThoriumLibStd);
+  Engine.LoadLibrary(TThoriumLibStdIO);
   try
     Module := Engine.NewModule('__main__');
 
@@ -73,7 +75,7 @@ begin
           WriteLn('Successfully compiled:')
         else
           WriteLn('Compilation failed (you should not see this as an exception should''ve been raised).');
-        Module.Dump;
+        Module.Dump(True);
       except
         (*on E: EThoriumCompilerError do
         begin

@@ -61,6 +61,8 @@ function Offset(var ARec; var AField): ptruint;
 function ThoriumCase(const Input: String): String;
 function ThoriumCase(const Input: Char): Char;
 
+function ColorCmd(A, B, C: Integer): String;
+
 implementation
 
 //  Cardinal:
@@ -137,6 +139,18 @@ begin
   {$else}
   Result := LowerCase(Input);
   {$endif}
+end;
+
+function ColorCmd(A, B, C: Integer): String;
+begin
+  Result := #27 + '[' + IntToStr(A);
+  if B >= 0 then
+  begin
+    Result += ';'+IntToStr(B);
+    if C >= 0 then
+      Result += ';'+IntToStr(C);
+  end;
+  Result += 'm';
 end;
 
 end.

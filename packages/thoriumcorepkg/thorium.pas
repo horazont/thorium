@@ -10835,7 +10835,15 @@ begin
     for I := 0 to FStringLibrary.Count - 1 do
       WriteLn('0x', IntToHex(I, 8), '  "', StringReplace(StringReplace(FStringLibrary[I], #10, '\n', [rfReplaceAll]), '"', '\"', [rfReplaceAll]), '"');
   end;
-(*  if FHostTypeUsage.Count > 0 then
+  if FRequiredLibraries.Count > 0 then
+  begin
+    WriteLn(' Index       Library identifier');
+    for I := 0 to FRequiredLibraries.Count - 1 do
+    begin
+      WriteLn('0x', IntToHex(I, 8), '  ', FRequiredLibraries[I].GetName);
+    end;
+  end;
+  if FHostTypeUsage.Count > 0 then
   begin
     //WriteLn('Extended type usage:');
     WriteLn(' Index       Flg   Type name');
@@ -10890,9 +10898,9 @@ begin
     WriteLn(' Index       Module name');
     for I := 0 to FRequiredModules.Count - 1 do
     begin
-      WriteLn('0x', IntToHex(I, 8), '  ', TThoriumModule(FThorium.FModules[FRequiredModules.Items[I]]).Name);
+      WriteLn('0x', IntToHex(I, 8), '  ', TThoriumModule(FRequiredModules.Items[I]).Name);
     end;
-  end; *)
+  end;
 end;
 
 function TThoriumModule.DumpCodeStr: String;
