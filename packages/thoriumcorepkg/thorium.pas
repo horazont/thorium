@@ -1824,7 +1824,7 @@ type
     procedure RemoveInstructionPointer(APointer: PThoriumInstructionAddress);
     
     procedure DumpCodeBin(DestStream: TStream);
-    function DumpCodeStr: String;
+    function DumpCodeStr(ColorfulOutput: Boolean = False): String;
 
     procedure LoadFromStream(Stream: TStream);
     procedure SaveToStream(Stream: TStream);
@@ -2056,8 +2056,8 @@ type
   public
     function CompileFromStream(SourceStream: TStream; ACompiler: TThoriumCompilerClass;
       Flags: TThoriumCompilerFlags = [cfOptimize]): Boolean;
-    procedure Dump;
-    function DumpCodeStr: String;
+    procedure Dump(ColorfulOutput: Boolean = False);
+    function DumpCodeStr(ColorfulOutput: Boolean = False): String;
     function DumpLibStr: String;
     procedure ExecuteMain;
     function EncloseHostValue(const AValue: Pointer; const AType: PTypeInfo): TThoriumValue;
@@ -8552,22 +8552,46 @@ begin
   DestStream.Write(FInstructions^, FCount * SizeOf(TThoriumInstruction));
 end;
 
-function TThoriumInstructions.DumpCodeStr: String;
+function TThoriumInstructions.DumpCodeStr(ColorfulOutput: Boolean): String;
 // Writes a half human readable code to the string
+
+  function GetColorCode(A: Integer; B: Integer = -1; C: Integer = -1): String;
+  begin
+    if not ColorfulOutput then
+      Exit('')
+    else
+      Exit(ColorCmd(A, B, C));
+  end;
+
 var
   I: Integer;
   CurrentInstruction: PThoriumInstruction;
+  ColAddr, ColInstruction, ColInstructionHint, ColLine, CurInstruction, CurInstructionCol: String;
 begin
-  Result := Format(' %-9.9s   %-55.55s  %9.9s', ['Address', 'Instruction', 'LineNo.']) + LineEnding;
+  ColAddr := GetColorCode(1, 34);
+  ColInstruction := GetColorCode(1, 37);
+  ColInstructionHint := GetColorCode(0, 37);
+  ColLine := GetColorCode(1, 33);
+  Result := Format('%s %-9.9s %s  %-55.55s %s %9.9s'+GetColorCode(0), [ColAddr, 'Address', ColInstruction, 'Instruction', ColLine, 'LineNo.']) + LineEnding;
   CurrentInstruction := FInstructions;
   for I := 0 to FCount - 1 do
   begin
     if (I <> 0) then
       Result := Result + LineEnding;
-    Result := Result + Format('0x%.8x  %-56.56s %10d', [
+    CurInstruction := ThoriumInstructionToStr(CurrentInstruction^);
+    if CurInstruction[1] = '.' then
+      CurInstructionCol := ColInstructionHint
+    else
+      CurInstructionCol := ColInstruction;
+    Result := Result + Format('%s0x%.8x %s %-56.56s %s%10d%s', [
+      ColAddr,
       I,
-      ThoriumInstructionToStr(CurrentInstruction^),
-      CurrentInstruction^.CodeLine
+      CurInstructionCol,
+      CurInstruction
+      ,
+      ColLine,
+      CurrentInstruction^.CodeLine,
+      GetColorCode(0)
     ]);
     Inc(CurrentInstruction);
   end;
@@ -10776,30 +10800,39 @@ begin
   end;
 end;
 
-procedure TThoriumModule.Dump;
+procedure TThoriumModule.Dump(ColorfulOutput: Boolean);
+
+  function GetColorCode(A: Integer; B: Integer = -1; C: Integer = -1): String;
+  begin
+    if not ColorfulOutput then
+      Exit('')
+    else
+      Exit(ColorCmd(A, B, C));
+  end;
+
 var
   I, J: Integer;
   TypeSpec: IThoriumType;
   Callable: TThoriumHostCallableBase;
 begin
-  WriteLn('Module: ', FName);
+  WriteLn('Module: ', GetColorCode(1), FName, GetColorCode(0));
   WriteLn('Code (', FOptimizedInstructions, ' removed by optimization): ');
-  WriteLn(DumpCodeStr);
+  WriteLn(DumpCodeStr(ColorfulOutput));
   //WriteLn('Optimized instructions: ', FOptimizedInstructions);
   if FPublicFunctions.Count > 0 then
   begin;
     //WriteLn('Exported functions: ');
-    WriteLn(' EntryAddr   Header');
+    WriteLn(GetColorCode(1), ' EntryAddr   Header', GetColorCode(0));
     for I := 0 to FPublicFunctions.Count - 1 do
     begin
       with TThoriumFunction(FPublicFunctions[I]) do
       begin
         if not Prototype.HasReturnValue then
-          Write('0x', IntToHex(EntryPoint, 8), '  void ')
+          Write(GetColorCode(34), '0x', IntToHex(EntryPoint, 8), GetColorCode(0), '  void ')
         else
         begin
           TypeSpec := Prototype.ReturnType;
-          Write('0x', IntToHex(EntryPoint, 8), '  ', TypeSpec.Name, ' ');
+          Write(GetColorCode(34), '0x', IntToHex(EntryPoint, 8), GetColorCode(0), '  ', TypeSpec.Name, ' ');
         end;
         Write(Name, '(');
         for J := 0 to Prototype.Parameters.Count - 1 do
@@ -10816,60 +10849,60 @@ begin
   if FPublicVariables.Count > 0 then
   begin
     //WriteLn('Exported variables:');
-    WriteLn(' StackAddr   Flag    Name');
+    WriteLn(GetColorCode(1), ' StackAddr   Flag    Name', GetColorCode(0));
     for I := 0 to FPublicVariables.Count - 1 do
     begin
       with TThoriumVariable(FPublicVariables[I]) do
       begin
         if IsStatic then
-          WriteLn('0x', IntToHex(StackPosition, 8), '  static  ', TypeSpec.Name, ' ', Name)
+          WriteLn(GetColorCode(32), '0x', IntToHex(StackPosition, 8), GetColorCode(0), '  static  ', TypeSpec.Name, ' ', Name)
         else
-          WriteLn('0x', IntToHex(StackPosition, 8), '          ', TypeSpec.Name, ' ', Name);
+          WriteLn(GetColorCode(32), '0x', IntToHex(StackPosition, 8), GetColorCode(0), '          ', TypeSpec.Name, ' ', Name);
       end;
     end;
   end;
   if FStringLibrary.Count > 0 then
   begin
     //WriteLn('Strings:');
-    WriteLn(' Index       String');
+    WriteLn(GetColorCode(1), ' Index       String', GetColorCode(0));
     for I := 0 to FStringLibrary.Count - 1 do
-      WriteLn('0x', IntToHex(I, 8), '  "', StringReplace(StringReplace(FStringLibrary[I], #10, '\n', [rfReplaceAll]), '"', '\"', [rfReplaceAll]), '"');
+      WriteLn(GetColorCode(35), '0x', IntToHex(I, 8), GetColorCode(0), '  "', StringReplace(StringReplace(FStringLibrary[I], #10, '\n', [rfReplaceAll]), '"', '\"', [rfReplaceAll]), '"');
   end;
   if FRequiredLibraries.Count > 0 then
   begin
-    WriteLn(' Index       Library identifier');
+    WriteLn(GetColorCode(1), ' Index       Library identifier', GetColorCode(0));
     for I := 0 to FRequiredLibraries.Count - 1 do
     begin
-      WriteLn('0x', IntToHex(I, 8), '  ', FRequiredLibraries[I].GetName);
+      WriteLn(GetColorCode(2), '0x', IntToHex(I, 8), GetColorCode(0), '  ', FRequiredLibraries[I].GetName);
     end;
   end;
   if FHostTypeUsage.Count > 0 then
   begin
     //WriteLn('Extended type usage:');
-    WriteLn(' Index       Flg   Type name');
+    WriteLn(GetColorCode(1), ' Index       Flg   Type name', GetColorCode(0));
     for I := 0 to FHostTypeUsage.Count - 1 do
     begin
       if TThoriumHostObjectType(FHostTypeUsage[I]) is TThoriumRTTIObjectType then
-        WriteLn('0x', IntToHex(I, 8), '  RTTI  ', TThoriumRTTIObjectType(FHostTypeUsage[I]).BaseClass.ClassName)
+        WriteLn(GetColorCode(2), '0x', IntToHex(I, 8), GetColorCode(0), '  RTTI  ', TThoriumRTTIObjectType(FHostTypeUsage[I]).BaseClass.ClassName)
       else
-        WriteLn('0x', IntToHex(I, 8), '        ', TThoriumHostObjectType(FHostTypeUsage[I]).ClassName);
+        WriteLn(GetColorCode(2), '0x', IntToHex(I, 8), GetColorCode(0), '        ', TThoriumHostObjectType(FHostTypeUsage[I]).ClassName);
     end;
     if FHostTypeRelocations.Count > 0 then
     begin
-      WriteLn(' UsByteOff   Index');
+      WriteLn(GetColorCode(1), ' UsByteOff   Index');
       for I := 0 to FHostTypeRelocations.Count - 1 do
       begin
         with TThoriumRelocation(FHostTypeRelocations[I]^) do
-          WriteLn('0x', IntToHex(ByteOffset, 8), '  0x', IntToHex(ObjectIndex, 8));
+          WriteLn(GetColorCode(31), '0x', IntToHex(ByteOffset, 8), GetColorCode(0), '  ', GetColorCode(2), '0x', IntToHex(ObjectIndex, 8), GetColorCode(0));
       end;
     end;
   end;
   if FHostFuncUsage.Count > 0 then
   begin
-    WriteLn(' Index       Name');
+    WriteLn(GetColorCode(1), ' Index       Name', GetColorCode(0));
     for I := 0 to FHostFuncUsage.Count - 1 do
     begin
-      Write('0x', IntToHex(I, 8), '  ');
+      Write(GetColorCode(2), '0x', IntToHex(I, 8), GetColorCode(0), '  ');
       Callable := TThoriumHostCallableBase(FHostFuncUsage[I]);
       if Callable is TThoriumHostMethodBase then
       begin
@@ -10885,28 +10918,28 @@ begin
     end;
     if FHostFuncRelocations.Count > 0 then
     begin
-      WriteLn(' UsByteOff   Index');
+      WriteLn(GetColorCode(1), ' UsByteOff   Index', GetColorCode(0));
       for I := 0 to FHostFuncRelocations.Count - 1 do
         with PThoriumRelocation(FHostFuncRelocations[I])^ do
         begin
-          WriteLn('0x', IntToHex(ByteOffset, 8), '  0x', IntToHex(ObjectIndex, 8));
+          WriteLn(GetColorCode(31), '0x', IntToHex(ByteOffset, 8), GetColorCode(0), '  ', GetColorCode(2), '0x', IntToHex(ObjectIndex, 8), GetColorCode(0));
         end;
     end;
   end;
   if FRequiredModules.Count > 0 then
   begin
-    WriteLn(' Index       Module name');
+    WriteLn(GetColorCode(1), ' Index       Module name', GetColorCode(0));
     for I := 0 to FRequiredModules.Count - 1 do
     begin
-      WriteLn('0x', IntToHex(I, 8), '  ', TThoriumModule(FRequiredModules.Items[I]).Name);
+      WriteLn(GetColorCode(2), '0x', IntToHex(I, 8), GetColorCode(0), '  ', TThoriumModule(FRequiredModules.Items[I]).Name);
     end;
   end;
 end;
 
-function TThoriumModule.DumpCodeStr: String;
+function TThoriumModule.DumpCodeStr(ColorfulOutput: Boolean): String;
 // Encapsulation for TThoriumInstructions.DumpCodeStr
 begin
-  Result := FInstructions.DumpCodeStr;
+  Result := FInstructions.DumpCodeStr(ColorfulOutput);
 end;
 
 function TThoriumModule.DumpLibStr: String;

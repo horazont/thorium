@@ -143,6 +143,11 @@ end;
 
 function ColorCmd(A, B, C: Integer): String;
 begin
+  if (A = 0) and (C = 0) then
+  begin
+    // Only set background
+    Exit(#27 + '[;' + IntToStr(B) + 'm');
+  end;
   Result := #27 + '[' + IntToStr(A);
   if B >= 0 then
   begin
