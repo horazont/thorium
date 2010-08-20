@@ -597,6 +597,11 @@ type
     property TypeKind: TThoriumTypeKind;
   end;
 
+  IThoriumCallable = interface ['{C9317686-61BE-4D72-AF95-9E0FF25C752E}']
+    function GetParameters: TThoriumParameters;
+    function GetReturnType: IThoriumType;
+  end;
+
   TThoriumStructFieldDefinition = record
     Name: String;
     Offset: ptruint;
@@ -692,6 +697,7 @@ type
     class function PerformCmpOperation(const AValue: TThoriumValue; const Operation: TThoriumOperationDescription; const BValue: PThoriumValue = nil): Boolean;
     function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean = True): Boolean; virtual;
   end;
+  TThoriumTypes = specialize TFPGList<TThoriumType>;
 
   { TThoriumTypeSimple }
 
@@ -845,7 +851,7 @@ type
 
   { TThoriumTypeFunction }
 
-  TThoriumTypeFunction = class (TThoriumType)
+  TThoriumTypeFunction = class (TThoriumType, IThoriumCallable)
   private
     constructor Create;
   public
@@ -860,6 +866,8 @@ type
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
+    function GetParameters: TThoriumParameters;
+    function GetReturnType: IThoriumType;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
   published
     property HasReturnValue: Boolean read GetHasReturnValue;
@@ -870,7 +878,7 @@ type
 
   { TThoriumTypeHostFunction }
 
-  TThoriumTypeHostFunction = class (TThoriumType)
+  TThoriumTypeHostFunction = class (TThoriumType, IThoriumCallable)
   private
     constructor Create(const AHostFunction: TThoriumHostCallableBase);
   private
@@ -883,6 +891,8 @@ type
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: IThoriumType=nil; const ExName: String = ''): Boolean; override;
+    function GetParameters: TThoriumParameters;
+    function GetReturnType: IThoriumType;
     function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
   published
     property HasReturnValue: Boolean read GetHasReturnValue;
@@ -1107,12 +1117,14 @@ type
     FList: TInterfaceList;
 
     function GetCount: Integer;
+    function GetTypeSpec(Index: Integer): IThoriumType;
   protected
     procedure Clear;
     procedure Delete(AIndex: Integer);
     procedure Remove(AType: IThoriumType);
   public
     property Count: Integer read GetCount;
+    property TypeSpec[Index: Integer]: IThoriumType read GetTypeSpec; default;
   public
     procedure Add(AType: IThoriumType);
     function Duplicate: TThoriumParameters;
@@ -5462,6 +5474,16 @@ begin
   Result := False;
 end;
 
+function TThoriumTypeFunction.GetParameters: TThoriumParameters;
+begin
+  Result := FParameters;
+end;
+
+function TThoriumTypeFunction.GetReturnType: IThoriumType;
+begin
+  Result := FReturnType;
+end;
+
 function TThoriumTypeFunction.IsEqualTo(const AnotherType: IThoriumType
   ): Boolean;
 begin
@@ -5503,6 +5525,16 @@ function TThoriumTypeHostFunction.CanPerformOperation(
   const ExName: String): Boolean;
 begin
   Result := False;
+end;
+
+function TThoriumTypeHostFunction.GetParameters: TThoriumParameters;
+begin
+  Result := FParameters;
+end;
+
+function TThoriumTypeHostFunction.GetReturnType: IThoriumType;
+begin
+  Result := FReturnType;
 end;
 
 function TThoriumTypeHostFunction.IsEqualTo(const AnotherType: IThoriumType
@@ -5767,6 +5799,11 @@ begin
   Result := FList.Count;
 end;
 
+function TThoriumParameters.GetTypeSpec(Index: Integer): IThoriumType;
+begin
+  FList[Index].QueryInterface(IThoriumType, Result);
+end;
+
 procedure TThoriumParameters.Add(AType: IThoriumType);
 begin
   FList.Add(AType);
@@ -5801,7 +5838,7 @@ end;
 procedure TThoriumParameters.GetParameterSpec(const Index: Integer; out
   ParamSpec: IThoriumType);
 begin
-
+  FList[Index].QueryInterface(IThoriumType, ParamSpec);
 end;
 
 procedure TThoriumParameters.LoadFromStream(Stream: TStream);
@@ -9311,7 +9348,7 @@ begin
   end;
   if StackCount > 0 then
     GenCode(pop_s(StackCount));
-  Result := GenCode(jmp(0));
+  Result := GenCode(jmp(THORIUM_JMP_INVALID));
   Ctx.JumpList.AddEntry(Result);
 end;
 

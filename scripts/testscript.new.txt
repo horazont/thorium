@@ -1,21 +1,11 @@
-loadlibrary core.std.io
+loadlibrary core.std.io;
 
-public int abc = 10;
-public static int def = 0x0123456789ABCDEF;
-private float ghi = 10.0;
-
-public void main() 
+void test()
 {
-  int a;
-  switch (a) {
-    case 0:
-      abc = 10;
-      break;
-      
-    case 1:
-      abc = 20;
-  }
+
 }
 
-public string meow = "meow", cookie = "cookie";
-int jkl = 20;
+void main()
+{
+  test();
+}

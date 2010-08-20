@@ -1501,6 +1501,8 @@ begin
   begin
     Result := FCurrentStr;
     Proceed;
+    if FCurrentSym = tsSemicolon then
+      Proceed;
   end
   else if FCurrentSym = tsIdentifier then
   begin
@@ -1511,6 +1513,8 @@ begin
       Result += FCurrentStr;
       Proceed;
     end;
+    ExpectSymbol([tsSemicolon]);
+    Proceed;
   end;
 end;
 
@@ -1950,6 +1954,176 @@ var
   RegPreviousValue, RegID1: TThoriumRegisterID;
 
   Solution: PThoriumQualifiedIdentifier;
+
+  procedure SolveCall;
+  var
+    Parameters: TThoriumTypes;
+    ParameterRegIDs: TThoriumIntList;
+    ParameterCastLocations: TThoriumIntList;
+    ParamRegID, CastRegID: TThoriumRegisterID;
+    State: TThoriumValueState;
+    DynamicParameterList: TThoriumIntList;
+    I, J: Integer;
+    Scores: array of Integer;
+    Callable: IThoriumCallable;
+    CallableParameters: TThoriumParameters;
+    Assignment: TThoriumAssignmentDescription;
+    HighestScore: Integer;
+    HighestScoreIdx: Integer;
+    ParamType: IThoriumType;
+    DynIdx: Integer;
+  begin
+    // Prefilter
+    I := Entries.Count - 1;
+    while I >= 0 do
+    begin
+      Entry := Entries[I];
+      if not Entry^.Entry.TypeSpec.CanCall then
+        Discard(I)
+      else if Entry^.Entry.TypeSpec.QueryInterface(IThoriumCallable, Callable) <> S_OK then
+        CompilerError('Type '''+Entry^.Entry.TypeSpec.Name+''' presents itself as callable, but does not implement IThoriumCallable.')
+      else
+        Callable := nil;
+      Dec(I);
+    end;
+    if Entries.Count = 0 then
+      CompilerError('Cannot call this.');
+
+    GetFreeRegister(trEXP, ParamRegID);
+    Parameters := TThoriumTypes.Create;
+    DynamicParameterList := TThoriumIntList.Create;
+    ParameterCastLocations := TThoriumIntList.Create;
+    ParameterRegIDs := TThoriumIntList.Create;
+    try
+      AttachHook;
+      if FCurrentSym <> tsCloseBracket then
+      begin
+        repeat
+          ParamType := RelationalExpression(ParamRegID, State);
+          Parameters.Add(ParamType.GetInstance);
+          ParameterRegIDs.AddEntry(ParamRegID);
+          // These are to insert casts later. Will be removed by
+          // Instructions.Finish if not needed
+          ParameterCastLocations.AddEntry(GenCode(noop(THORIUM_NOOPMARK_PLACEHOLDER, 0, 0, 0)));
+          GenCode(noop(THORIUM_NOOPMARK_PLACEHOLDER, 0, 0, 0));
+          GenCode(mover_st(ParamRegID));
+          if (State = vsDynamic) and (ParamType.NeedsClear) then
+          begin
+            DynamicParameterList.AddEntry(ParamRegID);
+            GetFreeRegister(trEXP, ParamRegID);
+          end;
+        until FCurrentSym <> tsComma;
+      end;
+      ExpectSymbol([tsCloseBracket]);
+      Proceed;
+
+      SetLength(Scores, Solutions.Count);
+      for I := 0 to High(Scores) do
+      begin
+        Entry := Entries[I];
+        Solution := Solutions[I];
+
+        // This was checked in advance
+        Entry^.Entry.TypeSpec.QueryInterface(IThoriumCallable, Callable);
+
+        CallableParameters := Callable.GetParameters;
+        if CallableParameters.Count <> Parameters.Count then
+        begin
+          Scores[I] := -10000;
+          Continue;
+        end;
+
+        Assignment.Casting := True;
+        for J := 0 to Parameters.Count - 1 do
+        begin
+          if CallableParameters[J].IsEqualTo(Parameters[J]) then
+            Scores[I] += 10
+          else if CallableParameters[J].CanAssignTo(Assignment, Parameters[J]) then
+          begin
+            if Assignment.Cast.Needed then
+              Scores[I] += 5
+            else
+              Scores[I] += 10;
+          end
+          else
+            Scores[I] := -1000;
+        end;
+      end;
+
+      HighestScore := 0;
+      HighestScoreIdx := -1;
+      I := Entries.Count - 1;
+      while I >= 0 do
+      begin
+        if Scores[I] <= 0 then
+          Discard(I)
+        else if Scores[I] > HighestScore then
+        begin
+          HighestScore := Scores[I];
+          HighestScoreIdx := I;
+        end;
+        Dec(I);
+      end;
+
+      if Entries.Count = 0 then
+        CompilerError('Cannot call this with that combination of paramters.');
+
+      I := Entries.Count - 1;
+      while I >= 0 do
+      begin
+        if I <> HighestScoreIdx then
+          Discard(I);
+        Dec(I);
+      end;
+
+      Assert(Entries.Count = 1);
+
+      Entry := Entries[0];
+      Solution := Solutions[0];
+      Entry^.Entry.TypeSpec.QueryInterface(IThoriumCallable, Callable);
+
+      CallableParameters := Callable.GetParameters;
+
+      for I := 0 to Parameters.Count - 1 do
+      begin
+        Assignment.Casting := True;
+        CallableParameters[I].CanAssignTo(Assignment, Parameters[I]);
+        if Assignment.Cast.Needed then
+        begin
+          GetFreeRegister(trEXP, CastRegID);
+          Assignment.Cast.Instruction.SRI := ParameterRegIDs[I];
+          Assignment.Cast.Instruction.TRI := CastRegID;
+          GetInstruction(ParameterCastLocations[I])^ := TThoriumInstruction(Assignment.Cast.Instruction);
+          TThoriumInstructionMOVER_ST(GetInstruction(ParameterCastLocations[I]+2)^).SRI := CastRegID;
+          DynIdx := DynamicParameterList.FindValue(ParameterRegIDs[I]);
+          if DynIdx >= 0 then
+          begin
+            GetInstruction(ParameterCastLocations[I]+1)^ := clr(ParameterRegIDs[I]);
+            DynamicParameterList.DeleteEntry(DynIdx);
+          end;
+          if not Assignment.Cast.TargetType.NeedsClear then
+            ReleaseRegister(CastRegID)
+          else
+            DynamicParameterList.AddEntry(CastRegID);
+        end;
+      end;
+
+      FlushHook(False);
+
+      Operation.Operation := opCall;
+      Entry^.Entry.TypeSpec.CanPerformOperation(Operation);
+
+      AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation));
+      AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation));
+    finally
+      ParameterRegIDs.Free;
+      ParameterCastLocations.Free;
+      DynamicParameterList.Free;
+      Parameters.Free;
+      ReleaseRegister(ParamRegID);
+    end;
+  end;
+
 begin
   Assert(FCurrentSym = tsIdentifier);
 
@@ -2112,21 +2286,7 @@ begin
         begin
           Proceed;
 
-          Operation.Operation := opCall;
-
-          I := Entries.Count - 1;
-          while I >= 0 do
-          begin
-            Entry := Entries[I];
-            Solution := Solutions[I];
-            if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation) then
-              Discard(I)
-            else
-            begin
-
-            end;
-            Dec(I);
-          end;
+          SolveCall;
         end;
       end;
     end;
