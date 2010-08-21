@@ -88,6 +88,13 @@ begin
     finally
       FS.Free;
     end;
+
+    Engine.InitializeVirtualMachine;
+    try
+      Module.PublicFunction[0].SafeCall([]);
+    finally
+      Engine.ReleaseVirtualMachine;
+    end;
   finally
     Engine.Free;
   end;

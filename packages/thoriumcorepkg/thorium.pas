@@ -566,6 +566,7 @@ type
     function DoCast(const AValue: TThoriumValue; const TargetType: IThoriumType): TThoriumValue;
     procedure DoCastlessAssign(const ASource: Pointer; var ADest: TThoriumValue);
     function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue;
+    function DoCreateNone: TThoriumValue;
     function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
     function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
     function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue): Boolean;
@@ -667,6 +668,7 @@ type
     function DoCast(const AValue: TThoriumValue; const TargetType: IThoriumType): TThoriumValue; virtual; abstract;
     procedure DoCastlessAssign(const ASource: Pointer; var ADest: TThoriumValue); virtual; abstract;
     function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue; virtual; abstract;
+    function DoCreateNone: TThoriumValue; virtual; abstract;
     function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
     function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
     function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue): Boolean; virtual;
@@ -2185,6 +2187,10 @@ type
                 machine of one Thorium context.
                                                                               *)
 {%REGION 'Thorium core engine' /fold}
+
+  TThoriumLibCore = class (TThoriumLibrary)
+
+  end;
 
   (* This class manages all modules, libraries and the virtual machine thus
      representing one Thorium context. This class is not a singleton. Several
@@ -11378,8 +11384,1830 @@ begin
 end;
 
 procedure TThoriumVirtualMachine.ExecuteInstruction; inline;
+var
+  _NewEntry, _Operand1: PThoriumStackEntry;
+  Intf: IThoriumPersistent;
+
+  function FastStackScopeToIndex(Scope: SmallInt): Integer; inline;
+  begin
+    case Scope of
+      THORIUM_STACK_SCOPE_NOSCOPE: Result := 0;
+      THORIUM_STACK_SCOPE_FROMTOP: Result := FStack.FCount-1;
+      THORIUM_STACK_SCOPE_MODULEROOT: Result := FModuleStackIndicies.Items[FCurrentModuleIdx];
+      THORIUM_STACK_SCOPE_PARAMETERS: Result := FCurrentStackFrame;
+      THORIUM_STACK_SCOPE_LOCAL: Result := FCurrentStackFrame + 1;
+    else
+      Result := 0;
+    end;
+  end;
+
+  procedure int_s; inline;
+  begin
+    with TThoriumInstructionINT_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etValue;
+      _NewEntry^.Value.RTTI := nil;
+      _NewEntry^.Value.Int := Value;
+      {$ifdef Timecheck}EndTimecheck('int.s');{$endif}
+    end;
+  end;
+
+  procedure int; inline;
+  begin
+    with TThoriumInstructionINT(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].Int := Value;
+      {$ifdef Timecheck}EndTimecheck('int');{$endif}
+    end;
+  end;
+
+  procedure intb; inline;
+  begin
+    with TThoriumInstructionINTB(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI := nil;
+      case Kind of
+        THORIUM_OP_EQUAL:
+        begin
+          if (FStateRegister and THORIUM_STATE_ACCUM_EQUAL = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+            FRegisters[TRI].Int := 1
+          else
+            FRegisters[TRI].Int := 0;
+        end;
+        THORIUM_OP_NOTEQUAL:
+        begin
+          if not (FStateRegister and THORIUM_STATE_ACCUM_EQUAL = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+            FRegisters[TRI].Int := 1
+          else
+            FRegisters[TRI].Int := 0;
+        end;
+        THORIUM_OP_GREATER:
+        begin
+          if (FStateRegister and THORIUM_STATE_ACCUM_GREATER = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+            FRegisters[TRI].Int := 1
+          else
+            FRegisters[TRI].Int := 0;
+        end;
+        THORIUM_OP_LESS:
+        begin
+          if (FStateRegister and THORIUM_STATE_ACCUM_LESS = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+            FRegisters[TRI].Int := 1
+          else
+            FRegisters[TRI].Int := 0;
+        end;
+        THORIUM_OP_GREATEREQUAL:
+        begin
+          if (FStateRegister and THORIUM_STATE_ACCUM_GREATEREQUAL = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+            FRegisters[TRI].Int := 1
+          else
+            FRegisters[TRI].Int := 0;
+        end;
+        THORIUM_OP_LESSEQUAL:
+        begin
+          if (FStateRegister and THORIUM_STATE_ACCUM_LESSEQUAL = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+            FRegisters[TRI].Int := 1
+          else
+            FRegisters[TRI].Int := 0;
+        end;
+      else
+        FRegisters[TRI].Int := 0;
+      end;
+      {$ifdef Timecheck}EndTimecheck('intb');{$endif}
+    end;
+  end;
+
+  procedure flt_s; inline;
+  begin
+    with TThoriumInstructionFLT_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etValue;
+      _NewEntry^.Value.RTTI := nil;
+      _NewEntry^.Value.Float := Value;
+      {$ifdef Timecheck}EndTimecheck('flt.s');{$endif}
+    end;
+  end;
+
+  procedure flt; inline;
+  begin
+    with TThoriumInstructionFLT(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].Float := Value;
+      {$ifdef Timecheck}EndTimecheck('flt');{$endif}
+    end;
+  end;
+
+  procedure str_s; inline;
+  begin
+    with TThoriumInstructionSTR_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etValue;
+      _NewEntry^.Value.RTTI := nil;
+      New(_NewEntry^.Value.Str);
+      {$ifdef Timecheck}EndTimecheck('str.s');{$endif}
+    end;
+  end;
+
+  procedure strl_s; inline;
+  begin
+    with TThoriumInstructionSTRL_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etValue;
+      _NewEntry^.Value.RTTI := nil;
+      New(_NewEntry^.Value.Str);
+      _NewEntry^.Value.Str^ := FCurrentModule.FStringLibrary[Index];
+      {$ifdef Timecheck}EndTimecheck('strl.s');{$endif}
+    end;
+  end;
+
+  procedure str; inline;
+  begin
+    with TThoriumInstructionSTR(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI := nil;
+      New(FRegisters[TRI].Str);
+      {$ifdef Timecheck}EndTimecheck('str');{$endif}
+    end;
+  end;
+
+  procedure strl; inline;
+  begin
+    with TThoriumInstructionSTRL(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI := nil;
+      New(FRegisters[TRI].Str);
+      FRegisters[TRI].Str^ := FCurrentModule.FStringLibrary[Index];
+      {$ifdef Timecheck}EndTimecheck('strl');{$endif}
+    end;
+  end;
+
+  procedure ext_s; inline;
+  begin
+    with TThoriumInstructionEXT_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^.Value := TThoriumType(ExtendedType).DoCreateNone;
+      {$ifdef Timecheck}EndTimecheck('ext.s');{$endif}
+    end;
+  end;
+
+  procedure ext; inline;
+  begin
+    with TThoriumInstructionEXT(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := TThoriumType(ExtendedType).DoCreateNone;
+      {$ifdef Timecheck}EndTimecheck('ext');{$endif}
+    end;
+  end;
+
+  procedure fnc; inline;
+  begin
+    with TThoriumInstructionFNC(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].Func := TThoriumFunction(FunctionRef);
+      FRegisters[TRI].RTTI := FRegisters[TRI].Func.Prototype;
+      {$ifdef Timecheck}EndTimecheck('fnc');{$endif}
+    end;
+  end;
+
+  procedure xfnc; inline;
+  begin
+    with TThoriumInstructionXFNC(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].HostFunc := TThoriumHostFunctionBase(FunctionRef);
+      FRegisters[TRI].RTTI := FRegisters[TRI].HostFunc.Prototype;
+      {$ifdef Timecheck}EndTimecheck('fnce');{$endif}
+    end;
+  end;
+
+  procedure copyr_s; inline;
+  begin
+    with TThoriumInstructionCOPYR_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
+      if _NewEntry^.Value.References = 1 then
+        ThoriumFreeValue(_NewEntry^.Value)
+      else
+        Dec(_NewEntry^.Value.References);
+      _NewEntry^.Value := FRegisters[SRI];
+      Inc(_NewEntry^.Value.References);
+      {$ifdef Timecheck}EndTimecheck('copyr.s');{$endif}
+    end;
+  end;
+
+  procedure copyr_st; inline;
+  begin
+    with TThoriumInstructionCOPYR_ST(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etValue;
+      _NewEntry^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck('copyr.st');{$endif}
+    end;
+  end;
+
+  procedure copyr_fs; inline;
+  begin
+    with TThoriumInstructionCOPYR_FS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
+      ThoriumFreeValue(_NewEntry^.Value);
+      _NewEntry^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck('copyr.fs');{$endif}
+    end;
+  end;
+
+  procedure copys_st; inline;
+  begin
+    with TThoriumInstructionCOPYS_ST(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etValue;
+      _NewEntry^.Value := ThoriumDuplicateValue(FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value);
+      {$ifdef Timecheck}EndTimecheck('copys.st');{$endif}
+    end;
+  end;
+
+  procedure copyfs; inline;
+  begin
+    with TThoriumInstructionCOPYFS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := ThoriumDuplicateValue(FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset)^.Value);
+      {$ifdef Timecheck}EndTimecheck('copyfs');{$endif}
+    end;
+  end;
+
+  procedure copys; inline;
+  begin
+    with TThoriumInstructionCOPYS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := ThoriumDuplicateValue(FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value);
+      {$ifdef Timecheck}EndTimecheck('copys');{$endif}
+    end;
+  end;
+
+  procedure copyr; inline;
+  begin
+    with TThoriumInstructionCOPYR(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := ThoriumDuplicateValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck('copyr');{$endif}
+    end;
+  end;
+
+  procedure moves_s; inline;
+  begin
+    with TThoriumInstructionMOVES_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTop;
+      _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
+      ThoriumFreeValue(_NewEntry^.Value);
+      _NewEntry^._Type := etValue;
+      Move(_Operand1^, _NewEntry^, SizeOf(TThoriumStackEntry));
+      FStack.Pop(1, False);
+      {$ifdef Timecheck}EndTimecheck('moves.s');{$endif}
+    end;
+  end;
+
+  procedure mover_s; inline;
+  begin
+    with TThoriumInstructionMOVER_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
+      ThoriumFreeValue(_NewEntry^.Value);
+      _NewEntry^._Type := etValue;
+      Move(FRegisters[SRI], _NewEntry^.Value, SizeOf(TThoriumValue));
+      {$ifdef Timecheck}EndTimecheck('mover.s');{$endif}
+    end;
+  end;
+
+  procedure mover_st; inline;
+  begin
+    with TThoriumInstructionMOVER_ST(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etValue;
+      Move(FRegisters[SRI], _NewEntry^.Value, SizeOf(TThoriumValue));
+      {$ifdef Timecheck}EndTimecheck('mover.st');{$endif}
+    end;
+  end;
+
+  procedure mover; inline;
+  begin
+    with TThoriumInstructionMOVER(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      Move(FRegisters[SRI], FRegisters[TRI], SizeOf(TThoriumValue));
+      {$ifdef Timecheck}EndTimecheck('mover');{$endif}
+    end;
+  end;
+
+  procedure moves; inline;
+  begin
+    with TThoriumInstructionMOVES(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      Move(FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value, FRegisters[TRI], SizeOf(TThoriumValue));
+      {$ifdef Timecheck}EndTimecheck('copys');{$endif}
+    end;
+  end;
+
+  procedure movest; inline;
+  begin
+    with TThoriumInstructionMOVEST(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTop;
+      Move(_Operand1^.Value, FRegisters[TRI], SizeOf(TThoriumValue));
+      FStack.Pop(1, False);
+      {$ifdef Timecheck}EndTimecheck('moves');{$endif}
+    end;
+  end;
+
+  procedure mover_fs; inline;
+  begin
+    with TThoriumInstructionMOVER_FS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
+      ThoriumFreeValue(_NewEntry^.Value);
+      _NewEntry^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck('copyr.fs');{$endif}
+    end;
+  end;
+
+  procedure movefs; inline;
+  begin
+    with TThoriumInstructionMOVEFS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset)^.Value;
+      {$ifdef Timecheck}EndTimecheck('copyfs');{$endif}
+    end;
+  end;
+
+  procedure moves_st; inline;
+  begin
+    with TThoriumInstructionMOVES_ST(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etValue;
+      _NewEntry^.Value := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value;
+      {$ifdef Timecheck}EndTimecheck('copys.st');{$endif}
+    end;
+  end;
+
+  procedure pop_s; inline;
+  begin
+    with TThoriumInstructionPOP_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FStack.Pop(Amount);
+      {$ifdef Timecheck}EndTimecheck('pop.s');{$endif}
+    end;
+  end;
+
+  procedure clr; inline;
+  begin
+    with TThoriumInstructionCLR(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      ThoriumFreeValue(FRegisters[TRI]);
+      {$ifdef Timecheck}EndTimecheck('clr');{$endif}
+    end;
+  end;
+
+  procedure castif; inline;
+  begin
+    with TThoriumInstructionCASTIF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btFloat;
+      FRegisters[TRI].BuiltIn.Float := FRegisters[SRI].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('castif');{$endif}
+    end;
+  end;
+
+  procedure castie; inline;
+  begin
+    with TThoriumInstructionCASTIE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction castie not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('castie');{$endif}
+    end;
+  end;
+
+  procedure castfe; inline;
+  begin
+    with TThoriumInstructionCASTFE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction castfe not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('castfe');{$endif}
+    end;
+  end;
+
+  procedure castse; inline;
+  begin
+    with TThoriumInstructionCASTSE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction castse not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('castse');{$endif}
+    end;
+  end;
+
+  procedure castei; inline;
+  begin
+    with TThoriumInstructionCASTEI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction castei not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('castei');{$endif}
+    end;
+  end;
+
+  procedure castef; inline;
+  begin
+    with TThoriumInstructionCASTEF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction castef not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('castef');{$endif}
+    end;
+  end;
+
+  procedure castes; inline;
+  begin
+    with TThoriumInstructionCASTES(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumException.Create('Instruction castes not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('castes');{$endif}
+    end;
+  end;
+
+  procedure caste; inline;
+  begin
+    with TThoriumInstructionCASTE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction caste not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('caste');{$endif}
+    end;
+  end;
+
+  procedure cmpi; inline;
+  begin
+    with TThoriumInstructionCMPI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FStateRegister := FStateRegister and (not (FStateRegister and THORIUM_STATE_COMPFLAGS));
+      if FRegisters[Op1].BuiltIn.Int > FRegisters[Op2].BuiltIn.Int then
+        FStateRegister := FStateRegister or THORIUM_STATE_GREATER
+      else if FRegisters[Op1].BuiltIn.Int < FRegisters[Op2].BuiltIn.Int then
+        FStateRegister := FStateRegister or THORIUM_STATE_LESS
+      else
+        FStateRegister := FStateRegister or THORIUM_STATE_EQUAL;
+      {$ifdef Timecheck}EndTimecheck('cmpi');{$endif}
+    end;
+  end;
+
+  procedure cmpif; inline;
+  begin
+    with TThoriumInstructionCMPIF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FStateRegister := FStateRegister and (not (FStateRegister and THORIUM_STATE_COMPFLAGS));
+      if FRegisters[Op1].BuiltIn.Int > FRegisters[Op2].BuiltIn.Float then
+        FStateRegister := FStateRegister or THORIUM_STATE_GREATER
+      else if FRegisters[Op1].BuiltIn.Int < FRegisters[Op2].BuiltIn.Float then
+        FStateRegister := FStateRegister or THORIUM_STATE_LESS
+      else
+        FStateRegister := FStateRegister or THORIUM_STATE_EQUAL;
+      {$ifdef Timecheck}EndTimecheck('cmpif');{$endif}
+    end;
+  end;
+
+  procedure cmpie; inline;
+  begin
+    with TThoriumInstructionCMPIE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction cmpie not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('cmpie');{$endif}
+    end;
+  end;
+
+  procedure cmpf; inline;
+  begin
+    with TThoriumInstructionCMPF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FStateRegister := FStateRegister and (not (FStateRegister and THORIUM_STATE_COMPFLAGS));
+      if FRegisters[Op1].BuiltIn.Float > FRegisters[Op2].BuiltIn.Float then
+        FStateRegister := FStateRegister or THORIUM_STATE_GREATER
+      else if FRegisters[Op1].BuiltIn.Float < FRegisters[Op2].BuiltIn.Float then
+        FStateRegister := FStateRegister or THORIUM_STATE_LESS
+      else
+        FStateRegister := FStateRegister or THORIUM_STATE_EQUAL;
+      {$ifdef Timecheck}EndTimecheck('cmpf');{$endif}
+    end;
+  end;
+
+  procedure cmpfi; inline;
+  begin
+    with TThoriumInstructionCMPFI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FStateRegister := FStateRegister and (not (FStateRegister and THORIUM_STATE_COMPFLAGS));
+      if FRegisters[Op1].BuiltIn.Float > FRegisters[Op2].BuiltIn.Int then
+        FStateRegister := FStateRegister or THORIUM_STATE_GREATER
+      else if FRegisters[Op1].BuiltIn.Float < FRegisters[Op2].BuiltIn.Int then
+        FStateRegister := FStateRegister or THORIUM_STATE_LESS
+      else
+        FStateRegister := FStateRegister or THORIUM_STATE_EQUAL;
+      {$ifdef Timecheck}EndTimecheck('cmpfi');{$endif}
+    end;
+  end;
+
+  procedure cmpfe; inline;
+  begin
+    with TThoriumInstructionCMPFE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction cmpfe not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('cmpfe');{$endif}
+    end;
+  end;
+
+  procedure cmps; inline;
+  begin
+    with TThoriumInstructionCMPS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FStateRegister := FStateRegister and (not (FStateRegister and THORIUM_STATE_COMPFLAGS));
+      if ThoriumDerefStr(FRegisters[Op1].BuiltIn.Str) > ThoriumDerefStr(FRegisters[Op2].BuiltIn.Str) then
+        FStateRegister := FStateRegister or THORIUM_STATE_GREATER
+      else if ThoriumDerefStr(FRegisters[Op1].BuiltIn.Str) < ThoriumDerefStr(FRegisters[Op2].BuiltIn.Str) then
+        FStateRegister := FStateRegister or THORIUM_STATE_LESS
+      else
+        FStateRegister := FStateRegister or THORIUM_STATE_EQUAL;
+      {$ifdef Timecheck}EndTimecheck('cmps');{$endif}
+    end;
+  end;
+
+  procedure cmpse; inline;
+  begin
+    with TThoriumInstructionCMPSE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction cmpse not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('cmpse');{$endif}
+    end;
+  end;
+
+  procedure cmpe; inline;
+  begin
+    with TThoriumInstructionCMPE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction cmpe not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('cmpe');{$endif}
+    end;
+  end;
+
+  procedure cmpei; inline;
+  begin
+    with TThoriumInstructionCMPEI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction cmpei not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('cmpei');{$endif}
+    end;
+  end;
+
+  procedure cmpef; inline;
+  begin
+    with TThoriumInstructionCMPEF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException.Create('Instruction cmpef not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('cmpef');{$endif}
+    end;
+  end;
+
+  procedure cmpes; inline;
+  begin
+    with TThoriumInstructionCMPES(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      raise EThoriumRuntimeException .Create('Instruction cmpes not implemented yet.');
+      {$ifdef Timecheck}EndTimecheck('cmpes');{$endif}
+    end;
+  end;
+
+  procedure addi; inline;
+  begin
+    with TThoriumInstructionADDI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int +
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('addi');{$endif}
+    end;
+  end;
+
+  procedure addf; inline;
+  begin
+    with TThoriumInstructionADDF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btFloat;
+      FRegisters[TRI].BuiltIn.Float := FRegisters[Op1].BuiltIn.Float +
+        FRegisters[Op2].BuiltIn.Float;
+      {$ifdef Timecheck}EndTimecheck('addf');{$endif}
+    end;
+  end;
+
+  procedure adds; inline;
+  begin
+    with TThoriumInstructionADDS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if TRI = Op1 then
+      begin
+        FRegisters[TRI] := ThoriumCreateStringValue(FRegisters[Op1].BuiltIn.Str^ + FRegisters[Op2].BuiltIn.Str^);
+      end
+      else
+      begin
+        FRegisters[TRI]._Type := vtBuiltIn;
+        FRegisters[TRI].BuiltIn._Type := btString;
+        New(FRegisters[TRI].BuiltIn.Str);
+        FRegisters[TRI].BuiltIn.Str^ := FRegisters[Op1].BuiltIn.Str^ + FRegisters[Op2].BuiltIn.Str^;
+      end;
+      {$ifdef Timecheck}EndTimecheck('adds');{$endif}
+    end;
+  end;
+
+  procedure subi; inline;
+  begin
+    with TThoriumInstructionSUBI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int -
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('subi');{$endif}
+    end;
+  end;
+
+  procedure subf; inline;
+  begin
+    with TThoriumInstructionSUBF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btFloat;
+      FRegisters[TRI].BuiltIn.Float := FRegisters[Op1].BuiltIn.Float -
+        FRegisters[Op2].BuiltIn.Float;
+      {$ifdef Timecheck}EndTimecheck('subf');{$endif}
+    end;
+  end;
+
+  procedure muli; inline;
+  begin
+    with TThoriumInstructionMULI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int *
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('muli');{$endif}
+    end;
+  end;
+
+  procedure mulf; inline;
+  begin
+    with TThoriumInstructionMULF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btFloat;
+      FRegisters[TRI].BuiltIn.Float := FRegisters[Op1].BuiltIn.Float *
+        FRegisters[Op2].BuiltIn.Float;
+      {$ifdef Timecheck}EndTimecheck('mulf');{$endif}
+    end;
+  end;
+
+  procedure divi; inline;
+  begin
+    with TThoriumInstructionDIVI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int div
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('divi');{$endif}
+    end;
+  end;
+
+  procedure divf; inline;
+  begin
+    with TThoriumInstructionDIVF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btFloat;
+      FRegisters[TRI].BuiltIn.Float := FRegisters[Op1].BuiltIn.Float /
+        FRegisters[Op2].BuiltIn.Float;
+      {$ifdef Timecheck}EndTimecheck('divf');{$endif}
+    end;
+  end;
+
+  procedure negi; inline;
+  begin
+    with TThoriumInstructionNEGI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[Op1].BuiltIn.Int := -FRegisters[Op1].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('negi');{$endif}
+    end;
+  end;
+
+  procedure negf; inline;
+  begin
+    with TThoriumInstructionNEGF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[Op1].BuiltIn.Float := -FRegisters[Op1].BuiltIn.Float;
+      {$ifdef Timecheck}EndTimecheck('negf');{$endif}
+    end;
+  end;
+
+  procedure _not; inline;
+  begin
+    with TThoriumInstructionNOT(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[Op1].BuiltIn.Int := not FRegisters[Op1].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('not');{$endif}
+    end;
+  end;
+
+  procedure bnot; inline;
+  begin
+    with TThoriumInstructionNOT(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if FRegisters[Op1].BuiltIn.Int = 0 then
+        FRegisters[Op1].BuiltIn.Int := 1
+      else
+        FRegisters[Op1].BuiltIn.Int := 0;
+      {$ifdef Timecheck}EndTimecheck('not');{$endif}
+    end;
+  end;
+
+  procedure _mod; inline;
+  begin
+    with TThoriumInstructionMOD(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int mod
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('mod');{$endif}
+    end;
+  end;
+
+  procedure _and; inline;
+  begin
+    with TThoriumInstructionAND(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int and
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('and');{$endif}
+    end;
+  end;
+
+  procedure _or; inline;
+  begin
+    with TThoriumInstructionOR(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int or
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('or');{$endif}
+    end;
+  end;
+
+  procedure _xor; inline;
+  begin
+    with TThoriumInstructionXOR(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int xor
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('xor');{$endif}
+    end;
+  end;
+
+  procedure _shl; inline;
+  begin
+    with TThoriumInstructionSHL(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int shl
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('shl');{$endif}
+    end;
+  end;
+
+  procedure _shr; inline;
+  begin
+    with TThoriumInstructionSHR(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI]._Type := vtBuiltIn;
+      FRegisters[TRI].BuiltIn._Type := btInteger;
+      FRegisters[TRI].BuiltIn.Int := FRegisters[Op1].BuiltIn.Int shr
+        FRegisters[Op2].BuiltIn.Int;
+      {$ifdef Timecheck}EndTimecheck('shr');{$endif}
+    end;
+  end;
+
+  procedure inci_s; inline;
+  begin
+    with TThoriumInstructionINCI_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
+      _Operand1^.Value.BuiltIn.Int := _Operand1^.Value.BuiltIn.Int + 1;
+      {$ifdef Timecheck}EndTimecheck('inci.s');{$endif}
+    end;
+  end;
+
+  procedure incf_s; inline;
+  begin
+    with TThoriumInstructionINCF_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
+      _Operand1^.Value.BuiltIn.Float := _Operand1^.Value.BuiltIn.Float + 1;
+      {$ifdef Timecheck}EndTimecheck('incf.s');{$endif}
+    end;
+  end;
+
+  procedure inci_fs; inline;
+  begin
+    with TThoriumInstructionINCI_FS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
+      _Operand1^.Value.BuiltIn.Int := _Operand1^.Value.BuiltIn.Int + 1;
+      {$ifdef Timecheck}EndTimecheck('inci.fs');{$endif}
+    end;
+  end;
+
+  procedure incf_fs; inline;
+  begin
+    with TThoriumInstructionINCF_FS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
+      _Operand1^.Value.BuiltIn.Float := _Operand1^.Value.BuiltIn.Float + 1;
+      {$ifdef Timecheck}EndTimecheck('incf.fs');{$endif}
+    end;
+  end;
+
+  procedure inci; inline;
+  begin
+    with TThoriumInstructionINCI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].BuiltIn.Int+=1;
+      {$ifdef Timecheck}EndTimecheck('inci');{$endif}
+    end;
+  end;
+
+  procedure incf; inline;
+  begin
+    with TThoriumInstructionINCF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].BuiltIn.Float+=1;
+      {$ifdef Timecheck}EndTimecheck('incf');{$endif}
+    end;
+  end;
+
+  procedure deci_s; inline;
+  begin
+    with TThoriumInstructionDECI_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
+      _Operand1^.Value.BuiltIn.Int := _Operand1^.Value.BuiltIn.Int - 1;
+      {$ifdef Timecheck}EndTimecheck('deci.s');{$endif}
+    end;
+  end;
+
+  procedure decf_s; inline;
+  begin
+    with TThoriumInstructionDECF_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
+      _Operand1^.Value.BuiltIn.Float := _Operand1^.Value.BuiltIn.Float - 1;
+      {$ifdef Timecheck}EndTimecheck('decf.s');{$endif}
+    end;
+  end;
+
+  procedure deci_fs; inline;
+  begin
+    with TThoriumInstructionDECI_FS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
+      _Operand1^.Value.BuiltIn.Int := _Operand1^.Value.BuiltIn.Int - 1;
+      {$ifdef Timecheck}EndTimecheck('deci.fs');{$endif}
+    end;
+  end;
+
+  procedure decf_fs; inline;
+  begin
+    with TThoriumInstructionDECF_FS(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
+      _Operand1^.Value.BuiltIn.Float := _Operand1^.Value.BuiltIn.Float - 1;
+      {$ifdef Timecheck}EndTimecheck('decf.fs');{$endif}
+    end;
+  end;
+
+  procedure deci; inline;
+  begin
+    with TThoriumInstructionDECI(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].BuiltIn.Int-=1;
+      {$ifdef Timecheck}EndTimecheck('deci');{$endif}
+    end;
+  end;
+
+  procedure decf; inline;
+  begin
+    with TThoriumInstructionDECF(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].BuiltIn.Float-=1;
+      {$ifdef Timecheck}EndTimecheck('decf');{$endif}
+    end;
+  end;
+
+  procedure xfget; inline;
+  begin
+    with TThoriumInstructionXFGET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if (TRI = ERI) then
+      begin
+        FRegisters[THORIUM_REGISTER_C1] := FRegisters[ERI];
+        FRegisters[ERI] := FRegisters[THORIUM_REGISTER_C1].Extended.TypeClass.GetField(FRegisters[ERI], ID);
+        //ThoriumFreeValue(FRegisters[THORIUM_REGISTER_C1]);
+      end
+      else
+      begin
+        FRegisters[TRI] := FRegisters[ERI].Extended.TypeClass.GetField(FRegisters[ERI], ID);
+        //ThoriumFreeValue(FRegisters[ERI]);
+      end;
+      {$ifdef Timecheck}EndTimecheck('xfget');{$endif}
+    end;
+  end;
+
+  procedure xfset; inline;
+  begin
+    with TThoriumInstructionXFSET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[ERI].Extended.TypeClass.SetField(FRegisters[ERI], ID, FRegisters[VRI]);
+      // ThoriumFreeValue(FRegisters[ERI]);
+      ThoriumFreeValue(FRegisters[VRI]);
+      {$ifdef Timecheck}EndTimecheck('xfset');{$endif}
+    end;
+  end;
+
+  procedure xiget; inline;
+  begin
+    with TThoriumInstructionXIGET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if TRI = ERI then
+      begin
+        FRegisters[THORIUM_REGISTER_C1] := FRegisters[ERI];
+        FRegisters[ERI] := FRegisters[ERI].Extended.TypeClass.GetIndex(FRegisters[ERI], FRegisters[IRI]);
+        ThoriumFreeValue(FRegisters[THORIUM_REGISTER_C1]);
+        ThoriumFreeValue(FRegisters[IRI]);
+      end
+      else if TRI = IRI then
+      begin
+        FRegisters[THORIUM_REGISTER_C1] := FRegisters[IRI];
+        FRegisters[IRI] := FRegisters[ERI].Extended.TypeClass.GetIndex(FRegisters[ERI], FRegisters[IRI]);
+        ThoriumFreeValue(FRegisters[THORIUM_REGISTER_C1]);
+        //ThoriumFreeValue(FRegisters[ERI]);
+      end
+      else
+      begin
+        FRegisters[TRI] := FRegisters[ERI].Extended.TypeClass.GetIndex(FRegisters[ERI], FRegisters[IRI]);
+        //ThoriumFreeValue(FRegisters[ERI]);
+        ThoriumFreeValue(FRegisters[IRI]);
+      end;
+      {$ifdef Timecheck}EndTimecheck('xiget');{$endif}
+    end;
+  end;
+
+  procedure xct; inline;
+  begin
+    with TThoriumInstructionXCT(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      TObject(FRegisters[ERI].Extended.Value).GetInterface(IThoriumPersistent, Intf);
+      Intf.EnableHostControl;
+      Intf := nil;
+      {$ifdef Timecheck}EndTimecheck('xct');{$endif}
+    end;
+  end;
+
+  procedure xiset; inline;
+  begin
+    with TThoriumInstructionXISET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[ERI].Extended.TypeClass.SetIndex(FRegisters[ERI], FRegisters[IRI], FRegisters[VRI]);
+      //ThoriumFreeValue(FRegisters[ERI]);
+      ThoriumFreeValue(FRegisters[IRI]);
+      ThoriumFreeValue(FRegisters[VRI]);
+      {$ifdef Timecheck}EndTimecheck('xiset');{$endif}
+    end;
+  end;
+
+  procedure xpget; inline;
+  begin
+    with TThoriumInstructionXPGET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      TThoriumLibraryProperty(Prop).GetValue(@FRegisters[TRI]);
+      {$ifdef Timecheck}EndTimecheck('xpset');{$endif}
+    end;
+  end;
+
+  procedure xpset; inline;
+  begin
+    with TThoriumInstructionXPSET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      TThoriumLibraryProperty(Prop).SetValue(@FRegisters[SRI]);
+      ThoriumFreeValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck('xpset');{$endif}
+    end;
+  end;
+
+  procedure vastart; inline;
+  begin
+    with TThoriumInstructionVASTART(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etVarargs;
+      if Pointers = 1 then
+        _NewEntry^.VAData := GetMem(Length * SizeOf(ptruint))
+      else
+        _NewEntry^.VAData := GetMem(Length);
+      _NewEntry^.VADataOrigin := _NewEntry^.VAData;
+      _NewEntry^.VABufferOrigin := nil;
+      _NewEntry^.VAToFreeOrigin := nil;
+
+      {$ifdef Timecheck}EndTimecheck('vastart');{$endif}
+    end;
+  end;
+
+  procedure va_i8; inline;
+  begin
+    with TThoriumInstructionVA_I8(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      if FRegisters[SRI].BuiltIn.Int >= $FF then
+        PByte(_Operand1^.VAData)^ := $FF
+      else if FRegisters[SRI].BuiltIn.Int <= 0 then
+        PByte(_Operand1^.VAData)^ := 0
+      else
+        PByte(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Int;
+      Inc(_Operand1^.VAData, 1);
+      {$ifdef Timecheck}EndTimecheck('va.i8');{$endif}
+    end;
+  end;
+
+  procedure va_i16; inline;
+  begin
+    with TThoriumInstructionVA_I16(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      if FRegisters[SRI].BuiltIn.Int >= $FFFF then
+        PWord(_Operand1^.VAData)^ := $FFFF
+      else if FRegisters[SRI].BuiltIn.Int <= 0 then
+        PWord(_Operand1^.VAData)^ := 0
+      else
+        PWord(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Int;
+      Inc(_Operand1^.VAData, 2);
+      {$ifdef Timecheck}EndTimecheck('va.i16');{$endif}
+    end;
+  end;
+
+  procedure va_i32; inline;
+  begin
+    with TThoriumInstructionVA_I32(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      if FRegisters[SRI].BuiltIn.Int >= $FFFFFFFF then
+        PDWord(_Operand1^.VAData)^ := $FFFFFFFF
+      else if FRegisters[SRI].BuiltIn.Int <= 0 then
+        PDWord(_Operand1^.VAData)^ := 0
+      else
+        PDWord(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Int;
+      Inc(_Operand1^.VAData, 4);
+      {$ifdef Timecheck}EndTimecheck('va.i32');{$endif}
+    end;
+  end;
+
+  procedure va_i64; inline;
+  begin
+    with TThoriumInstructionVA_I64(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      PQWord(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Int and $7FFFFFFFFFFFFFFF;
+      Inc(_Operand1^.VAData, 8);
+      {$ifdef Timecheck}EndTimecheck('va.i64');{$endif}
+    end;
+  end;
+
+  procedure va_i8s; inline;
+  begin
+    with TThoriumInstructionVA_I8S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      if FRegisters[SRI].BuiltIn.Int >= 127 then
+        PShortInt(_Operand1^.VAData)^ := 127
+      else if FRegisters[SRI].BuiltIn.Int <= -128 then
+        PShortInt(_Operand1^.VAData)^ := -128
+      else
+        PShortInt(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Int;
+      Inc(_Operand1^.VAData, 1);
+      {$ifdef Timecheck}EndTimecheck('va.i8s');{$endif}
+    end;
+  end;
+
+  procedure va_i16s; inline;
+  begin
+    with TThoriumInstructionVA_I16S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      if FRegisters[SRI].BuiltIn.Int >= 32767 then
+        PSmallInt(_Operand1^.VAData)^ := 32767
+      else if FRegisters[SRI].BuiltIn.Int <= -32768 then
+        PSmallInt(_Operand1^.VAData)^ := -32768
+      else
+        PSmallInt(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Int;
+      Inc(_Operand1^.VAData, 2);
+      {$ifdef Timecheck}EndTimecheck('va.i16s');{$endif}
+    end;
+  end;
+
+  procedure va_i32s; inline;
+  begin
+    with TThoriumInstructionVA_I32S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      if FRegisters[SRI].BuiltIn.Int >= 2147483647 then
+        PLongInt(_Operand1^.VAData)^ := 2147483647
+      else if FRegisters[SRI].BuiltIn.Int <= -2147483648 then
+        PLongInt(_Operand1^.VAData)^ := -2147483648
+      else
+        PLongInt(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Int;
+      Inc(_Operand1^.VAData, 4);
+      {$ifdef Timecheck}EndTimecheck('va.i32s');{$endif}
+    end;
+  end;
+
+  procedure va_i64s; inline;
+  begin
+    with TThoriumInstructionVA_I64S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      PInt64(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Int;
+      Inc(_Operand1^.VAData, 8);
+      {$ifdef Timecheck}EndTimecheck('va.i64s');{$endif}
+    end;
+  end;
+
+  procedure va_f32; inline;
+  begin
+    with TThoriumInstructionVA_F32(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      PSingle(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Float;
+      Inc(_Operand1^.VAData, 4);
+      {$ifdef Timecheck}EndTimecheck('va.f32');{$endif}
+    end;
+  end;
+
+  procedure va_f64; inline;
+  begin
+    with TThoriumInstructionVA_F64(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      PDouble(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Float;
+      Inc(_Operand1^.VAData, 8);
+      {$ifdef Timecheck}EndTimecheck('va.f64');{$endif}
+    end;
+  end;
+
+  procedure va_f80; inline;
+  begin
+    with TThoriumInstructionVA_F80(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      PExtended(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Float;
+      Inc(_Operand1^.VAData, 10);
+      {$ifdef Timecheck}EndTimecheck('va.f80');{$endif}
+    end;
+  end;
+
+  procedure va_s; inline;
+  begin
+    with TThoriumInstructionVA_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      // Use move instead of assignment to avoid hassle with the stringmanager
+      _Operand1 := FStack.GetTopStackEntry;
+      // Move(FRegisters[SRI].BuiltIn.Str^, PString(_Operand1^.VAData)^, SizeOf(String));
+      PPointer(_Operand1^.VAData)^ := nil;
+      PString(_Operand1^.VAData)^ := FRegisters[SRI].BuiltIn.Str^;
+      Inc(_Operand1^.VAData, SizeOf(Ptruint));
+      {$ifdef Timecheck}EndTimecheck('va.s');{$endif}
+    end;
+  end;
+
+  procedure va_x; inline;
+  begin
+    with TThoriumInstructionVA_X(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      PPointer(_Operand1^.VAData)^ := FRegisters[SRI].Extended.Value;
+      Inc(_Operand1^.VAData, SizeOf(ptruint));
+      {$ifdef Timecheck}EndTimecheck('va.x');{$endif}
+    end;
+  end;
+
+  procedure vastart_t; inline;
+  begin
+    with TThoriumInstructionVASTART_T(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etVarargs;
+      _NewEntry^.VAData := GetMem(Length * SizeOf(TVarRec));
+      _NewEntry^.VADataOrigin := _NewEntry^.VAData;
+      _NewEntry^.VABuffer := GetMem(Floats * SizeOf(Extended) + (Length - (ToClear + Floats)) * SizeOf(TThoriumInteger));
+      _NewEntry^.VABufferOrigin := _NewEntry^.VABuffer;
+      _NewEntry^.VAToFree := GetMem(ToClear * SizeOf(TThoriumValue));
+      _NewEntry^.VAToFreeOrigin := _NewEntry^.VAToFree;
+      {$ifdef Timecheck}EndTimecheck('vastart.t');{$endif}
+    end;
+  end;
+
+  procedure vat_f; inline;
+  begin
+    with TThoriumInstructionVAT_F(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      PExtended(_Operand1^.VABuffer)^ := FRegisters[SRI].BuiltIn.Float;
+      with PVarRec(_Operand1^.VAData)^ do
+      begin
+        VType := vtExtended;
+        VExtended := _Operand1^.VABuffer;
+      end;
+      Inc(_Operand1^.VABuffer, SizeOf(Extended));
+      Inc(_Operand1^.VAData, SizeOf(TVarRec));
+      {$ifdef Timecheck}EndTimecheck('vat.f');{$endif}
+    end;
+  end;
+
+  procedure vat_i; inline;
+  begin
+    with TThoriumInstructionVAT_I(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      PThoriumInteger(_Operand1^.VABuffer)^ := FRegisters[SRI].BuiltIn.Int;
+      with PVarRec(_Operand1^.VAData)^ do
+      begin
+        VType := vtInt64;
+        VInt64 := _Operand1^.VABuffer;
+      end;
+      Inc(_Operand1^.VABuffer, SizeOf(TThoriumInteger));
+      Inc(_Operand1^.VAData, SizeOf(TVarRec));
+      {$ifdef Timecheck}EndTimecheck('vat.i');{$endif}
+    end;
+  end;
+
+  procedure vat_s; inline;
+  begin
+    with TThoriumInstructionVAT_S(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      with PVarRec(_Operand1^.VAData)^ do
+      begin
+        VType := vtAnsiString;
+        VAnsiString := PPointer(FRegisters[SRI].BuiltIn.Str)^;
+      end;
+      //Move(FRegisters[SRI], _Operand1^.VAToFree[0], SizeOf(TThoriumValue));
+      //Inc(_Operand1^.VAToFree);
+      Inc(_Operand1^.VAData, SizeOf(TVarRec));
+      {$ifdef Timecheck}EndTimecheck('vat.s');{$endif}
+    end;
+  end;
+
+  procedure vat_x; inline;
+  begin
+    with TThoriumInstructionVAT_X(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTopStackEntry;
+      with PVarRec(_Operand1^.VAData)^ do
+      begin
+        VType := vtPointer;
+        VPointer := FRegisters[SRI].Extended.Value;
+      end;
+      Move(FRegisters[SRI], _Operand1^.VAToFree[0], SizeOf(TThoriumValue));
+      Inc(_Operand1^.VAToFree);
+      Inc(_Operand1^.VAData, SizeOf(TVarRec));
+      {$ifdef Timecheck}EndTimecheck('vat.x');{$endif}
+    end;
+  end;
+
+  procedure vafinish; inline;
+  begin
+    with TThoriumInstructionVAFINISH(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      {$ifdef Timecheck}EndTimecheck('vafinish');{$endif}
+    end;
+  end;
+
+  procedure jmp; inline;
+  begin
+    with TThoriumInstructionJMP(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      Inc(FCurrentInstruction, (NewAddress-1)-FCurrentInstructionIdx);
+      //WriteLn('JMP by offset ', (NewAddress-1)-FCurrentInstructionIdx, ' to ', IntToHex(NewAddress-1, 4), ' from ', IntToHex(FCurrentInstructionIdx, 4));
+      Inc(FCurrentInstructionIdx, (NewAddress-1)-FCurrentInstructionIdx);
+      FCurrentInstructionIdx := NewAddress-1;
+      {$ifdef Timecheck}EndTimecheck('jmp');{$endif}
+    end;
+  end;
+
+  procedure je; inline;
+  begin
+    with TThoriumInstructionJE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if (FStateRegister and THORIUM_STATE_ACCUM_EQUAL = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+      begin
+        Inc(FCurrentInstruction, (NewAddress-1) - FCurrentInstructionIdx);
+        Inc(FCurrentInstructionIdx, (NewAddress-1) - FCurrentInstructionIdx);
+        FCurrentInstructionIdx := NewAddress-1;
+      end;
+      {$ifdef Timecheck}EndTimecheck('je');{$endif}
+    end;
+  end;
+
+  procedure jne; inline;
+  begin
+    with TThoriumInstructionJNE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if not (FStateRegister and THORIUM_STATE_ACCUM_EQUAL = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+      begin
+        Inc(FCurrentInstruction, (NewAddress-1) - FCurrentInstructionIdx);
+        Inc(FCurrentInstructionIdx, (NewAddress-1) - FCurrentInstructionIdx);
+        FCurrentInstructionIdx := NewAddress-1;
+      end;
+      {$ifdef Timecheck}EndTimecheck('jne');{$endif}
+    end;
+  end;
+
+  procedure jgt; inline;
+  begin
+    with TThoriumInstructionJGT(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if (FStateRegister and THORIUM_STATE_ACCUM_GREATER = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+      begin
+        Inc(FCurrentInstruction, (NewAddress-1) - FCurrentInstructionIdx);
+        Inc(FCurrentInstructionIdx, (NewAddress-1) - FCurrentInstructionIdx);
+        FCurrentInstructionIdx := NewAddress-1;
+      end;
+      {$ifdef Timecheck}EndTimecheck('jgt');{$endif}
+    end;
+  end;
+
+  procedure jge; inline;
+  begin
+    with TThoriumInstructionJGE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if (FStateRegister and THORIUM_STATE_ACCUM_GREATEREQUAL = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+      begin
+        Inc(FCurrentInstruction, (NewAddress-1) - FCurrentInstructionIdx);
+        Inc(FCurrentInstructionIdx, (NewAddress-1) - FCurrentInstructionIdx);
+        FCurrentInstructionIdx := NewAddress-1;
+      end;
+      {$ifdef Timecheck}EndTimecheck('jge');{$endif}
+    end;
+  end;
+
+  procedure jlt; inline;
+  begin
+    with TThoriumInstructionJLT(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if (FStateRegister and THORIUM_STATE_ACCUM_LESS = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+      begin
+        Inc(FCurrentInstruction, (NewAddress-1) - FCurrentInstructionIdx);
+        Inc(FCurrentInstructionIdx, (NewAddress-1) - FCurrentInstructionIdx);
+        FCurrentInstructionIdx := NewAddress-1;
+      end;
+      {$ifdef Timecheck}EndTimecheck('jlt');{$endif}
+    end;
+  end;
+
+  procedure jle; inline;
+  begin
+    with TThoriumInstructionJLE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      if (FStateRegister and THORIUM_STATE_ACCUM_LESSEQUAL = FStateRegister and THORIUM_STATE_COMPFLAGS) then
+      begin
+        Inc(FCurrentInstruction, (NewAddress-1) - FCurrentInstructionIdx);
+        Inc(FCurrentInstructionIdx, (NewAddress-1) - FCurrentInstructionIdx);
+        FCurrentInstructionIdx := NewAddress-1;
+      end;
+      {$ifdef Timecheck}EndTimecheck('jle');{$endif}
+    end;
+  end;
+
+  procedure call; inline;
+  begin
+    with TThoriumInstructionCALL(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etStackFrame;
+      _NewEntry^.ReturnAddress := FCurrentInstructionIdx;
+      _NewEntry^.PreviousStackFrame := FCurrentStackFrame;
+      _NewEntry^.ReturnModule := THORIUM_MODULE_INDEX_CURRENT;
+      _NewEntry^.RegisterDumpRange := HRI;
+      _NewEntry^.RetVals := RetVal;
+      _NewEntry^.Params := Parameters;
+      _NewEntry^.DropResult := False;
+      GetMem(_NewEntry^.RegisterDump, SizeOf(TThoriumValue)*(HRI+1));
+      Move(FRegisters[0], _NewEntry^.RegisterDump^, SizeOf(TThoriumValue)*(HRI+1));
+
+      FCurrentStackFrame := FStack.FCount-1;
+      Inc(FCurrentInstruction, (EntryPoint-1) - FCurrentInstructionIdx);
+      Inc(FCurrentInstructionIdx, (EntryPoint-1) - FCurrentInstructionIdx);
+      {$ifdef Timecheck}EndTimecheck('call');{$endif}
+    end;
+  end;
+
+  procedure call_d; inline;
+  begin
+    with TThoriumInstructionCALL_D(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(0, FCurrentStackFrame);
+      if KeepResult <> 0 then
+        _Operand1^.DropResult := False;
+      _Operand1^.RetVals := RetVal;
+      _Operand1^.Params := Parameters + _Operand1^.Params + Pops;
+      Inc(FCurrentInstruction, (EntryPoint-1) - FCurrentInstructionIdx);
+      Inc(FCurrentInstructionIdx, (EntryPoint-1) - FCurrentInstructionIdx);
+      {$ifdef Timecheck}EndTimecheck('call.d');{$endif}
+    end;
+  end;
+
+  procedure fcall; inline;
+  begin
+    with TThoriumInstructionFCALL(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _NewEntry := FStack.Push;
+      _NewEntry^._Type := etStackFrame;
+      _NewEntry^.ReturnAddress := FCurrentInstructionIdx;
+      _NewEntry^.PreviousStackFrame := FCurrentStackFrame;
+      _NewEntry^.ReturnModule := FCurrentModuleIdx;
+      _NewEntry^.RegisterDumpRange := HRI;
+      _NewEntry^.RetVals := RetVal;
+      _NewEntry^.Params := Parameters;
+      _NewEntry^.DropResult := False;
+      GetMem(_NewEntry^.RegisterDump, SizeOf(TThoriumValue)*HRI);
+      Move(FRegisters[0], _NewEntry^.RegisterDump^, SizeOf(TThoriumValue)*HRI);
+
+      FCurrentInstructionIdx := EntryPoint - 1;
+      FCurrentStackFrame := FStack.FCount-1;
+      FCurrentModuleIdx := ModuleIndex;
+      FCurrentModule := TThoriumModule(FThorium.FModules[FCurrentModuleIdx]);
+      FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
+      {$ifdef Timecheck}EndTimecheck('fcall');{$endif}
+    end;
+  end;
+
+  procedure xcall; inline;
+  begin
+    with TThoriumInstructionXCALL(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      TThoriumHostFunctionBase(FunctionRef).CallFromVirtualMachine(Self);
+      {$ifdef Timecheck}EndTimecheck('ecall');{$endif}
+    end;
+  end;
+
+  procedure xcall_m; inline;
+  begin
+    with TThoriumInstructionXCALL_M(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      TThoriumHostMethodBase(MethodRef).CallFromVirtualMachine(TObject(FRegisters[RTTIValueRegister].Extended.Value), Self);
+      // ThoriumFreeValue(FRegisters[RTTIValueRegister]);
+      {$ifdef Timecheck}EndTimecheck('ecall');{$endif}
+    end;
+  end;
+
+  procedure ret; inline;
+  begin
+    with TThoriumInstructionRET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(0, FCurrentStackFrame);
+      FCurrentStackFrame := _Operand1^.PreviousStackFrame;
+      FCurrentInstructionIdx := _Operand1^.ReturnAddress;
+      if _Operand1^.ReturnModule <> THORIUM_MODULE_INDEX_CURRENT then
+      begin
+        FCurrentModuleIdx := _Operand1^.ReturnModule;
+        FCurrentModule := TThoriumModule(FThorium.FModules[FCurrentModuleIdx]);
+      end;
+      FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
+      if _Operand1^.RegisterDump <> nil then
+      begin
+        Move(_Operand1^.RegisterDump^, FRegisters[0], SizeOf(TThoriumValue)*(_Operand1^.RegisterDumpRange+1));
+        FreeMem(_Operand1^.RegisterDump);
+      end;
+      if (_Operand1^.RetVals = 1) then
+      begin
+        if (_Operand1^.DropResult) then
+        begin
+          // Pop the result away
+          FStack.Pop(2+_Operand1^.Params, False);
+        end
+        else
+        begin
+          // Assign the value immediatedly above the stack frame to the slot
+          // reserved for the return value.
+          if _Operand1^.Params = 0 then
+          begin
+            // If there are no parameters, we can directly overwrite the stack
+            // frame.
+            _Operand1^ := _Operand1[1];
+            // _Operand1[1]._Type := etNull; // To avoid freeing by the pop
+            FStack.Pop(1, False);
+          end
+          else
+          begin
+            // Otherwise we just overwrite the slot of the last parameter
+            // ThoriumFreeValue(_Operand1[-(_Operand1^.Params)].Value);
+            _Operand1[-(_Operand1^.Params)] := _Operand1[1];
+            // Again, avoid freeing by the pop
+            // _Operand1[1]._Type := etNull;
+            FStack.Pop(1+_Operand1^.Params, False);
+          end;
+        end;
+      end
+      else
+        FStack.Pop(1+_Operand1^.Params, False);
+      {$ifdef Timecheck}EndTimecheck('ret');{$endif}
+    end;
+  end;
+
+  (*procedure Template; inline;
+  begin
+    with TThoriumInstruction(CurrInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      {$ifdef Timecheck}EndTimecheck('');{$endif}
+    end;
+  end;*)
 begin
-  raise Exception.Create('Re-implement ExecuteInstruction');
+  case FCurrentInstruction^.Instruction of
+    tiINT_S: int_s;
+    tiINT: int;
+    tiINTB: intb;
+    tiFLT_S: flt_s;
+    tiFLT: flt;
+    tiSTR_S: str_s;
+    tiSTRL_S: strl_s;
+    tiSTR: str;
+    tiSTRL: strl;
+    tiEXT_S: ext_s;
+    tiEXT: ext;
+    tiFNC: fnc;
+    tiFNCE: fnce;
+    tiCOPYR_S: copyr_s;
+    tiCOPYR_ST: copyr_st;
+    tiCOPYR_FS: copyr_fs;
+    tiCOPYS_ST: copys_st;
+    tiCOPYFS: copyfs;
+    tiCOPYS: copys;
+    tiCOPYR: copyr;
+    tiMOVES_S: moves_s;
+    tiMOVER_S: mover_s;
+    tiMOVER_ST: mover_st;
+    tiMOVER: mover;
+    tiMOVES: moves;
+    tiMOVEST: movest;
+    tiMOVER_FS: mover_fs;
+    tiMOVEFS: movefs;
+    tiMOVES_ST: moves_st;
+    tiPOP_S: pop_s;
+    tiCLR: clr;
+    tiCASTIF: castif;
+    tiCASTIE: castie;
+    tiCASTFE: castfe;
+    tiCASTSE: castse;
+    tiCASTEI: castei;
+    tiCASTEF: castef;
+    tiCASTES: castes;
+    tiCASTE: caste;
+    tiCMPI: cmpi;
+    tiCMPIF: cmpif;
+    tiCMPIE: cmpie;
+    tiCMPF: cmpf;
+    tiCMPFI: cmpfi;
+    tiCMPFE: cmpfe;
+    tiCMPS: cmps;
+    tiCMPSE: cmpse;
+    tiCMPE: cmpe;
+    tiCMPEI: cmpei;
+    tiCMPEF: cmpef;
+    tiCMPES: cmpes;
+    tiADDI: addi;
+    tiADDF: addf;
+    tiADDS: adds;
+    tiSUBI: subi;
+    tiSUBF: subf;
+    tiMULI: muli;
+    tiMULF: mulf;
+    tiDIVI: divi;
+    tiDIVF: divf;
+    tiNEGI: negi;
+    tiNEGF: negf;
+    tiNOT: _not;
+    tiBNOT: bnot;
+    tiMOD: _mod;
+    tiAND: _and;
+    tiOR: _or;
+    tiXOR: _xor;
+    tiSHL: _shl;
+    tiSHR: _shr;
+    tiINCI_S: inci_s;
+    tiINCF_S: incf_s;
+    tiINCI_FS: inci_fs;
+    tiINCF_FS: incf_fs;
+    tiINCI: inci;
+    tiINCF: incf;
+    tiDECI_S: deci_s;
+    tiDECF_S: decf_s;
+    tiDECI_FS: deci_fs;
+    tiDECF_FS: decf_fs;
+    tiDECI: deci;
+    tiDECF: decf;
+    tiXFGET: xfget;
+    tiXFSET: xfset;
+    tiXIGET: xiget;
+    tiXISET: xiset;
+    tiXPGET: xpget;
+    tiXPSET: xpset;
+    tiXCT: xct;
+    tiVASTART: vastart;
+    tiVASTART_T: vastart_t;
+    tiVA_I8: va_i8;
+    tiVA_I16: va_i16;
+    tiVA_I32: va_i32;
+    tiVA_I64: va_i64;
+    tiVA_I8S: va_i8s;
+    tiVA_I16S: va_i16s;
+    tiVA_I32S: va_i32s;
+    tiVA_I64S: va_i64s;
+    tiVA_F32: va_f32;
+    tiVA_F64: va_f64;
+    tiVA_F80: va_f80;
+    tiVA_S: va_s;
+    tiVA_X: va_x;
+    tiVAT_F: vat_f;
+    tiVAT_I: vat_i;
+    tiVAT_S: vat_s;
+    tiVAT_X: vat_x;
+    tiVAFINISH: vafinish;
+    tiJMP: jmp;
+    tiJE: je;
+    tiJNE: jne;
+    tiJGT: jgt;
+    tiJGE: jge;
+    tiJLT: jlt;
+    tiJLE: jle;
+    tiCALL: call;
+    tiCALL_D: call_d;
+    tiFCALL: fcall;
+    tiXCALL: xcall;
+    tiXCALL_M: xcall_m;
+    tiRET: ret;
+  else
+    //Assert(False, 'Unknown opcode');
+    raise EThoriumRuntimeException.CreateFmt('Unknown opcode: %d (%s)', [Ord(FCurrentInstruction^.Instruction), GetEnumName(TypeInfo(TThoriumInstructionCode), Ord(FCurrentInstruction^.Instruction))]);
+  end;
+  Inc(FCurrentInstruction);
+  Inc(FCurrentInstructionIdx);
+  //System.Inc(FCurrentInstructionIdx);
 end;
 
 function TThoriumVirtualMachine.GetStack: TThoriumStack;

@@ -1190,24 +1190,12 @@ begin
     CompilerError('For that we need a parser stack.');
   end;
 
-  // Catch any opening bracket to avoid inefficient handling by Factor or
-  // something
-  if FCurrentSym = tsOpenBracket then
-  begin
-    Proceed;
-    JumpingLogicalExpression(TrueJumps, FalseJumps);
-    ExpectSymbol([tsCloseBracket]);
-    Proceed;
-  end
-  else
-  begin
-    // Otherwise, parse the first term
-    JumpingLogicalTerm(TrueJumps, FalseJumps);
-  end;
+  JumpingLogicalTerm(TrueJumps, FalseJumps);
 
   // And after that any further terms
   while FCurrentSym in THORIUM_DEFAULT_LOGICAL_EXPRESSION_OPERATOR do
   begin
+    EmbedHint('jmpexp:or');
     case FCurrentSym of
       tsOr:
       begin
@@ -1268,6 +1256,7 @@ begin
   // Read more expressions
   while FCurrentSym in THORIUM_DEFAULT_LOGICAL_TERM_OPERATOR do
   begin
+    EmbedHint('jmpexp:and');
     case FCurrentSym of
       tsAnd:
       begin
@@ -1285,9 +1274,19 @@ begin
     end;
     Proceed;
     // Parse moar.
-    JumpingRelationalExpression(SubTrueJump, SubFalseJump);
-    TrueJumps.AddEntry(SubTrueJump);
-    FalseJumps.AddEntry(SubFalseJump);
+    if FCurrentSym = tsOpenBracket then
+    begin
+      Proceed;
+      JumpingLogicalExpression(TrueJumps, FalseJumps);
+      ExpectSymbol([tsCloseBracket]);
+      Proceed;
+    end
+    else
+    begin
+      JumpingRelationalExpression(SubTrueJump, SubFalseJump);
+      TrueJumps.AddEntry(SubTrueJump);
+      FalseJumps.AddEntry(SubFalseJump);
+    end;
   end;
 end;
 

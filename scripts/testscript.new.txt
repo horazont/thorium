@@ -5,9 +5,16 @@ int test(float a, float b)
 
 }
 
-void main()
+public void main()
 {
   int test2, test3;
-  float test4;
-  test4 = test(test2, test3);
+  if 
+    (test2 == 1) 
+    and 
+    (test2 == 2) 
+    or 
+    (test3 == 1) 
+  {
+    test2 = 10;
+  }
 }
