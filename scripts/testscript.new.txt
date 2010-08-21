@@ -1,11 +1,13 @@
 loadlibrary core.std.io;
 
-void test()
+int test(float a, float b)
 {
 
 }
 
 void main()
 {
-  test();
+  int test2, test3;
+  float test4;
+  test4 = test(test2, test3);
 }

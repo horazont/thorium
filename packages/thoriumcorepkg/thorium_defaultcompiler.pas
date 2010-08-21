@@ -1127,7 +1127,7 @@ begin
     // Add the parameter to the function's parameter list
     Func.Prototype.Parameters.Add(ParamTypeIdent.FinalType);
     Params[ParamIndex-1].ParamName := ParamIdent.FullStr;
-    Params[ParamIndex-1].ParamType := ParamIdent.FinalType;
+    Params[ParamIndex-1].ParamType := ParamTypeIdent.FinalType;
 
     Inc(ParamIndex);
   end;
@@ -1145,6 +1145,7 @@ begin
   FCurrentScope := THORIUM_STACK_SCOPE_LOCAL;
   FCurrentFunctionTableStack := FTableSizes.Count;
 
+  LocalOffset := 0;
   EmbedHint('func:start');
   SaveTable;
   Statement(LocalOffset);
@@ -1999,6 +2000,9 @@ var
       if FCurrentSym <> tsCloseBracket then
       begin
         repeat
+          if FCurrentSym = tsComma then
+            Proceed;
+          EmbedHint('call:param');
           ParamType := RelationalExpression(ParamRegID, State);
           Parameters.Add(ParamType.GetInstance);
           ParameterRegIDs.AddEntry(ParamRegID);
@@ -2015,7 +2019,7 @@ var
         until FCurrentSym <> tsComma;
       end;
       ExpectSymbol([tsCloseBracket]);
-      Proceed;
+      // Don't proceed here - thats done in the while loop
 
       SetLength(Scores, Solutions.Count);
       for I := 0 to High(Scores) do
@@ -2038,7 +2042,7 @@ var
         begin
           if CallableParameters[J].IsEqualTo(Parameters[J]) then
             Scores[I] += 10
-          else if CallableParameters[J].CanAssignTo(Assignment, Parameters[J]) then
+          else if Parameters[J].CanAssignTo(Assignment, CallableParameters[J]) then
           begin
             if Assignment.Cast.Needed then
               Scores[I] += 5
@@ -2050,12 +2054,12 @@ var
         end;
       end;
 
-      HighestScore := 0;
+      HighestScore := -1;
       HighestScoreIdx := -1;
       I := Entries.Count - 1;
       while I >= 0 do
       begin
-        if Scores[I] <= 0 then
+        if Scores[I] < 0 then
           Discard(I)
         else if Scores[I] > HighestScore then
         begin
@@ -2087,7 +2091,7 @@ var
       for I := 0 to Parameters.Count - 1 do
       begin
         Assignment.Casting := True;
-        CallableParameters[I].CanAssignTo(Assignment, Parameters[I]);
+        Parameters[I].CanAssignTo(Assignment, CallableParameters[I]);
         if Assignment.Cast.Needed then
         begin
           GetFreeRegister(trEXP, CastRegID);
@@ -2113,8 +2117,20 @@ var
       Operation.Operation := opCall;
       Entry^.Entry.TypeSpec.CanPerformOperation(Operation);
 
-      AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation));
-      AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation));
+      AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, GetHighestRegisterInUse));
+      AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, GetHighestRegisterInUse));
+
+      if Entry^.Entry.TypeSpec.NeedsClear then
+      begin
+        GenCodeToOperation(Solution^.GetCode, clr(ATargetRegister));
+        GenCodeToOperation(Solution^.SetCode, clr(ATargetRegister));
+      end;
+
+      GenCodeToOperation(Solution^.GetCode, movest(ATargetRegister));
+      GenCodeToOperation(Solution^.SetCode, movest(ATargetRegister));
+
+      Solution^.FinalType := Callable.GetReturnType;
+      Solution^.FullStr += '()';
     finally
       ParameterRegIDs.Free;
       ParameterCastLocations.Free;
@@ -2125,7 +2141,7 @@ var
   end;
 
 begin
-  Assert(FCurrentSym = tsIdentifier);
+  ExpectSymbol([tsIdentifier]);
 
   Assert(GetFreeRegister(trEXP, RegPreviousValue));
 
@@ -2345,11 +2361,10 @@ begin
       end;
 
       SaveTable;
-      WriteLn('enter statement block');
       Statement(Offset);
       while FCurrentSym <> tsCloseCurlyBracket do
         Statement(Offset);
-      WriteLn('leave statement block');
+      EmbedHint('block:cleanup');
       RestoreTable(Offset);
 
       ExpectSymbol([tsCloseCurlyBracket]);
@@ -2467,7 +2482,9 @@ begin
   begin
     UseBrackets := True;
     Proceed;
-  end;
+  end
+  else
+    UseBrackets := False;
 
   TypeIdent := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikType]);
   Ident := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikUndeclared, ikNoFar]);
@@ -2510,8 +2527,11 @@ begin
       FCodeHook2 := OldHook2;
     end;
 
-    ExpectSymbol([tsCloseBracket]);
-    Proceed;
+    if UseBrackets then
+    begin
+      ExpectSymbol([tsCloseBracket]);
+      Proceed;
+    end;
 
     SetupJumps(TrueJumps, GetNextInstructionAddress);
 
@@ -2553,12 +2573,14 @@ begin
   case Ident1.Kind of
     ikType:
     begin
-      EmbedHint('local');
       // Local declaration
       // [Ident1] [Ident2] ( = expression)? (, [Ident2] ( = expression)?)*;
       repeat
+        if FCurrentSym = tsComma then
+          Proceed;
         Ident2 := SolveIdentifier(THORIUM_REGISTER_INVALID, [ikNoFar, ikUndeclared]);
         ExpectSymbol([tsAssign, tsSemicolon, tsComma]);
+        EmbedHint('local');
         VariableDeclaration(vsPrivate, Ident1, Ident2, Offset);
         ExpectSymbol([tsSemicolon, tsComma]);
       until FCurrentSym <> tsComma;
@@ -2569,7 +2591,7 @@ begin
     case FCurrentSym of
       tsAssign:
       begin
-        EmbedHint('assignment');
+        EmbedHint('assignment:right');
         // Handle an assignment.
         // [Ident1] = [RelationalExpression];
         if not (tskAssignment in AllowedStatements) then
@@ -2589,6 +2611,7 @@ begin
         // Cast if neccessary
         if Assignment.Cast.Needed then
         begin
+          EmbedHint('assignment:cast');
           // Assign the registers to the cast instruction
           Assignment.Cast.Instruction.SRI := RegID2;
           Assignment.Cast.Instruction.TRI := RegID1;
@@ -2600,6 +2623,7 @@ begin
           // Move the RelationalExpression result to the approprate register
           GenCode(mover(RegID2, RegID1));
         end;
+        EmbedHint('assignment');
         AppendOperations(Ident1.SetCode);
         // Release the RelationalExpression register
         if (ExpressionState = vsDynamic) and (ExpressionType.NeedsClear) then

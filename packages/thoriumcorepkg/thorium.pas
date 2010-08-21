@@ -3879,11 +3879,11 @@ begin
     tiJLT: with TThoriumInstructionJLT(AInstruction) do Result := Result + Format('$0x%.8x', [NewAddress]);
     tiJLE: with TThoriumInstructionJLE(AInstruction) do Result := Result + Format('$0x%.8x', [NewAddress]);
 
-    tiCALL: with TThoriumInstructionCALL(AInstruction) do Result := Result + Format('$0x%.8x {%%%s}', [EntryPoint, ThoriumRegisterToStr(HRI)]);
+    tiCALL: with TThoriumInstructionCALL(AInstruction) do Result := Result + Format('%%%s {%%%s}', [ThoriumRegisterToStr(SRI), ThoriumRegisterToStr(HRI)]);
 
     tiCALL_D: with TThoriumInstructionCALL_D(AInstruction) do Result := Result + Format('$0x%.8x $0x%.8x', [EntryPoint, Pops]);
 
-    tiFCALL: with TThoriumInstructionFCALL(AInstruction) do Result := Result + Format('$0x%.8x($0x%.8x)', [ModuleIndex, EntryPoint]);
+    tiFCALL: with TThoriumInstructionFCALL(AInstruction) do Result := Result + Format('%%%s {%%%s}', [ThoriumRegisterToStr(SRI), ThoriumRegisterToStr(HRI)]);
 
     tiXCALL: with TThoriumInstructionXCALL(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x]', [ptrint(FunctionRef)]);
     tiXCALL_M: with TThoriumInstructionXCALL_M(AInstruction) do Result := Result + Format('%%%s [$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x]', [ThoriumRegisterToStr(RTTIValueRegister), ptrint(MethodRef)]);
@@ -4650,6 +4650,7 @@ begin
       Result := inherited;
     Assignment.Cast.Needed := True;
     Assignment.Cast.Instruction := TThoriumInstructionCAST(castif(0, 0));
+    Assignment.Cast.TargetType := AnotherType;
   end
   else
     Result := inherited;
@@ -5471,7 +5472,16 @@ function TThoriumTypeFunction.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: IThoriumType;
   const ExName: String): Boolean;
 begin
-  Result := False;
+  if Operation.Operation = opCall then
+  begin
+    Operation.Casts[0].Needed := False;
+    Operation.Casts[1].Needed := False;
+    Operation.OperationInstruction := OperationInstructionDescription(call(0, 0), 1, -1, 0);
+    Operation.ResultType := FReturnType;
+    Result := True;
+  end
+  else
+    Result := inherited;
 end;
 
 function TThoriumTypeFunction.GetParameters: TThoriumParameters;
@@ -8521,7 +8531,7 @@ begin
     if Instr^.Instruction = tiNOOP then
     begin
       // check for it's first parameter:
-      case Instr^.Kind of
+      (*case Instr^.Kind of
         THORIUM_NOOPMARK_CALL: // Here is a call to a previously only forward
                                // declarated function.
         begin
@@ -8533,7 +8543,7 @@ begin
           else
             TThoriumInstruction(Instr^) := fcall(Func.FEntryPoint, Instr^.Parameter2, Instr^.Parameter3, Func.Prototype.HasReturnValueInt, Func.Prototype.Parameters.Count);
         end;
-      end;
+      end;*)
     end;
     Inc(Instr);
   end;

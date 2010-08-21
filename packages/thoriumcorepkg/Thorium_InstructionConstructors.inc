@@ -1637,31 +1637,26 @@ begin
   end;
 end;
 
-function call(AEntryPoint: TThoriumInstructionAddress; AHRI: Word; ARetVal: Word; AParameters: LongInt): TThoriumInstruction;
+function call(ASRI, AHRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionCALL(Result) do
   begin
     Instruction := tiCALL;
-    EntryPoint := AEntryPoint;
+    SRI := ASRI;
     HRI := AHRI;
-    RetVal := ARetVal;
-    Parameters := AParameters;
     CodeLine := 0;
   end;
 end;
 
-function fcall(AEntryPoint: TThoriumInstructionAddress; AModuleIndex: LongInt; AHRI: Word; ARetVal: Word; AParameters: Cardinal): TThoriumInstruction;
+function fcall(ASRI, AHRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionFCALL(Result) do
   begin
     Instruction := tiFCALL;
-    ModuleIndex := AModuleIndex;
-    EntryPoint := AEntryPoint;
+    SRI := ASRI;
     HRI := AHRI;
-    RetVal := ARetVal;
-    Parameters := AParameters;
     CodeLine := 0;
   end;
 end;

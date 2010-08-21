@@ -1640,11 +1640,9 @@ type
 
   TThoriumInstructionCALL = record
     Instruction: TThoriumInstructionCode;
-    EntryPoint: TThoriumInstructionAddress;
+    SRI: Word;
     HRI: Word;
-    RetVal: Word;
-    Parameters: LongInt;
-    Reserved: array [0..5] of Word;
+    Reserved: array [0..9] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -1664,12 +1662,9 @@ type
 
   TThoriumInstructionFCALL = record
     Instruction: TThoriumInstructionCode;
-    EntryPoint: TThoriumInstructionAddress;
-    ModuleIndex: LongInt;
+    SRI: Word;
     HRI: Word;
-    RetVal: Word;
-    Parameters: Cardinal;
-    Reserved: array [0..3] of Word;
+    Reserved: array [0..9] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
