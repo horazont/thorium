@@ -16,7 +16,9 @@
       </Parsing>
       <CodeGeneration>
         <Checks>
+          <IOChecks Value="True"/>
           <RangeChecks Value="True"/>
+          <OverflowChecks Value="True"/>
           <StackChecks Value="True"/>
         </Checks>
         <VerifyObjMethodCallValidity Value="True"/>
@@ -31,13 +33,16 @@
         </Debugging>
       </Linking>
       <Other>
+        <CompilerMessages>
+          <IgnoredMessages idx4046="True"/>
+        </CompilerMessages>
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
     <Description Value="Core package of Thorium Scripting Language, containing the main engine and global constants."/>
     <License Value="MPL 1.1"/>
-    <Version Major="1" Release="6"/>
-    <Files Count="8">
+    <Version Major="1" Minor="1"/>
+    <Files Count="7">
       <Item1>
         <Filename Value="thorium.pas"/>
         <UnitName Value="Thorium"/>

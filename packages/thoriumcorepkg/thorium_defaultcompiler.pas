@@ -260,7 +260,7 @@ type
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
     procedure JumpingLogicalExpression(TrueJumps, FalseJumps: TThoriumIntList);
     procedure JumpingLogicalTerm(TrueJumps, FalseJumps: TThoriumIntList);
-    procedure JumpingRelationalExpression(var TrueJump, FalseJump: TThoriumInstructionAddress);
+    procedure JumpingRelationalExpression(out TrueJump, FalseJump: TThoriumInstructionAddress);
     procedure Module;
     function ParseLibraryName: String;
     function ParseModuleName: String;
@@ -400,7 +400,6 @@ var
   Ch: Char;
   I: TThoriumDefaultSymbol;
   Tmp: String;
-  TmpUI: Cardinal;
 begin
   Ch := FLastChar;
   Sym := tsNone;
@@ -683,7 +682,7 @@ end;
 function TThoriumDefaultCompiler.GenCode(AInstruction: TThoriumInstruction
   ): Integer;
 begin
-  inherited GenCode(AInstruction, FScanner.FLine);
+  Result := inherited GenCode(AInstruction, FScanner.FLine);
 end;
 
 function TThoriumDefaultCompiler.GenCodeEx(
@@ -731,8 +730,8 @@ procedure TThoriumDefaultCompiler.ConstantDeclaration(
 var
   State: TThoriumValueState;
   Value: TThoriumValue;
-  InitialData: TThoriumInitialData;
   Entry: PThoriumTableEntry;
+  InitialData: TThoriumInitialData;
   Creation: TThoriumCreateInstructionDescription;
 begin
   EmbedHint('const');
@@ -752,7 +751,7 @@ begin
     InitialData.Int := Value.Int;
 
   // Fetch the creation instruction
-  if not ATypeIdent.FinalType.CanCreate(Value, False, Creation) then
+  if not ATypeIdent.FinalType.CanCreate(InitialData, False, Creation) then
     CompilerError('Cannot create a value of '''+ATypeIdent.FinalType.Name+'''.');
   GenCreation(Creation);
 
@@ -863,7 +862,6 @@ function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
 var
   InitialData: TThoriumInitialData;
   CreationDescription: TThoriumCreateInstructionDescription;
-  TableEntry: TThoriumTableEntry;
   OperationDescription: TThoriumOperationDescription;
   Reg: TThoriumRegisterID;
   Identifier: TThoriumQualifiedIdentifier;
@@ -1001,6 +999,7 @@ var
   Entries: TThoriumTableEntryResultList;
   I: Integer;
 begin
+  EntriesHandle := nil;
   // Initialize a result list
   Entries := TThoriumTableEntryResultList.Create;
   try
@@ -1290,13 +1289,12 @@ begin
   end;
 end;
 
-procedure TThoriumDefaultCompiler.JumpingRelationalExpression(var TrueJump,
+procedure TThoriumDefaultCompiler.JumpingRelationalExpression(out TrueJump,
   FalseJump: TThoriumInstructionAddress);
 var
   Sym: TThoriumDefaultSymbol;
   OperandType1, OperandType2: IThoriumType;
   Operation: TThoriumOperationDescription;
-  ResultValue: TThoriumValue;
   State1, State2: TThoriumValueState;
   Value1, Value2: TThoriumValue;
   RegID1, RegID2: TThoriumRegisterID;
@@ -1421,16 +1419,12 @@ procedure TThoriumDefaultCompiler.Module;
 var
   IsStatic: Boolean;
   Visibility: TThoriumVisibilityLevel;
-  NeedIdentifier: Boolean;
   Offset: Integer;
-  LastJump: TThoriumInstructionAddress;
-  HadVariable: Boolean;
 begin
   FCurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
   IsStatic := False;
   Offset := 0;
   Visibility := vsPrivate;
-  NeedIdentifier := False;
   Proceed;
   FHadGlobalVariable := False;
   FLastGlobalJump := GenCode(jmp(THORIUM_JMP_EXIT));
@@ -1908,7 +1902,6 @@ var
 
 var
   CodeHook1: TThoriumInstructionArray;
-  CodeHook2: TThoriumInstructionArray;
 
   procedure AttachHook;
   begin
@@ -2156,6 +2149,7 @@ begin
   OldCodeHook := FCodeHook;
   OldCodeHook1 := FCodeHook1;
   OldCodeHook2 := FCodeHook2;
+  EntriesHandle := nil;
   Entries := TThoriumTableEntryResultList.Create;
   Solutions := TThoriumQualifiedIdentifierList.Create;
   try
@@ -2935,7 +2929,6 @@ var
   Value: TThoriumValue;
   InitialData: TThoriumInitialData;
   Entry: PThoriumTableEntry;
-  Reg: TThoriumRegisterID;
   Creation: TThoriumCreateInstructionDescription;
 begin
   EmbedHint('var');

@@ -37,7 +37,7 @@ uses
 
 {%REGION 'Versioning'}
 const
-  THORIUM_FILE_VERSION = 15;
+  THORIUM_FILE_VERSION = 16;
 
   THORIUM_MAJOR_VERSION : Word = 1;
   THORIUM_MINOR_VERSION : Word = 0;
@@ -214,30 +214,36 @@ type
                                                                               *)
 {%REGION 'Registers' /fold}
 const
-  // If THORIUM_REGISTER_C_COUNT is less than 2, there will be unpredictable
-  // faults.
+  // The amount of cache registers must be at least 6 (currently). More won't
+  // bring any benefit, less will bring up dragons.
+  THORIUM_REGISTER_C_COUNT = 6;
   // The amount of expression registers determine the maximum nesting level of
   // expressions. Each operator precedence level (+-, /*) and each nesting with
   // brackets cost one register.
-  THORIUM_REGISTER_C_COUNT = 4;
   THORIUM_REGISTER_EXP_COUNT = 512;
   // The full amount of registers must not exceed 65535 and it is recommended
   // to keep the full amount below 512 to save memory and to improve the
   // performance during in-script function calls.
   THORIUM_REGISTER_COUNT = THORIUM_REGISTER_C_COUNT + THORIUM_REGISTER_EXP_COUNT;
 
-  // Cache register
-  THORIUM_REGISTER_C_MIN = $0000;
-  THORIUM_REGISTER_C_MAX = THORIUM_REGISTER_C_MIN + (THORIUM_REGISTER_C_COUNT - 1);
   // Expression register
-  THORIUM_REGISTER_EXP_MIN = THORIUM_REGISTER_C_MAX + 1;
+  THORIUM_REGISTER_EXP_MIN = $0000;
   THORIUM_REGISTER_EXP_MAX = THORIUM_REGISTER_EXP_MIN + (THORIUM_REGISTER_EXP_COUNT - 1);
+  // Cache register
+  THORIUM_REGISTER_C_MIN = THORIUM_REGISTER_EXP_MAX + 1;
+  THORIUM_REGISTER_C_MAX = THORIUM_REGISTER_C_MIN + (THORIUM_REGISTER_C_COUNT - 1);
   THORIUM_REGISTER_INVALID = $FFFF;
 
   // Some often used values
   THORIUM_REGISTER_C1 = THORIUM_REGISTER_C_MIN;
   THORIUM_REGISTER_C2 = THORIUM_REGISTER_C_MIN + 1;
   THORIUM_REGISTER_C3 = THORIUM_REGISTER_C_MIN + 2;
+  THORIUM_REGISTER_C4 = THORIUM_REGISTER_C_MIN + 3;
+  THORIUM_REGISTER_C5_RUNTIME = THORIUM_REGISTER_C_MIN + 4;
+  THORIUM_REGISTER_C6_RUNTIME = THORIUM_REGISTER_C_MIN + 5;
+
+  THORIUM_REGISTER_RUNTIME_MIN = THORIUM_REGISTER_C5_RUNTIME;
+  THORIUM_REGISTER_RUNTIME_MAX = THORIUM_REGISTER_C6_RUNTIME;
 
   THORIUM_REGISTER_MASK_BLOCK_SIZE = 16; // One word. DO NOT CHANGE WITHOUT CHANGING THE TYPE DEFINITION BELOW
   THORIUM_REGISTER_MASK_SIZE = (THORIUM_REGISTER_COUNT div THORIUM_REGISTER_MASK_BLOCK_SIZE) + Integer(THORIUM_REGISTER_COUNT mod THORIUM_REGISTER_MASK_BLOCK_SIZE > 0);
@@ -376,7 +382,7 @@ type
     tiFLT_S, tiFLT,
     tiSTR_S, tiSTRL_S, tiSTR, tiSTRL,
     tiEXT_S, tiEXT,
-    tiFNC, tiXFNC,
+    tiFNC, tiXFNC, tiXMETH,
     tiCOPYR_S, tiCOPYR_ST, tiCOPYR_FS, tiCOPYS_ST, tiCOPYFS, tiCOPYS, tiCOPYR,
     tiMOVES_S, tiMOVER_S, tiMOVER_ST, tiMOVER, tiMOVES, tiMOVEST, tiMOVER_FS, tiMOVEFS, tiMOVES_ST,
     tiPOP_S, tiPOPP_S,
@@ -581,6 +587,26 @@ type
     {$endif}
     TRI: Word;
     Reserved: array [0..6] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionXMETH = record
+    Instruction: TThoriumInstructionCode;
+    {$ifdef ENDIAN_BIG}
+    {$ifndef CPU64}
+    MethodRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    MethodRef: Pointer;
+    {$ifdef ENDIAN_LITTLE}
+    {$ifndef CPU64}
+    MethodRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    TRI: Word;
+    ERI: Word;
+    Reserved: array [0..5] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -1671,37 +1697,19 @@ type
 
   TThoriumInstructionXCALL = record
     Instruction: TThoriumInstructionCode;
-    {$ifdef ENDIAN_BIG}
-    {$ifndef CPU64}
-    FunctionRefPointerOverhead: LongInt;
-    {$endif}
-    {$endif}
-    FunctionRef: Pointer;
-    {$ifdef ENDIAN_LITTLE}
-    {$ifndef CPU64}
-    FunctionRefPointerOverhead: LongInt;
-    {$endif}
-    {$endif}
-    Reserved: array [0..7] of Word;
+    SRI: Word;
+    HRI: Word;
+    Reserved: array [0..9] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
 
   TThoriumInstructionXCALL_M = record
     Instruction: TThoriumInstructionCode;
-    {$ifdef ENDIAN_BIG}
-    {$ifndef CPU64}
-    MethodRefPointerOverhead: LongInt;
-    {$endif}
-    {$endif}
-    MethodRef: Pointer;
-    {$ifdef ENDIAN_LITTLE}
-    {$ifndef CPU64}
-    MethodRefPointerOverhead: LongInt;
-    {$endif}
-    {$endif}
-    RTTIValueRegister: Word;
-    Reserved: array [0..6] of Word;
+    SRI: Word;
+    HRI: Word;
+    ERI: Word;
+    Reserved: array [0..8] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -1753,7 +1761,7 @@ const
     'flt.s', 'flt',
     'str.s', 'strl.s', 'str', 'strl',
     'ext.s', 'ext',
-    'fnc', 'xfnc',
+    'fnc', 'xfnc', 'xmeth',
     'copyr.s', 'copyr.st', 'copyr.fs', 'copys.st', 'copyfs', 'copys', 'copyr',
     'moves.s', 'mover.s', 'mover.st', 'mover', 'moves', 'movest', 'mover.fs', 'movefs', 'moves_st',
     'pop.s', 'popp.s',

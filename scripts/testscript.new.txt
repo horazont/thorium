@@ -1,4 +1,4 @@
-loadlibrary core.std.io;
+loadlibrary thorium;
 
 int test(float a, float b)
 {

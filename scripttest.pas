@@ -41,8 +41,9 @@ program scripttest;
 {.$define HeapTrc}
 
 uses
-  {$ifdef HeapTrc}Heaptrc, {$endif}Classes, SysUtils, thorium, thorium_utils, thorium_globals,
-  ThoriumLibStd, ThoriumLibStdIO, ThoriumLibString, ThoriumLibStreams, Thorium_DefaultCompiler;
+  {$ifdef HeapTrc}Heaptrc, {$endif}Classes, SysUtils, thorium, thorium_utils,
+  thorium_globals, (*ThoriumLibStd, ThoriumLibStdIO, ThoriumLibString,
+  ThoriumLibStreams, *)Thorium_DefaultCompiler;
 
 {$ifdef UseTestModule}
 const
@@ -63,8 +64,6 @@ begin
   {$endif}
 
   Engine := TThorium.Create;
-  Engine.LoadLibrary(TThoriumLibStd);
-  Engine.LoadLibrary(TThoriumLibStdIO);
   try
     Module := Engine.NewModule('__main__');
 

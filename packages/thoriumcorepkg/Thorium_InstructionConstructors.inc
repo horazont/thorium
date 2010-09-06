@@ -150,6 +150,19 @@ begin
   end;
 end;
 
+function xmeth(AMethodRef: TThoriumHostMethodBase; ATRI, AERI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXMETH(Result) do
+  begin
+    Instruction := tiXMETH;
+    MethodRef := AMethodRef;
+    TRI := ATRI;
+    ERI := AERI;
+    CodeLine := 0;
+  end;
+end;
+
 function copyr_s(ASRI: Word; AScope: Word; AOffset: LongInt): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
@@ -1661,25 +1674,27 @@ begin
   end;
 end;
 
-function xcall(AFunctionRef: TThoriumHostFunctionBase): TThoriumInstruction;
+function xcall(ASRI, AHRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionXCALL(Result) do
   begin
     Instruction := tiXCALL;
-    FunctionRef := AFunctionRef;
+    SRI := ASRI;
+    HRI := AHRI;
     CodeLine := 0;
   end;
 end;
 
-function xcall_m(AMethodRef: TThoriumHostMethodBase; ARTTIValueRegister: TThoriumRegisterID): TThoriumInstruction;
+function xcall_m(ASRI, AHRI, AERI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionXCALL_M(Result) do
   begin
     Instruction := tiXCALL_M;
-    MethodRef := AMethodRef;
-    RTTIValueRegister := ARTTIValueRegister;
+    SRI := ASRI;
+    HRI := AHRI;
+    ERI := AERI;
     CodeLine := 0;
   end;
 end;
