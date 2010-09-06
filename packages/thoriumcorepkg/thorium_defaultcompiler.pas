@@ -235,7 +235,7 @@ type
     FCurrentScope: Integer;
     FCurrentStr: String;
     FCurrentSym: TThoriumDefaultSymbol;
-    FCurrentReturnType: IThoriumType;
+    FCurrentReturnType: TThoriumType;
     FCurrentFunctionTableStack: Integer;
     FCurrentFunc: TThoriumFunction;
     FScanner: TThoriumDefaultScanner;
@@ -253,7 +253,7 @@ type
     procedure ConstantDeclaration(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
     procedure GenericDeclaration(const AStatic: Boolean; const AVisibility: TThoriumVisibilityLevel; var Offset: Integer);
-    function Factor(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
+    function Factor(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: TThoriumType = nil): TThoriumType;
     function FindFilteredTableEntry(const Ident: String; AllowedKinds: TThoriumQualifiedIdentifierKinds; out Entry: TThoriumTableEntry; DropMultiple: Boolean = True; GetLast: Boolean = False): Boolean;
     procedure FilterTableEntries(Entries: TThoriumTableEntryResultList; AllowedKinds: TThoriumQualifiedIdentifierKinds);
     procedure FunctionDeclaration(const AVisibility: TThoriumVisibilityLevel;
@@ -265,8 +265,8 @@ type
     function ParseLibraryName: String;
     function ParseModuleName: String;
     procedure PlaceStatic(const StaticValue: TThoriumValue; ATargetRegister: Word);
-    function RelationalExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
-    function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: IThoriumType = nil): IThoriumType;
+    function RelationalExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: TThoriumType = nil): TThoriumType;
+    function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: TThoriumType = nil): TThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
       AllowedKinds: TThoriumQualifiedIdentifierKinds): TThoriumQualifiedIdentifier;
     procedure Statement(var Offset: Integer;
@@ -278,7 +278,7 @@ type
     procedure StatementIf(var Offset: Integer);
     procedure StatementSwitch(var Offset: Integer);
     procedure StatementWhile(var Offset: Integer);
-    function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: IThoriumType = nil): IThoriumType;
+    function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: TThoriumType = nil): TThoriumType;
     procedure VariableDeclarationCBC(const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer);
     procedure VariableDeclaration(const AVisibility: TThoriumVisibilityLevel;
@@ -858,7 +858,7 @@ end;
 
 function TThoriumDefaultCompiler.Factor(ATargetRegister: Word;
   out AState: TThoriumValueState; out AStaticValue: TThoriumValue;
-  ATypeHint: IThoriumType): IThoriumType;
+  ATypeHint: TThoriumType): TThoriumType;
 var
   InitialData: TThoriumInitialData;
   CreationDescription: TThoriumCreateInstructionDescription;
@@ -939,7 +939,7 @@ begin
         CompilerError('Internal compiler error: Cannot create string value.');
       AState := vsStatic;
       // Sadly, we need some static handling here.
-      AStaticValue.RTTI := Result.GetInstance;
+      AStaticValue.RTTI := Result;
       AStaticValue.Str := NewStr(FCurrentStr);
       StoreType(Result);
       Proceed;
@@ -1079,7 +1079,7 @@ procedure TThoriumDefaultCompiler.FunctionDeclaration(
 type
   TParam = record
     ParamName: String;
-    ParamType: IThoriumType;
+    ParamType: TThoriumType;
   end;
   TParams = array of TParam;
 
@@ -1293,7 +1293,7 @@ procedure TThoriumDefaultCompiler.JumpingRelationalExpression(out TrueJump,
   FalseJump: TThoriumInstructionAddress);
 var
   Sym: TThoriumDefaultSymbol;
-  OperandType1, OperandType2: IThoriumType;
+  OperandType1, OperandType2: TThoriumType;
   Operation: TThoriumOperationDescription;
   State1, State2: TThoriumValueState;
   Value1, Value2: TThoriumValue;
@@ -1548,10 +1548,10 @@ end;
 
 function TThoriumDefaultCompiler.RelationalExpression(ATargetRegister: Word;
   out AState: TThoriumValueState; AStaticValue: PThoriumValue;
-  ATypeHint: IThoriumType): IThoriumType;
+  ATypeHint: TThoriumType): TThoriumType;
 var
   Sym: TThoriumDefaultSymbol;
-  OperandType: IThoriumType;
+  OperandType: TThoriumType;
   Operation: TThoriumOperationDescription;
   ResultValue: TThoriumValue;
   State1, State2: TThoriumValueState;
@@ -1610,7 +1610,8 @@ begin
     else
       CompilerError('Invalid relational operator.');
     end;
-    if not (Result.GetInstance is TThoriumTypeInteger) then
+    { TODO : ToDo: Avoid explicit type usage. }
+    if not (Result is TThoriumTypeInteger) then
       Result := TThoriumTypeInteger.Create;
     State1 := vsDynamic;
 
@@ -1633,14 +1634,14 @@ end;
 
 function TThoriumDefaultCompiler.SimpleExpression(ATargetRegister: Word;
   out AState: TThoriumValueState; AStaticValue: PThoriumValue;
-  ATypeHint: IThoriumType): IThoriumType;
+  ATypeHint: TThoriumType): TThoriumType;
 var
   Sym: TThoriumDefaultSymbol;
   Operation: TThoriumOperationDescription;
   State1, State2: TThoriumValueState;
   Value1, Value2: TThoriumValue;
   RegID2: TThoriumRegisterID;
-  OperandType: IThoriumType;
+  OperandType: TThoriumType;
   ResultValue: TThoriumValue;
 begin
   Result := Term(ATargetRegister, State1, Value1, ATypeHint);
@@ -1942,7 +1943,7 @@ var
   OldCodeHook1: PThoriumInstructionArray;
   OldCodeHook2: PThoriumInstructionArray;
 
-  ExprType: IThoriumType;
+  ExprType: TThoriumType;
   ExprState: TThoriumValueState;
   RegPreviousValue, RegID1: TThoriumRegisterID;
 
@@ -1963,7 +1964,7 @@ var
     Assignment: TThoriumAssignmentDescription;
     HighestScore: Integer;
     HighestScoreIdx: Integer;
-    ParamType: IThoriumType;
+    ParamType: TThoriumType;
     DynIdx: Integer;
   begin
     // Prefilter
@@ -1996,7 +1997,7 @@ var
             Proceed;
           EmbedHint('call:param');
           ParamType := RelationalExpression(ParamRegID, State);
-          Parameters.Add(ParamType.GetInstance);
+          Parameters.Add(ParamType);
           ParameterRegIDs.AddEntry(ParamRegID);
           // These are to insert casts later. Will be removed by
           // Instructions.Finish if not needed
@@ -2555,7 +2556,7 @@ procedure TThoriumDefaultCompiler.StatementIdentifier(var Offset: Integer;
   const AllowedStatements: TThoriumDefaultStatementKinds);
 var
   Ident1, Ident2: TThoriumQualifiedIdentifier;
-  ExpressionType: IThoriumType;
+  ExpressionType: TThoriumType;
   ExpressionState: TThoriumValueState;
   RegID1, RegID2: TThoriumRegisterID;
   Assignment: TThoriumAssignmentDescription;
@@ -2691,7 +2692,7 @@ end;
 procedure TThoriumDefaultCompiler.StatementSwitch(var Offset: Integer);
 var
   SwitchRegID, CaseRegID: TThoriumRegisterID;
-  SwitchType, CaseType: IThoriumType;
+  SwitchType, CaseType: TThoriumType;
   SwitchState, CaseState: TThoriumValueState;
   CaseValue: TThoriumValue;
   Operation: TThoriumOperationDescription;
@@ -2846,13 +2847,13 @@ end;
 
 function TThoriumDefaultCompiler.Term(ATargetRegister: Word; out
   AState: TThoriumValueState; out AStaticValue: TThoriumValue;
-  ATypeHint: IThoriumType): IThoriumType;
+  ATypeHint: TThoriumType): TThoriumType;
 var
   State1, State2: TThoriumValueState;
   Value1, Value2: TThoriumValue;
   Sym: TThoriumDefaultSymbol;
   RegID2: TThoriumRegisterID;
-  OperandType: IThoriumType;
+  OperandType: TThoriumType;
   Operation: TThoriumOperationDescription;
   ResultValue: TThoriumValue;
 begin
