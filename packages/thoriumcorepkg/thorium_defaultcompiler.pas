@@ -189,12 +189,14 @@ const
 type
 
   TThoriumDefaultStatementKind = (tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
-    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak, tskNullStatement);
+    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak, tskReturn,
+    tskNullStatement);
   TThoriumDefaultStatementKinds = set of TThoriumDefaultStatementKind;
 
 const
   THORIUM_DEFAULT_ALL_STATEMENTS = [tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
-    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak, tskNullStatement];
+    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak, tskReturn,
+    tskNullStatement];
 
 type
   TThoriumDeclarationHandler = procedure (const AVisibility: TThoriumVisibilityLevel;
@@ -276,6 +278,7 @@ type
     procedure StatementFor(var Offset: Integer);
     procedure StatementIdentifier(var Offset: Integer; const AllowedStatements: TThoriumDefaultStatementKinds);
     procedure StatementIf(var Offset: Integer);
+    procedure StatementReturn(var Offset: Integer);
     procedure StatementSwitch(var Offset: Integer);
     procedure StatementWhile(var Offset: Integer);
     function Term(ATargetRegister: Word; out AState: TThoriumValueState; out AStaticValue: TThoriumValue; ATypeHint: TThoriumType = nil): TThoriumType;
@@ -1156,7 +1159,8 @@ begin
   // Ensure a return value is created
   if Func.Prototype.ReturnType <> nil then
   begin
-    Func.Prototype.ReturnType.CanCreateNone(False, CreationInstruction);
+    if not Func.Prototype.ReturnType.CanCreateNone(False, CreationInstruction) then
+      CompilerError('Cannot create `none'' value of type `'+Func.Prototype.ReturnType.Name+'''.');
     GenCreation(CreationInstruction);
   end;
   GenCode(ret());
@@ -1727,7 +1731,7 @@ var
       ForceNewCustomOperation(Solution^.GetCode);
       ForceNewCustomOperation(Solution^.SetCode);
       case Entry^.Entry._Type of
-        etStatic, etVariable:
+        etStatic, etVariable, etParameter:
         begin
           if Entry^.SourceModule <> FModule then
           begin
@@ -1759,18 +1763,26 @@ var
               )
             );
           end;
-          if Entry^.Entry._Type = etStatic then
-          begin
-            Solution^.Kind := ikStatic;
-            Solution^.State := vsStatic;
-            Solution^.Writable := False;
-            Solution^.Value := Entry^.Entry.Value;
-          end
-          else
-          begin
-            Solution^.Kind := ikVariable;
-            Solution^.State := vsAccessable;
-            Solution^.Writable := True;
+          case Entry^.Entry._Type of
+            etStatic:
+            begin
+              Solution^.Kind := ikStatic;
+              Solution^.State := vsStatic;
+              Solution^.Writable := False;
+              Solution^.Value := Entry^.Entry.Value;
+            end;
+            etParameter:
+            begin
+              Solution^.Kind := ikVariable;
+              Solution^.State := vsAccessable;
+              Solution^.Writable := False;
+            end;
+            etVariable:
+            begin
+              Solution^.Kind := ikVariable;
+              Solution^.State := vsAccessable;
+              Solution^.Writable := True;
+            end;
           end;
         end;
         etRegisterVariable:
@@ -2414,6 +2426,13 @@ begin
       Proceed;
       NeedSemicolon := True;
     end;
+    tsReturn:
+    begin
+      if not (tskReturn in AllowedStatements) then
+        CompilerError('Return statement is not allowed here.');
+      StatementReturn(Offset);
+      NeedSemicolon := True;
+    end
   else
     ExpectSymbol([tsUnknown]);
   end;
@@ -2684,6 +2703,34 @@ begin
     FalseJumps.Free;
     TrueJumps.Free;
   end;
+end;
+
+procedure TThoriumDefaultCompiler.StatementReturn(var Offset: Integer);
+var
+  RegID: TThoriumRegisterID;
+  State: TThoriumValueState;
+  Assignment: TThoriumAssignmentDescription;
+  ExprType: TThoriumType;
+  Tmp: Integer;
+begin
+  Proceed;
+  GetFreeRegister(trEXP, RegID);
+
+  Assignment.Casting := True;
+  ExprType := RelationalExpression(RegID, State, nil, FCurrentFunc.Prototype.ReturnType);
+  if not ExprType.CanAssignTo(Assignment, FCurrentFunc.Prototype.ReturnType) then
+    CompilerError('Incompatible types: `'+ExprType.Name+''' (expression) and `'+FCurrentFunc.Prototype.ReturnType.Name+''' (return type).');
+
+  PopAndClearByTableStack(FCurrentFunctionTableStack + 1);
+  case State of
+    vsDynamic: GenCode(copyr_st(RegID));
+    vsAccessable: GenCode(copyr_st(RegID));
+    vsStatic: GenCode(mover_st(RegID));
+  else
+    raise EThoriumCompilerException.Create('Invalid value state.');
+  end;
+  GenCode(ret());
+  ReleaseRegister(RegID);
 end;
 
 procedure TThoriumDefaultCompiler.StatementSwitch(var Offset: Integer);
@@ -2985,6 +3032,7 @@ begin
     finally
 
     end;
+    FInstructions.Finish;
   finally
     FScanner.Free;
     Result := not HasError;
