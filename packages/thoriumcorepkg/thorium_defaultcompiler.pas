@@ -901,8 +901,7 @@ begin
       // Read the value to an initial dataset
       InitialData.Int := StrToInt64(FCurrentStr);
       // Create the type
-      { TODO : Avoid explicit type usage. }
-      Result := TThoriumTypeInteger.Create;
+      Result := TypeInteger;
       // Get the creation instruction
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create integer value.');
@@ -917,8 +916,7 @@ begin
     begin
       // See tsIntegerValue for details
       InitialData.Flt := StrToFloat(FCurrentStr, THORIUM_NUMBER_FORMAT);
-      { TODO : Avoid explicit type usage. }
-      Result := TThoriumTypeFloat.Create;
+      Result := TypeFloat;
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create float value.');
       AState := vsStatic;
@@ -933,8 +931,7 @@ begin
         InitialData.Int := AddLibraryString(FCurrentStr)
       else
         InitialData.Int := -1;
-      { TODO : Avoid explicit type usage. }
-      Result := TThoriumTypeString.Create;
+      Result := TypeString;
       if not Result.CanCreate(InitialData, True, CreationDescription) then
         CompilerError('Internal compiler error: Cannot create string value.');
       AState := vsStatic;

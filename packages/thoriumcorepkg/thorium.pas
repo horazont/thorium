@@ -54,12 +54,12 @@ unit Thorium;
 {.$define Timecheck}
 
 // Used for internal debug purposes. Produces a lot of overhead
-{.$define DebugToConsole}
+{$define DebugToConsole}
 {$ifdef DebugToConsole}
   // Produce a Thorium stackdump after each instruction.
-  {.$define Stackdump}
+  {$define Stackdump}
   // Output the name of each instruction before it gets executed.
-  {.$define InstructionDump}
+  {$define InstructionDump}
   // Catch SIGUSR1 and print current state information
   {.$define HookSIGUSR1}
 {$endif}
@@ -1179,7 +1179,7 @@ type
     property Prototyped: Boolean read FPrototyped;
     property VisibilityLevel: TThoriumVisibilityLevel read FVisibilityLevel;
 
-    function Call(AParameters: array of TThoriumValue): TThoriumValue;
+    function Call(AParameters: array of const): TThoriumValue;
     function Duplicate: TThoriumFunction;
     (*function AsEvent(AParameters: array of TThoriumHostType;
       ReturnType: TThoriumHostType): TThoriumFunctionCallbackCapsule; overload;
@@ -1188,7 +1188,8 @@ type
       ExtParameters: array of TThoriumHostObjectType;
       ExtReturnType: TThoriumHostObjectType = nil): TThoriumFunctionCallbackCapsule; overload;*)
     procedure LoadFromStream(Stream: TStream); override;
-    function SafeCall(AParameters: array of TThoriumValue): TThoriumValue;
+    function QuickCall(AParameters: array of TThoriumValue): TThoriumValue;
+    function SafeCall(AParameters: array of const): TThoriumValue;
     procedure SaveToStream(Stream: TStream); override;
   end;
   TThoriumFunctions = specialize TFPGList<TThoriumFunction>;
@@ -1875,6 +1876,9 @@ type
   private
     FStoredTypes: TInterfaceList;
   private
+    function GetTypeFloat: TThoriumTypeFloat;
+    function GetTypeInteger: TThoriumTypeInteger;
+    function GetTypeString: TThoriumTypeString;
     function IsRegisterInUse(AID: TThoriumRegisterID): Boolean;
     procedure SetRegisterInUse(AID: TThoriumRegisterID; AInUse: Boolean);
   protected
@@ -1906,6 +1910,10 @@ type
     FTableSizes: TThoriumIntStack;
     FThorium: TThorium;
     FTypeTable: TFPObjectHashTable;
+  protected
+    property TypeInteger: TThoriumTypeInteger read GetTypeInteger;
+    property TypeFloat: TThoriumTypeFloat read GetTypeFloat;
+    property TypeString: TThoriumTypeString read GetTypeString;
   protected
     function AddLibraryPropertyUsage(const AProp: TThoriumLibraryProperty): Integer;
     function AddLibraryPropertyUsageEx(var TargetArray: TThoriumLibraryPropertyArray;
@@ -2204,7 +2212,9 @@ type
     FOnRequireModule: TThoriumOnRequireModule;
     FOnOpenModule: TThoriumOnOpenModule;
     FVirtualMachine: TThoriumVirtualMachine;
-    FStringType: TThoriumTypeString;
+    FTypeFloat: TThoriumTypeFloat;
+    FTypeInteger: TThoriumTypeInteger;
+    FTypeString: TThoriumTypeString;
   private
     function GetLibrary(Index: Integer): TThoriumLibrary;
     function GetLibraryCount: Integer;
@@ -2264,10 +2274,15 @@ function ThoriumEncapsulateOperation(const AOperation: TThoriumOperationDescript
   const Value2RI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
   const ClearRegisters: TThoriumGenericOperationRegisters = []): TThoriumGenericOperation;
 
+function GetDebugMode: Boolean;
+property DebugMode: Boolean read GetDebugMode;
+
 implementation
 
 (*uses
   Thorium_DefaultCompiler;*)
+
+var FDebugMode: Boolean = {$ifdef DebugToConsole}True{$else}False{$endif};
 
 {$ifdef HookSIGUSR1}
 var
@@ -3660,6 +3675,11 @@ begin
   Result.ClearRegisters := ClearRegisters;
 end;
 
+function GetDebugMode: Boolean;
+begin
+  Result := FDebugMode;
+end;
+
 procedure ThoriumDumpInstructions(const AInstructions: TThoriumInstructionArray);
 var
   I: Integer;
@@ -4326,14 +4346,16 @@ end;
 
 function TThoriumType._AddRef: longint; stdcall;
 begin
-  Result := InterLockedIncrement(FReferences);
+  //Result := InterLockedIncrement(FReferences);
+  Result := 1;
 end;
 
 function TThoriumType._Release: longint; stdcall;
 begin
-  Result := InterLockedDecrement(FReferences);
+(*  Result := InterLockedDecrement(FReferences);
   if Result = 0 then
-    Free;
+    Free;       *)
+  Result := 1;
 end;
 
 function TThoriumType.GetNoneInitialData(out InitialData: TThoriumInitialData
@@ -4345,6 +4367,9 @@ end;
 
 function TThoriumType.GetName: String;
 begin
+  // Well, THATs quite an ugly hack.
+  if Self = nil then
+     Exit('void');
   Result := FName;
 end;
 
@@ -5873,11 +5898,59 @@ end;
 
 destructor TThoriumFunction.Destroy;
 begin
+  FPrototype.Free;
   FPrototypedCalls.Free;
   inherited Destroy;
 end;
 
-function TThoriumFunction.Call(AParameters: array of TThoriumValue
+function TThoriumFunction.Call(AParameters: array of const): TThoriumValue;
+var
+  Values: array of TThoriumValue;
+  I: Integer;
+begin
+  SetLength(Values, Length(AParameters));
+  for I := 0 to High(AParameters) do
+  begin
+    if AParameters[0].VType in [vtExtended, vtVariant, vtString] then
+      Values[I] := FPrototype.Parameters.TypeSpec[I].CreateValueFromPtr(AParameters[0].VExtended)
+    else
+      Values[I] := FPrototype.Parameters.TypeSpec[I].CreateValueFromPtr(@AParameters[0].VAnsiString);
+  end;
+  Result := QuickCall(Values);
+end;
+
+function TThoriumFunction.Duplicate: TThoriumFunction;
+begin
+  Result := TThoriumFunction.Create(FModule, FName);
+  Result.FEntryPoint := FEntryPoint;
+  Result.FNestingLevel := FNestingLevel;
+  Result.FPrototyped := False;
+  Result.FVisibilityLevel := FVisibilityLevel;
+  Result.FPrototype.Assign(FPrototype);
+end;
+
+(*function TThoriumFunction.AsEvent(AParameters: array of TThoriumHostType;
+  ReturnType: TThoriumHostType): TThoriumFunctionCallbackCapsule;
+begin
+  //Result := AsEvent(Parameters, ReturnType, [], nil);
+end;
+
+function TThoriumFunction.AsEvent(AParameters: array of TThoriumHostType;
+  ReturnType: TThoriumHostType; ExtParameters: array of TThoriumHostObjectType;
+  ExtReturnType: TThoriumHostObjectType): TThoriumFunctionCallbackCapsule;
+begin
+
+end;*)
+
+procedure TThoriumFunction.LoadFromStream(Stream: TStream);
+begin
+  inherited LoadFromStream(Stream);
+  Stream.Read(FEntryPoint, SizeOf(TThoriumInstructionAddress));
+  Stream.Read(FVisibilityLevel, SizeOf(TThoriumVisibilityLevel));
+  raise Exception.Create('Not re-implemented yet.');
+end;
+
+function TThoriumFunction.QuickCall(AParameters: array of TThoriumValue
   ): TThoriumValue;
 var
   I: Integer;
@@ -5917,42 +5990,29 @@ begin
   end;
 end;
 
-function TThoriumFunction.Duplicate: TThoriumFunction;
+function TThoriumFunction.SafeCall(AParameters: array of const): TThoriumValue;
+var
+  ParamCount, I: Integer;
+  Values: array of TThoriumValue;
+  ValueType: TThoriumType;
 begin
-  Result := TThoriumFunction.Create(FModule, FName);
-  Result.FEntryPoint := FEntryPoint;
-  Result.FNestingLevel := FNestingLevel;
-  Result.FPrototyped := False;
-  Result.FVisibilityLevel := FVisibilityLevel;
-  Result.FPrototype.Assign(FPrototype);
-end;
-
-(*function TThoriumFunction.AsEvent(AParameters: array of TThoriumHostType;
-  ReturnType: TThoriumHostType): TThoriumFunctionCallbackCapsule;
-begin
-  //Result := AsEvent(Parameters, ReturnType, [], nil);
-end;
-
-function TThoriumFunction.AsEvent(AParameters: array of TThoriumHostType;
-  ReturnType: TThoriumHostType; ExtParameters: array of TThoriumHostObjectType;
-  ExtReturnType: TThoriumHostObjectType): TThoriumFunctionCallbackCapsule;
-begin
-
-end;*)
-
-procedure TThoriumFunction.LoadFromStream(Stream: TStream);
-begin
-  inherited LoadFromStream(Stream);
-  Stream.Read(FEntryPoint, SizeOf(TThoriumInstructionAddress));
-  Stream.Read(FVisibilityLevel, SizeOf(TThoriumVisibilityLevel));
-  raise Exception.Create('Not re-implemented yet.');
-end;
-
-function TThoriumFunction.SafeCall(AParameters: array of TThoriumValue
-  ): TThoriumValue;
-begin
-  raise Exception.Create('Not reimplemented yet.');
   (*if FModule.FThorium.FVirtualMachine = nil then
+    raise EThoriumRuntimeException.Create('Virtual machine not initialized.');
+  ParamCount := FPrototype.FParameters.Count;
+  if (Length(AParameters) <> ParamCount) then
+    raise EThoriumRuntimeException.CreateFmt('Invalid parameter count (got %d, expected %d).', [Length(AParameters), ParamCount]);
+  SetLength(Values, ParamCount);
+  for I := 0 to ParamCount - 1 do
+  begin
+
+  end;    *)
+end;
+
+(*var
+  ParamCount, I: Integer;
+  TypeSpec: TThoriumType;
+begin
+  if FModule.FThorium.FVirtualMachine = nil then
     raise EThoriumRuntimeException.Create('Virtual machine not initialized.');
   ParamCount := FPrototype.FParameters.Count;
   if (Length(AParameters) <> ParamCount) then
@@ -5965,8 +6025,8 @@ begin
   end;
   Result._Type := vtBuiltIn;
   Result.BuiltIn._Type := btNil;
-  Result := Call(AParameters);*)
-end;
+  Result := Call(AParameters);
+end;    *)
 
 procedure TThoriumFunction.SaveToStream(Stream: TStream);
 begin
@@ -6836,9 +6896,9 @@ begin
   FHostCallables := TThoriumHostCallableList.Create;
   FProperties := TThoriumLibraryPropertyList.Create;
   FRequiredLibraries := TThoriumLibraryList.Create;
+  FRTTITypes := TThoriumTypes.Create;
   FThorium := AThorium;
   FTypes := TThoriumTypes.Create;
-  FRTTITypes := TThoriumTypes.Create;
   FTypeMap := TThoriumTypesMap.Create;
   InitializeLibrary;
 end;
@@ -7227,10 +7287,10 @@ begin
   ForceUnfrozen;
   CasedName := ThoriumCase(AName);
   // nil is used for void type.
+  Result := AInstance;
   if AInstance <> nil then
   begin
     CheckExisting(CasedName, AInstance);
-    Result := AInstance;
     Result.FName := CasedName;
     // Make sure it persists.
     Result._AddRef;
@@ -8584,6 +8644,21 @@ begin
   inherited Destroy;
 end;
 
+function TThoriumCustomCompiler.GetTypeFloat: TThoriumTypeFloat;
+begin
+  Result := FThorium.FTypeFloat;
+end;
+
+function TThoriumCustomCompiler.GetTypeInteger: TThoriumTypeInteger;
+begin
+  Result := FThorium.FTypeInteger;
+end;
+
+function TThoriumCustomCompiler.GetTypeString: TThoriumTypeString;
+begin
+  Result := FThorium.FTypeString;
+end;
+
 function TThoriumCustomCompiler.IsRegisterInUse(AID: TThoriumRegisterID
   ): Boolean;
 begin
@@ -9073,6 +9148,7 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
   var
     Match: TThoriumTableEntryResult;
   begin
+    // There is no [del]spoon[/del] global symbol table.
     Match.SourceLibrary := nil;
     Match.SourceModule := nil;
     FillByte(Match.Entry, SizeOf(TThoriumTableEntry), 0);
@@ -9118,7 +9194,7 @@ begin
     ScanIncludedModule(FRequiredModules[I]);
   for I := 0 to FRequiredLibraries.Count - 1 do
     ScanIncludedLibrary(FRequiredLibraries[I]);
-  ScanGlobalSymbolTable;
+  //ScanGlobalSymbolTable;
 end;
 
 procedure TThoriumCustomCompiler.ForceNewCustomOperation(
@@ -11099,7 +11175,7 @@ begin
       Execute(I, 0, False);
   end;
   FillByte(FRegisters, SizeOf(TThoriumRegisters), 0);
-  FStringType := FThorium.FStringType;
+  FStringType := FThorium.FTypeString;
 end;
 
 destructor TThoriumVirtualMachine.Destroy;
@@ -11147,7 +11223,7 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etValue;
-      _NewEntry^.Value.RTTI := nil;
+      _NewEntry^.Value.RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       _NewEntry^.Value.Int := Value;
       {$ifdef Timecheck}EndTimecheck('int.s');{$endif}
     end;
@@ -11158,7 +11234,7 @@ var
     with TThoriumInstructionINT(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := Value;
       {$ifdef Timecheck}EndTimecheck('int');{$endif}
     end;
@@ -11169,7 +11245,7 @@ var
     with TThoriumInstructionINTB(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       case Kind of
         THORIUM_OP_EQUAL:
         begin
@@ -11227,7 +11303,7 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etValue;
-      _NewEntry^.Value.RTTI := nil;
+      _NewEntry^.Value.RTTI := {$ifdef DebugToConsole}FThorium.FTypeFloat{$else}nil{$endif};
       _NewEntry^.Value.Float := Value;
       {$ifdef Timecheck}EndTimecheck('flt.s');{$endif}
     end;
@@ -11238,7 +11314,7 @@ var
     with TThoriumInstructionFLT(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeFloat{$else}nil{$endif};;
       FRegisters[TRI].Float := Value;
       {$ifdef Timecheck}EndTimecheck('flt');{$endif}
     end;
@@ -11251,7 +11327,7 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etValue;
-      _NewEntry^.Value.RTTI := nil;
+      _NewEntry^.Value.RTTI := FThorium.FTypeString;
       New(_NewEntry^.Value.Str);
       {$ifdef Timecheck}EndTimecheck('str.s');{$endif}
     end;
@@ -11264,7 +11340,7 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etValue;
-      _NewEntry^.Value.RTTI := nil;
+      _NewEntry^.Value.RTTI := FThorium.FTypeString;
       New(_NewEntry^.Value.Str);
       _NewEntry^.Value.Str^ := FCurrentModule.FStringLibrary[Index];
       {$ifdef Timecheck}EndTimecheck('strl.s');{$endif}
@@ -11276,7 +11352,7 @@ var
     with TThoriumInstructionSTR(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := FThorium.FTypeString;
       New(FRegisters[TRI].Str);
       {$ifdef Timecheck}EndTimecheck('str');{$endif}
     end;
@@ -11287,7 +11363,7 @@ var
     with TThoriumInstructionSTRL(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := FThorium.FTypeString;
       New(FRegisters[TRI].Str);
       FRegisters[TRI].Str^ := FCurrentModule.FStringLibrary[Index];
       {$ifdef Timecheck}EndTimecheck('strl');{$endif}
@@ -11652,7 +11728,7 @@ var
     with TThoriumInstructionADDI(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int + FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('addi');{$endif}
     end;
@@ -11663,7 +11739,7 @@ var
     with TThoriumInstructionADDF(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeFloat{$else}nil{$endif};
       FRegisters[TRI].Float := FRegisters[Op1].Float + FRegisters[Op2].Float;
       {$ifdef Timecheck}EndTimecheck('addf');{$endif}
     end;
@@ -11693,7 +11769,7 @@ var
     with TThoriumInstructionSUBI(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int -
         FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('subi');{$endif}
@@ -11705,7 +11781,7 @@ var
     with TThoriumInstructionSUBF(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeFloat{$else}nil{$endif};
       FRegisters[TRI].Float := FRegisters[Op1].Float - FRegisters[Op2].Float;
       {$ifdef Timecheck}EndTimecheck('subf');{$endif}
     end;
@@ -11716,7 +11792,7 @@ var
     with TThoriumInstructionMULI(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int * FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('muli');{$endif}
     end;
@@ -11727,7 +11803,7 @@ var
     with TThoriumInstructionMULF(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeFloat{$else}nil{$endif};
       FRegisters[TRI].Float := FRegisters[Op1].Float * FRegisters[Op2].Float;
       {$ifdef Timecheck}EndTimecheck('mulf');{$endif}
     end;
@@ -11738,7 +11814,7 @@ var
     with TThoriumInstructionDIVI(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int div FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('divi');{$endif}
     end;
@@ -11749,7 +11825,7 @@ var
     with TThoriumInstructionDIVF(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeFloat{$else}nil{$endif};
       FRegisters[TRI].Float := FRegisters[Op1].Float / FRegisters[Op2].Float;
       {$ifdef Timecheck}EndTimecheck('divf');{$endif}
     end;
@@ -11803,7 +11879,7 @@ var
     with TThoriumInstructionMOD(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int mod FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('mod');{$endif}
     end;
@@ -11814,7 +11890,7 @@ var
     with TThoriumInstructionAND(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int and FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('and');{$endif}
     end;
@@ -11825,7 +11901,7 @@ var
     with TThoriumInstructionOR(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int or FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('or');{$endif}
     end;
@@ -11836,7 +11912,7 @@ var
     with TThoriumInstructionXOR(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int xor FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('xor');{$endif}
     end;
@@ -11847,7 +11923,7 @@ var
     with TThoriumInstructionSHL(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int shl FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('shl');{$endif}
     end;
@@ -11858,7 +11934,7 @@ var
     with TThoriumInstructionSHR(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI].RTTI := nil;
+      FRegisters[TRI].RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       FRegisters[TRI].Int := FRegisters[Op1].Int shr FRegisters[Op2].Int;
       {$ifdef Timecheck}EndTimecheck('shr');{$endif}
     end;
@@ -12732,6 +12808,7 @@ begin
     tiXCALL: xcall;
     tiXCALL_M: xcall_m;
     tiRET: ret;
+    tiEmbeddedHint: ;
   else
     //Assert(False, 'Unknown opcode');
     raise EThoriumRuntimeException.CreateFmt('Unknown opcode: %d (%s)', [Ord(FCurrentInstruction^.Instruction), GetEnumName(TypeInfo(TThoriumInstructionCode), Ord(FCurrentInstruction^.Instruction))]);
@@ -12776,6 +12853,12 @@ begin
   try
     FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
     repeat
+      if FCurrentInstruction^.Instruction = tiEmbeddedHint then
+      begin
+        Inc(FCurrentInstructionIdx);
+        Inc(FCurrentInstruction);
+        Continue;
+      end;
       {$ifdef Stackdump}
       Write('$', IntToHex(FCurrentInstructionIdx, 8), ': ');
       {$endif}
@@ -12808,8 +12891,24 @@ begin
 end;
 
 procedure TThoriumVirtualMachine.DumpStack;
+var
+  I: Integer;
+  ThisEntry: PThoriumStackEntry;
 begin
-  WriteLn('Re-implement TThoriumVirtualMachine.DumpStack');
+  WriteLn('[[ (top) ');
+  for I := 0 to FStack.EntryCount - 1 do
+  begin
+    ThisEntry := FStack.GetTop(I);
+    case ThisEntry^._Type of
+      etValue: WriteLn(Format('  %4d %-45s %-25s', [I, ThisEntry^.Value.RTTI.Name, ThisEntry^.Value.RTTI.ToString(ThisEntry^.Value)]));
+      etStackFrame: WriteLn(Format('  %4d Stackframe (ret to: %8.8x in mod. %d)', [I, ThisEntry^.ReturnAddress, ThisEntry^.ReturnModule]));
+      etNull: WriteLn(Format('  %4d null', [I]));
+      etVarargs: WriteLn(Format('  %4d varargs (%d)', [I, MemSize(ThisEntry^.VABufferOrigin)]));
+    else
+      WriteLn(Format('  %4d CORRUPTED', [I]));
+    end;
+  end;
+  WriteLn(']]');
 end;
 
 { TThoriumDebuggingVirtualMachine }
@@ -12969,7 +13068,9 @@ begin
   FOnOpenModule := nil;
   FAnonymousID := 0;
   LoadLibrary(TThoriumLibCore);
-  FStringType := TThoriumTypeString(FHostLibraries[0].FindType('string'));
+  FTypeString := TThoriumTypeString(FHostLibraries[0].FindType('string'));
+  FTypeInteger := TThoriumTypeInteger(FHostLibraries[0].FindType('int'));
+  FTypeFloat := TThoriumTypeFloat(FHostLibraries[0].FindType('float'));
 end;
 
 destructor TThorium.Destroy;
