@@ -207,6 +207,54 @@ begin
   end;
 end;
 
+function mover_fg(ASRI: Word; AOffset: LongInt; AModuleRef: TThoriumModule): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVER_FG(Result) do
+  begin
+    Instruction := tiMOVER_FG;
+    SRI := ASRI;
+    Offset := AOffset;
+    ModuleRef := AModuleRef;
+  end;
+end;
+
+function copyr_fg(ASRI: Word; AOffset: LongInt; AModuleRef: TThoriumModule): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYR_FG(Result) do
+  begin
+    Instruction := tiCOPYR_FG;
+    SRI := ASRI;
+    Offset := AOffset;
+    ModuleRef := AModuleRef;
+  end;
+end;
+
+function movefg(AOffset: LongInt; ATRI: Word; AModuleRef: TThoriumModule): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVEFG(Result) do
+  begin
+    Instruction := tiMOVEFG;
+    Offset := AOffset;
+    TRI := ATRI;
+    ModuleRef := AModuleRef;
+  end;
+end;
+
+function copyfg(AOffset: LongInt; ATRI: Word; AModuleRef: TThoriumModule): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYFG(Result) do
+  begin
+    Instruction := tiCOPYFG;
+    Offset := AOffset;
+    TRI := ATRI;
+    ModuleRef := AModuleRef;
+  end;
+end;
+
 function mover_l(ASRI: Word; AOffset: LongInt): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
@@ -1872,6 +1920,78 @@ begin
   Operation.ResultType := nil;
   Operation.Casts[0].Needed := False;
   Operation.Casts[1].Needed := False;
+end;
+
+function movegOperation(const Offset: Integer; const TRI: TThoriumRegisterID): TThoriumOperationDescription;
+begin
+  NewNonCastOperation(Result);
+  Result.OperationInstruction.Instruction := TThoriumInstructionREG(moveg(Offset, TRI));
+  Result.OperationInstruction.TargetRIOffset := 2;
+  Result.OperationInstruction.Value1RIOffset := -1;
+  Result.OperationInstruction.Value2RIOffset := -1;
+end;
+
+function copyr_gOperation(const SRI: TThoriumRegisterID; const Offset: Integer): TThoriumOperationDescription;
+begin
+  NewNonCastOperation(Result);
+  Result.OperationInstruction.Instruction := TThoriumInstructionREG(copyr_g(SRI, Offset));
+  Result.OperationInstruction.TargetRIOffset := 0;
+  Result.OperationInstruction.Value1RIOffset := -1;
+  Result.OperationInstruction.Value2RIOffset := -1;
+end;
+
+function movefgOperation(const Offset: Integer; const TRI: TThoriumRegisterID; const AModuleRef: TThoriumModule): TThoriumOperationDescription;
+begin
+  NewNonCastOperation(Result);
+  Result.OperationInstruction.Instruction := TThoriumInstructionREG(movefg(Offset, TRI, AModuleRef));
+  Result.OperationInstruction.TargetRIOffset := 2;
+  Result.OperationInstruction.Value1RIOffset := -1;
+  Result.OperationInstruction.Value2RIOffset := -1;
+end;
+
+function copyr_fgOperation(const SRI: TThoriumRegisterID; const Offset: Integer; const AModuleRef: TThoriumModule): TThoriumOperationDescription;
+begin
+  NewNonCastOperation(Result);
+  Result.OperationInstruction.Instruction := TThoriumInstructionREG(copyr_fg(SRI, Offset, AModuleRef));
+  Result.OperationInstruction.TargetRIOffset := 0;
+  Result.OperationInstruction.Value1RIOffset := -1;
+  Result.OperationInstruction.Value2RIOffset := -1;
+end;
+
+function movelOperation(const Offset: Integer; const TRI: TThoriumRegisterID): TThoriumOperationDescription;
+begin
+  NewNonCastOperation(Result);
+  Result.OperationInstruction.Instruction := TThoriumInstructionREG(movel(Offset, TRI));
+  Result.OperationInstruction.TargetRIOffset := 2;
+  Result.OperationInstruction.Value1RIOffset := -1;
+  Result.OperationInstruction.Value2RIOffset := -1;
+end;
+
+function copyr_lOperation(const SRI: TThoriumRegisterID; const Offset: Integer): TThoriumOperationDescription;
+begin
+  NewNonCastOperation(Result);
+  Result.OperationInstruction.Instruction := TThoriumInstructionREG(copyr_l(SRI, Offset));
+  Result.OperationInstruction.TargetRIOffset := 0;
+  Result.OperationInstruction.Value1RIOffset := -1;
+  Result.OperationInstruction.Value2RIOffset := -1;
+end;
+
+function movepOperation(const Offset: Integer; const TRI: TThoriumRegisterID): TThoriumOperationDescription;
+begin
+  NewNonCastOperation(Result);
+  Result.OperationInstruction.Instruction := TThoriumInstructionREG(movep(Offset, TRI));
+  Result.OperationInstruction.TargetRIOffset := 2;
+  Result.OperationInstruction.Value1RIOffset := -1;
+  Result.OperationInstruction.Value2RIOffset := -1;
+end;
+
+function copyr_pOperation(const SRI: TThoriumRegisterID; const Offset: Integer): TThoriumOperationDescription;
+begin
+  NewNonCastOperation(Result);
+  Result.OperationInstruction.Instruction := TThoriumInstructionREG(copyr_p(SRI, Offset));
+  Result.OperationInstruction.TargetRIOffset := 0;
+  Result.OperationInstruction.Value1RIOffset := -1;
+  Result.OperationInstruction.Value2RIOffset := -1;
 end;
 
 function movesOperation(const Scope, Offset: Integer; const TRI: TThoriumRegisterID): TThoriumOperationDescription;

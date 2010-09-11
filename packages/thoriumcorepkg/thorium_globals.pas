@@ -283,11 +283,11 @@ type
     vtHostFunction, vtHostMethod);
 
 
-  TThoriumTableEntryType = (etStatic, etVariable, etRegisterVariable,
-    etCallable, etHostCallable, etProperty, etLibraryConstant, etType,
-    etParameter);
+  TThoriumTableEntryType = (ttGlobal, ttLocal, ttParameter,
+    ttLocalRegisterVariable, ttGlobalCallable, ttHostCallable,
+    ttLibraryProperty, ttLibraryConstant, ttType);
   TThoriumTableEntryTypes = set of TThoriumTableEntryType;
-  TThoriumQualifiedIdentifierKind = (ikType, ikVariable, ikStatic, ikComplex,
+  TThoriumQualifiedIdentifierKind = (ikType, ikVariable, ikComplex,
     ikUndeclared, ikNoFar, ikPrototypedFunction, ikLibraryProperty);
   TThoriumQualifiedIdentifierKinds = set of TThoriumQualifiedIdentifierKind;
 
@@ -301,7 +301,6 @@ const
   THORIUM_IDENTIFIER_KIND_NAMES : array [TThoriumQualifiedIdentifierKind] of String = (
     'type',
     'variable',
-    'static',
     'complex expression',
     'undeclared identifier',
     '',

@@ -88,12 +88,12 @@ begin
       FS.Free;
     end;
 
-    Engine.InitializeVirtualMachine;
+    (*Engine.InitializeVirtualMachine;
     try
       Module.PublicFunction[0].Call([]);
     finally
       Engine.ReleaseVirtualMachine;
-    end;
+    end;  *)
   finally
     Engine.Free;
   end;

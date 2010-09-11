@@ -202,6 +202,8 @@ type
   TThoriumDeclarationHandler = procedure (const AVisibility: TThoriumVisibilityLevel;
       ATypeIdent, AValueIdent: TThoriumQualifiedIdentifier; var Offset: Integer) of object;
 
+  TThoriumDefaultIdentifierScope = (isLocal, isGlobal);
+
   { TThoriumDefaultScanner }
 
   TThoriumDefaultScanner = class (TObject)
@@ -234,7 +236,7 @@ type
     FBreakOffsetTarget: Integer;
     FHadGlobalVariable: Boolean;
     FLastGlobalJump: TThoriumInstructionAddress;
-    FCurrentScope: Integer;
+    FCurrentScope: TThoriumDefaultIdentifierScope;
     FCurrentStr: String;
     FCurrentSym: TThoriumDefaultSymbol;
     FCurrentReturnType: TThoriumType;
@@ -759,7 +761,7 @@ begin
   GenCreation(Creation);
 
   // Add an entry to the identifier table
-  Entry := FTable.AddConstantIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType, Value);
+  Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, Offset, ATypeIdent.FinalType, FCurrentScope = isGlobal, False, @Value);
   // Increase the table offset
   Inc(Offset);
 
@@ -947,7 +949,7 @@ begin
     tsIdentifier:
     begin
       // Resolve an identifier and return it appropriately
-      Identifier := SolveIdentifier(ATargetRegister, [ikComplex, ikLibraryProperty, ikPrototypedFunction, ikStatic, ikVariable]);
+      Identifier := SolveIdentifier(ATargetRegister, [ikComplex, ikLibraryProperty, ikPrototypedFunction, ikVariable]);
       // Use the state and type of the identifier
       AState := Identifier.State;
       Result := Identifier.FinalType;
@@ -1061,13 +1063,11 @@ begin
     Entry := Entries[I];
     if (ikNoFar in AllowedKinds) and (Entry^.SourceModule <> FModule) then
       Entries.Delete(I)
-    else if (not (ikType in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etType) then
+    else if (not (ikType in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = ttType) then
       Entries.Delete(I)
-    else if (not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type in [etCallable, etHostCallable]) then
+    else if (not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type in [ttGlobalCallable, ttHostCallable]) then
       Entries.Delete(I)
-    else if (not (ikVariable in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etVariable) then
-      Entries.Delete(I)
-    else if (not (ikStatic in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type = etStatic) then
+    else if (not (ikVariable in AllowedKinds) and not (ikComplex in AllowedKinds)) and (Entry^.Entry._Type in [ttLocal, ttGlobal, ttParameter]) then
       Entries.Delete(I);
     Dec(I);
   end;
@@ -1104,7 +1104,6 @@ begin
   FTable.AddFunctionIdentifier(Func.Name, Func);
 
   SaveTable;
-  FCurrentScope := THORIUM_STACK_SCOPE_PARAMETERS;
   Proceed;
   ParamIndex := 1;
 
@@ -1134,21 +1133,21 @@ begin
   // Add the parameters to the local table, in reverse order
   for I := High(Params) downto Low(Params) do
   begin
-    FTable.AddParameterIdentifier(Params[I].ParamName, FCurrentScope, I-Length(Params), Params[I].ParamType);
+    FTable.AddParameterIdentifier(Params[I].ParamName, I-Length(Params), Params[I].ParamType);
   end;
 
   ExpectSymbol([tsCloseBracket]);
   Proceed;
 
   // Setup scoop and table stack
-  FCurrentScope := THORIUM_STACK_SCOPE_LOCAL;
+  FCurrentScope := isLocal;
   FCurrentFunctionTableStack := FTableSizes.Count;
 
   LocalOffset := 0;
   EmbedHint('func:start');
   SaveTable;
   Statement(LocalOffset);
-  FCurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+  FCurrentScope := isGlobal;
   EmbedHint('func:end');
 
   // Restore the table - one time for the things happening in the statement and
@@ -1422,7 +1421,7 @@ var
   Visibility: TThoriumVisibilityLevel;
   Offset: Integer;
 begin
-  FCurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+  FCurrentScope := isGlobal;
   IsStatic := False;
   Offset := 0;
   Visibility := vsPrivate;
@@ -1731,81 +1730,106 @@ var
       ForceNewCustomOperation(Solution^.GetCode);
       ForceNewCustomOperation(Solution^.SetCode);
       case Entry^.Entry._Type of
-        etStatic, etVariable, etParameter:
+        ttLocal, ttGlobal, ttParameter, ttLocalRegisterVariable:
         begin
-          if Entry^.SourceModule <> FModule then
+          case Entry^.Entry._Type of
+            ttGlobal:
+            begin
+
+              if Entry^.SourceModule = FModule then
+              begin
+                // Belongs to this module
+                AppendOperation(Solution^.GetCode,
+                  ThoriumEncapsulateOperation(
+                    movegOperation(Entry^.Entry.Offset, ATargetRegister),
+                    ATargetRegister
+                  )
+                );
+                AppendOperation(Solution^.SetCode,
+                  ThoriumEncapsulateOperation(
+                    copyr_gOperation(ATargetRegister, Entry^.Entry.Offset),
+                    ATargetRegister
+                  )
+                );
+              end
+              else
+              begin
+                // Is from another module
+                AppendOperation(Solution^.GetCode,
+                  ThoriumEncapsulateOperation(
+                    movefgOperation(Entry^.Entry.Offset, ATargetRegister, Entry^.SourceModule),
+                    ATargetRegister
+                  )
+                );
+                AppendOperation(Solution^.SetCode,
+                  ThoriumEncapsulateOperation(
+                    copyr_fgOperation(ATargetRegister, Entry^.Entry.Offset, Entry^.SourceModule),
+                    ATargetRegister
+                  )
+                );
+              end;
+            end;
+            ttLocal:
+            begin
+              AppendOperation(Solution^.GetCode,
+                ThoriumEncapsulateOperation(
+                  movelOperation(Entry^.Entry.Offset, ATargetRegister),
+                  ATargetRegister
+                )
+              );
+              AppendOperation(Solution^.SetCode,
+                ThoriumEncapsulateOperation(
+                  copyr_lOperation(ATargetRegister, Entry^.Entry.Offset),
+                  ATargetRegister
+                )
+              );
+            end;
+            ttParameter:
+            begin
+              AppendOperation(Solution^.GetCode,
+                ThoriumEncapsulateOperation(
+                  movepOperation(Entry^.Entry.Offset, ATargetRegister),
+                  ATargetRegister
+                )
+              );
+              AppendOperation(Solution^.SetCode,
+                ThoriumEncapsulateOperation(
+                  copyr_pOperation(ATargetRegister, Entry^.Entry.Offset),
+                  ATargetRegister
+                )
+              );
+            end;
+            ttLocalRegisterVariable:
+            begin
+              AppendOperation(Solution^.GetCode,
+                ThoriumEncapsulateOperation(
+                  moverOperation(Entry^.Entry.Offset, ATargetRegister),
+                  ATargetRegister
+                )
+              );
+              AppendOperation(Solution^.SetCode,
+                ThoriumEncapsulateOperation(
+                  copyrOperation(ATargetRegister, Entry^.Entry.Offset),
+                  ATargetRegister
+                )
+              );
+            end;
+          end;
+
+          Solution^.Kind := ikVariable;
+          if not Entry^.Entry.Writable and Entry^.Entry.ValidValue then
           begin
-            AppendOperation(Solution^.GetCode,
-              ThoriumEncapsulateOperation(
-                movefsOperation(FThorium.IndexOfModule(Entry^.SourceModule), Entry^.Entry.Offset, ATargetRegister),
-                ATargetRegister
-              )
-            );
-            AppendOperation(Solution^.SetCode,
-              ThoriumEncapsulateOperation(
-                copyr_fsOperation(ATargetRegister, FThorium.IndexOfModule(Entry^.SourceModule), Entry^.Entry.Offset),
-                ATargetRegister
-              )
-            );
+            Solution^.State := vsStatic;
+            Solution^.Value := Entry^.Entry.Value;
           end
           else
-          begin
-            AppendOperation(Solution^.GetCode,
-              ThoriumEncapsulateOperation(
-                movesOperation(Entry^.Entry.Scope, Entry^.Entry.Offset, ATargetRegister),
-                ATargetRegister
-              )
-            );
-            AppendOperation(Solution^.SetCode,
-              ThoriumEncapsulateOperation(
-                copyr_sOperation(ATargetRegister, Entry^.Entry.Scope, Entry^.Entry.Offset),
-                ATargetRegister
-              )
-            );
-          end;
-          case Entry^.Entry._Type of
-            etStatic:
-            begin
-              Solution^.Kind := ikStatic;
-              Solution^.State := vsStatic;
-              Solution^.Writable := False;
-              Solution^.Value := Entry^.Entry.Value;
-            end;
-            etParameter:
-            begin
-              Solution^.Kind := ikVariable;
-              Solution^.State := vsAccessable;
-              Solution^.Writable := False;
-            end;
-            etVariable:
-            begin
-              Solution^.Kind := ikVariable;
-              Solution^.State := vsAccessable;
-              Solution^.Writable := True;
-            end;
-          end;
+            Solution^.State := vsAccessable;
+          Solution^.Writable := Entry^.Entry.Writable;
         end;
-        etRegisterVariable:
+
+        ttGlobalCallable:
         begin
           Solution^.Kind := ikVariable;
-          AppendOperation(Solution^.GetCode,
-            ThoriumEncapsulateOperation(
-              moverOperation(Entry^.Entry.Offset, ATargetRegister),
-              ATargetRegister
-            )
-          );
-          AppendOperation(Solution^.SetCode,
-            ThoriumEncapsulateOperation(
-              copyrOperation(ATargetRegister, Entry^.Entry.Offset),
-              ATargetRegister
-            )
-          );
-          Solution^.State := vsAccessable;
-          Solution^.Writable := True;
-        end;
-        etCallable:
-        begin
-          Solution^.Kind := ikStatic;
           Solution^.Writable := False;
           Solution^.State := vsAccessable;
           AppendOperation(Solution^.GetCode,
@@ -1821,9 +1845,9 @@ var
             )
           );
         end;
-        etHostCallable:
+        ttHostCallable:
         begin
-          Solution^.Kind := ikStatic;
+          Solution^.Kind := ikVariable;
           Solution^.Writable := False;
           Solution^.State := vsAccessable;
           AppendOperation(Solution^.GetCode,
@@ -1839,7 +1863,7 @@ var
             )
           );
         end;
-        etProperty:
+        ttLibraryProperty:
         begin
           Solution^.Kind := ikLibraryProperty;
           AppendOperation(Solution^.GetCode,
@@ -1857,14 +1881,14 @@ var
           Solution^.Writable := TThoriumLibraryProperty(Entry^.Entry.Ptr).GetStatic;
           Solution^.State := vsAccessable;
         end;
-        etLibraryConstant:
+        ttLibraryConstant:
         begin
-          Solution^.Kind := ikStatic;
+          Solution^.Kind := ikVariable;
           Solution^.Writable := False;
           Solution^.State := vsStatic;
           Solution^.Value := TThoriumLibraryConstant(Entry^.Entry.Ptr).Value;
         end;
-        etType:
+        ttType:
         begin
           Solution^.Kind := ikType;
           Solution^.Writable := False;
@@ -2579,7 +2603,7 @@ var
 begin
   // Identifier handling
   GetFreeRegister(trEXP, RegID1);
-  Ident1 := SolveIdentifier(RegID1, [ikStatic, ikType, ikComplex, ikLibraryProperty, ikVariable]);
+  Ident1 := SolveIdentifier(RegID1, [ikType, ikComplex, ikLibraryProperty, ikVariable]);
   case Ident1.Kind of
     ikType:
     begin
@@ -3011,7 +3035,7 @@ begin
   end
   else
   begin
-    Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, FCurrentScope, Offset, ATypeIdent.FinalType);
+    Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, Offset, ATypeIdent.FinalType, FCurrentScope = isGlobal, True);
     Inc(Offset);
     if AVisibility = vsPublic then
       AddPublicVariable(AValueIdent.FullStr).AssignFromTableEntry(Entry^);

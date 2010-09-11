@@ -272,9 +272,10 @@ type
                                                                               *)
 {%REGION 'Thorium values' /fold}
   TThoriumValue = record
-    // Should be available all the time, but may be unused.
+    // Should be available all the time for all types which need special
+    // handling (e.g. custom free functions etc.)
     RTTI: TThoriumType;
-    References: LongInt;
+    //References: LongInt;
   case Byte of
     0: (Int: TThoriumInteger);
     1: (Float: TThoriumFloat);
@@ -1050,7 +1051,7 @@ type
 {%REGION 'Stack and identifier table entries' /fold}
 
   (* Defines which data a stack entry contains. *)
-  TThoriumStackEntryType = (etValue, etStackFrame, etVarargs, etNull);
+  TThoriumStackEntryType = (stValue, stStackFrame, stVarargs, stNull);
 
   TThoriumStackFrame = record
     PreviousStackFrame: Integer;
@@ -1076,19 +1077,19 @@ type
      contain a value, a stack frame or a set of varargs for a function call. *)
   TThoriumStackEntry = record
   case _Type: TThoriumStackEntryType of
-    etValue:
+    stValue:
     (
       Value: TThoriumValue
     );
-    etStackFrame:
+    stStackFrame:
     (
-      Stackframe: TThoriumStackFrame;
+      StackFrame: TThoriumStackFrame;
     );
-    etVarargs:
+    stVarargs:
     (
       VarargsBuffer: TThoriumVarargsBuffer;
     );
-    etNull:
+    stNull:
     (
 
     );
@@ -1101,10 +1102,11 @@ type
      of which kind an identifier is and how it might be found. *)
   TThoriumTableEntry = record
     Name: PString;
-    Scope: Integer;
     _Type: TThoriumTableEntryType;
     Offset: Integer; // This is the register of a register variable and the index of a library constant.
     TypeSpec: TThoriumType;
+    Writable: Boolean;
+    ValidValue: Boolean;
     Value: TThoriumValue;
     Ptr: Pointer;
   end;
@@ -1805,13 +1807,14 @@ type
     procedure ForceCapacity(NewCapacity: Integer);
     function NewEntry: PThoriumTableEntry;
     procedure SetCapacity(NewCapacity: Integer);
+  protected
+    procedure FreeEntry(var AEntry: TThoriumTableEntry);
   public
     property Count: Integer read FCount;
-    function AddConstantIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType; Value: TThoriumValue): PThoriumTableEntry;
-    function AddParameterIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType): PThoriumTableEntry;
-    function AddVariableIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType): PThoriumTableEntry;
-    function AddRegisterVariableIdentifier(Name: String; RegisterID: TThoriumRegisterID; TypeSpec: TThoriumType): PThoriumTableEntry;
     function AddFunctionIdentifier(Name: String; Func: TThoriumFunction): PThoriumTableEntry;
+    function AddParameterIdentifier(Name: String; Offset: Integer; TypeSpec: TThoriumType): PThoriumTableEntry;
+    function AddRegisterVariableIdentifier(Name: String; RegisterID: TThoriumRegisterID; TypeSpec: TThoriumType): PThoriumTableEntry;
+    function AddVariableIdentifier(const AName: String; Offset: Integer; TypeSpec: TThoriumType; Global, Writable: Boolean; AValue: PThoriumValue = nil): PThoriumTableEntry;
     procedure ClearTable;
     function ClearTableTo(NewCount: Integer): Integer;
     function FindIdentifier(Name: String; out Ident: TThoriumTableEntry): Boolean;
@@ -2145,6 +2148,20 @@ type
     procedure Pop(Amount: Integer; FreeValues: Boolean = True); inline;
     function PopTop: PThoriumStackEntry; inline;
     procedure ClearStack;
+  end;
+
+  { TThoriumRuntimeModule }
+
+  TThoriumRuntimeModule = class (TObject)
+  public
+    constructor Create(const ACompiledModule: TThoriumModule);
+    destructor Destroy; override;
+  private
+    FGlobalValues: array of TThoriumValue;
+    FInstructions: TThoriumInstructions;
+  protected
+    procedure AssignInstructions(const ASource: TThoriumModule);
+    function FilterInstruction(var AInstruction: TThoriumInstruction): Boolean; virtual;
   end;
 
   (* This class executes previously generated Thorium bytecode. *)
@@ -3800,6 +3817,24 @@ begin
 
     tiFNC: with TThoriumInstructionFNC(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
     tiXFNC: with TThoriumInstructionXFNC(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
+
+    tiMOVER_G,
+    tiCOPYR_G: with TThoriumInstructionMOVER_G(AInstruction) do Result := Result + Format('%%%s global($0x%8.8x)', [ThoriumRegisterToStr(SRI), Offset]);
+    tiMOVER_L,
+    tiCOPYR_L: with TThoriumInstructionMOVER_L(AInstruction) do Result := Result + Format('%%%s local($0x%8.8x)', [ThoriumRegisterToStr(SRI), Offset]);
+    tiMOVER_P,
+    tiCOPYR_P: with TThoriumInstructionMOVER_P(AInstruction) do Result := Result + Format('%%%s param($0x%8.8x)', [ThoriumRegisterToStr(SRI), -(Offset+1)]);
+    tiMOVEG,
+    tiCOPYG: with TThoriumInstructionMOVEG(AInstruction) do Result := Result + Format('global($0x%8.8x) %%%s', [Offset, ThoriumRegisterToStr(TRI)]);
+    tiMOVEL,
+    tiCOPYL: with TThoriumInstructionMOVEL(AInstruction) do Result := Result + Format('local($0x%8.8x) %%%s', [Offset, ThoriumRegisterToStr(TRI)]);
+    tiMOVEP,
+    tiCOPYP: with TThoriumInstructionMOVEP(AInstruction) do Result := Result + Format('param($0x%8.8x) %%%s', [-(Offset+1), ThoriumRegisterToStr(TRI)]);
+
+    tiMOVER_FG,
+    tiCOPYR_FG: with TThoriumInstructionMOVER_FG(AInstruction) do Result := Result + Format('%%%s @%s($0x%8.8x)', [ThoriumRegisterToStr(SRI), Offset, TThoriumModule(ModuleRef).Name]);
+    tiMOVEFG,
+    tiCOPYFG: with TThoriumInstructionMOVEFG(AInstruction) do Result := Result + Format('@%s($0x%8.8x) %%%s', [TThoriumModule(ModuleRef).Name, Offset, ThoriumRegisterToStr(TRI)]);
 
     tiCOPYR_S: with TThoriumInstructionCOPYR_S(AInstruction) do Result := Result + Format('%%%s %%sp($0x%.4x, $0x%.8x)', [ThoriumRegisterToStr(SRI), Scope, Offset]);
     tiCOPYR_ST: with TThoriumInstructionCOPYR_ST(AInstruction) do Result := Result + Format('%%s', [ThoriumRegisterToStr(SRI)]);
@@ -6021,7 +6056,7 @@ begin
   begin
     with (Stack.Push)^ do
     begin
-      _Type := etValue;
+      _Type := stValue;
       Move(AParameters[I], Value, SizeOf(TThoriumValue));
     end;
   end;
@@ -6029,9 +6064,9 @@ begin
 
   with Frame^ do
   begin
-    _Type := etStackFrame;
-    FillStackFrame(Stackframe);
-    with Stackframe do
+    _Type := stStackFrame;
+    FillStackFrame(StackFrame);
+    with StackFrame do
     begin
       PreviousStackFrame := -1;
       ReturnAddress := THORIUM_RETURN_EXIT;
@@ -6111,13 +6146,11 @@ end;
 procedure TThoriumVariable.AssignFromTableEntry(
   const ATableEntry: TThoriumTableEntry);
 begin
-  if not (ATableEntry._Type in [etStatic, etVariable]) then
-    raise EThoriumCompilerError.Create('Cannot assign a non-variable and non-static to a TThoriumVariable instance.');
-  if ATableEntry.Scope <> THORIUM_STACK_SCOPE_MODULEROOT then
-    raise EThoriumCompilerError.Create('Only moduleroot symbols can be assigned to TThoriumVariable instances.');
+  if not (ATableEntry._Type in [ttGlobal]) then
+    raise EThoriumCompilerError.Create('Cannot assign a non-global to a TThoriumVariable instance.');
   FStackPosition := ATableEntry.Offset;
   FTypeSpec := ATableEntry.TypeSpec;
-  FIsStatic := ATableEntry._Type = etStatic;
+  FIsStatic := not ATableEntry.Writable;
 end;
 
 procedure TThoriumVariable.LoadFromStream(Stream: TStream);
@@ -7445,7 +7478,7 @@ begin
     begin
       FillByte(Match.Entry, SizeOf(TThoriumTableEntry), 0);
       Match.Entry.Ptr := FConstants[I];
-      Match.Entry._Type := etLibraryConstant;
+      Match.Entry._Type := ttLibraryConstant;
       Match.Entry.TypeSpec := FConstants[I].FValue.RTTI;
       Match.Entry.Value := FConstants[I].FValue;
       AppendTableEntry(Entries, Match);
@@ -7458,7 +7491,7 @@ begin
     begin
       FillByte(Match.Entry, SizeOf(TThoriumTableEntry), 0);
       Match.Entry.Ptr := FProperties[I];
-      Match.Entry._Type := etProperty;
+      Match.Entry._Type := ttLibraryProperty;
       Match.Entry.TypeSpec := FProperties[I].GetType;
       AppendTableEntry(Entries, Match);
     end;
@@ -7471,7 +7504,7 @@ begin
       FillByte(Match.Entry, SizeOf(TThoriumTableEntry), 0);
       Match.Entry.Ptr := FHostCallables[I];
       Match.Entry.TypeSpec := FHostCallables[I].Prototype;
-      Match.Entry._Type := etHostCallable;
+      Match.Entry._Type := ttHostCallable;
       AppendTableEntry(Entries, Match);
     end;
   end;
@@ -7483,7 +7516,7 @@ begin
       FillByte(Match.Entry, SizeOf(TThoriumTableEntry), 0);
       Match.Entry.Ptr := FTypes[I];
       Match.Entry.TypeSpec := FTypes[I];
-      Match.Entry._Type := etType;
+      Match.Entry._Type := ttType;
       AppendTableEntry(Entries, Match);
     end;
   end;
@@ -7830,7 +7863,7 @@ begin
     end;
     VM.FStack.Pop(PC, False);
     ST := Stack.GetTopStackEntry;
-    ST^._Type := etValue;
+    ST^._Type := stValue;
     ST^.Value := ReturnVal;
   end
   else
@@ -8025,7 +8058,7 @@ begin
     end;
     VM.FStack.Pop(PC);
     ST := VM.FStack.GetStackEntry(THORIUM_STACK_SCOPE_FROMTOP, 1);
-    ST^._Type := etValue;
+    ST^._Type := stValue;
     ST^.Value := ReturnVal;
   end
   else
@@ -8139,45 +8172,13 @@ begin
   FCapacity := NewCapacity;
 end;
 
-function TThoriumIdentifierTable.AddConstantIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType; Value: TThoriumValue): PThoriumTableEntry;
-// Adds an identifier declared as constant
+procedure TThoriumIdentifierTable.FreeEntry(var AEntry: TThoriumTableEntry);
 begin
-  Result := NewEntry;
-  New(Result^.Name);
-  Result^.Name^ := Name;
-  Result^.Scope := Scope;
-  Result^._Type := etStatic;
-  Result^.Offset := Offset;
-  Result^.TypeSpec := TypeSpec;
-  Result^.Value := TypeSpec.DuplicateValue(Value);
-end;
-
-function TThoriumIdentifierTable.AddParameterIdentifier(Name: String;
-  Scope: Integer; Offset: Integer; TypeSpec: TThoriumType): PThoriumTableEntry;
-var
-  Val: TThoriumValue;
-begin
-  Result := NewEntry;
-  New(Result^.Name);
-  Result^.Name^ := Name;
-  Result^.Scope := Scope;
-  Result^._Type := etParameter;
-  Result^.Offset := Offset;
-  Result^.TypeSpec := TypeSpec;
-  FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
-end;
-
-function TThoriumIdentifierTable.AddVariableIdentifier(Name: String; Scope: Integer; Offset: Integer; TypeSpec: TThoriumType): PThoriumTableEntry;
-// Adds an identifier declared as variable
-begin
-  Result := NewEntry;
-  New(Result^.Name);
-  Result^.Name^ := Name;
-  Result^.Scope := Scope;
-  Result^._Type := etVariable;
-  Result^.Offset := Offset;
-  Result^.TypeSpec := TypeSpec;
-  FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
+  ThoriumFreeValue(AEntry.Value);
+  Dispose(AEntry.Name);
+  if (AEntry._Type = ttGlobalCallable) then
+    TThoriumFunction(AEntry.Ptr).Free;
+  Finalize(AEntry);
 end;
 
 function TThoriumIdentifierTable.AddRegisterVariableIdentifier(Name: String;
@@ -8187,10 +8188,34 @@ begin
   Result := NewEntry;
   New(Result^.Name);
   Result^.Name^ := Name;
-  Result^._Type := etRegisterVariable;
+  Result^._Type := ttLocalRegisterVariable;
   Result^.Offset := RegisterID;
   Result^.TypeSpec := TypeSpec;
+  Result^.ValidValue := False;
   FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
+end;
+
+function TThoriumIdentifierTable.AddVariableIdentifier(const AName: String;
+  Offset: Integer; TypeSpec: TThoriumType; Global, Writable: Boolean;
+  AValue: PThoriumValue): PThoriumTableEntry;
+begin
+  Result := NewEntry;
+  New(Result^.Name);
+  Result^.Name^ := AName;
+  if Global then
+    Result^._Type := ttGlobal
+  else
+    Result^._Type := ttLocal;
+  Result^.Offset := Offset;
+  Result^.TypeSpec := TypeSpec;
+  Result^.Writable := Writable;
+  if (not Writable) and (AValue <> nil) then
+  begin
+    Result^.ValidValue := True;
+    Result^.Value := ThoriumDuplicateValue(AValue^);
+  end
+  else
+    Result^.ValidValue := False
 end;
 
 function TThoriumIdentifierTable.AddFunctionIdentifier(Name: String; Func: TThoriumFunction): PThoriumTableEntry;
@@ -8199,11 +8224,26 @@ begin
   Result := NewEntry;
   New(Result^.Name);
   Result^.Name^ := Name;
-  Result^.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-  Result^._Type := etCallable;
+  Result^._Type := ttGlobalCallable;
   Result^.Offset := 0;
   Result^.TypeSpec := Func.FPrototype;
   Result^.Ptr := Func;
+  Result^.ValidValue := False;
+  FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
+end;
+
+function TThoriumIdentifierTable.AddParameterIdentifier(Name: String;
+  Offset: Integer; TypeSpec: TThoriumType): PThoriumTableEntry;
+var
+  Val: TThoriumValue;
+begin
+  Result := NewEntry;
+  New(Result^.Name);
+  Result^.Name^ := Name;
+  Result^._Type := ttParameter;
+  Result^.Offset := Offset;
+  Result^.TypeSpec := TypeSpec;
+  Result^.Writable := False;
   FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 
@@ -8213,16 +8253,11 @@ var
   I: Integer;
   Entry: PThoriumTableEntry;
 begin
+  Entry := FIdentifiers;
   for I := 0 to FCount - 1 do
   begin
-    Entry := PThoriumTableEntry(ptruint(FIdentifiers) + Cardinal(I * SizeOf(TThoriumTableEntry)));
-    ThoriumFreeValue(Entry^.Value);
-    Entry^.Name^ := '';
-    Dispose(Entry^.Name);
-    Entry^.TypeSpec := nil;
-    if (Entry^._Type = etCallable) then
-      TThoriumFunction(Entry^.Ptr).Free;
-    Finalize(Entry);
+    FreeEntry(Entry^);
+    Inc(Entry);
   end;
   FreeMem(FIdentifiers);
   FIdentifiers := nil;
@@ -8241,15 +8276,7 @@ begin
   Entry := @FIdentifiers[NewCount];
   for I := NewCount to FCount - 1 do
   begin
-    ThoriumFreeValue(Entry^.Value);
-    Entry^.Name^ := '';
-    Dispose(Entry^.Name);
-    Entry^.TypeSpec := nil;
-    if (Entry^._Type = etCallable) then
-      TThoriumFunction(Entry^.Ptr).Free;
-    if Entry^._Type <> etRegisterVariable then
-      Inc(Result);
-    Finalize(Entry);
+    FreeEntry(Entry^);
     Inc(Entry);
   end;
   FCount := NewCount;
@@ -8973,12 +9000,12 @@ begin
   begin
     FTable.ReadIdentifier(I, Ident);
     case Ident._Type of
-      etVariable, etStatic:
+      ttLocal, ttGlobal, ttParameter:
       begin
         Inc(StackCount);
       end;
 
-      etRegisterVariable:
+      ttLocalRegisterVariable:
       begin
         if Ident.TypeSpec.NeedsClear then
           GenCode(clr(Ident.Offset));
@@ -9069,7 +9096,7 @@ begin
           Entry.Name := nil;
           Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
           Entry.Offset := -1;
-          Entry._Type := etCallable;
+          Entry._Type := ttGlobalCallable;
           Entry.TypeSpec := CurrFunc.PrototypeIntf;
           Entry.Value.Func := CurrFunc;
           Result := True;
@@ -9109,7 +9136,7 @@ begin
       Entry.Name := nil;
       Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
       Entry.Offset := -1;
-      Entry._Type := etHostCallable;
+      Entry._Type := ttHostCallable;
       Entry.TypeSpec := CurrExternalFunc.PrototypeIntf;
       Entry.Value.HostFunc := CurrExternalFunc;
       Result := True;
@@ -9121,7 +9148,7 @@ begin
       Entry.Name := nil;
       Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
       Entry.Offset := -1;
-      Entry._Type := etProperty;
+      Entry._Type := ttLibraryProperty;
       Entry.TypeSpec := CurrProp.GetType;
       Entry.Ptr := CurrProp;
       Result := True;
@@ -9135,7 +9162,7 @@ begin
       Entry.Name := nil;
       Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
       Entry.Offset := -1;
-      Entry._Type := etLibraryConstant;
+      Entry._Type := ttLibraryConstant;
       Entry.Value := CurrConst.FValue;
       // Reimplement this
       raise Exception.Create('Re-implement ExtractTypeSpec or replace with appropriate surrogate.');
@@ -9197,9 +9224,8 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
         begin
           Name := nil;
           Offset := VarEntry.FStackPosition;
-          Scope := THORIUM_STACK_SCOPE_MODULEROOT;
           TypeSpec := VarEntry.FTypeSpec;
-          _Type := etVariable;
+          _Type := ttGlobal;
         end;
         AppendTableEntry(Entries, Match);
         Break; // We can break here, since two variables with the same name in
@@ -9215,7 +9241,7 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
       begin
         with Match.Entry do
         begin
-          _Type := etCallable;
+          _Type := ttGlobalCallable;
           Name := nil;
           TypeSpec := FuncEntry.FPrototype;
           Value.Func := FuncEntry;
@@ -9243,25 +9269,25 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
 
     if Ident = 'int' then
     begin
-      Match.Entry._Type := etType;
+      Match.Entry._Type := ttType;
       Match.Entry.TypeSpec := TThoriumTypeInteger.Create;
       AppendTableEntry(Entries, Match);
     end
     else if Ident = 'string' then
     begin
-      Match.Entry._Type := etType;
+      Match.Entry._Type := ttType;
       Match.Entry.TypeSpec := TThoriumTypeString.Create;
       AppendTableEntry(Entries, Match);
     end
     else if Ident = 'float' then
     begin
-      Match.Entry._Type := etType;
+      Match.Entry._Type := ttType;
       Match.Entry.TypeSpec := TThoriumTypeFloat.Create;
       AppendTableEntry(Entries, Match);
     end
     else if Ident = 'void' then
     begin
-      Match.Entry._Type := etType;
+      Match.Entry._Type := ttType;
       Match.Entry.TypeSpec := nil;
       AppendTableEntry(Entries, Match);
     end;
@@ -11090,7 +11116,7 @@ function TThoriumStack.Prealloc: PThoriumStackEntry;
 begin
   Result := GetMem(SizeOf(TThoriumStackEntry));
   (*FillByte(Result^, SizeOf(TThoriumStackEntry), 0);
-  Result^._Type := etValue;
+  Result^._Type := stValue;
   Result^.Value._Type := vtBuiltIn;
   Result^.Value.BuiltIn._Type := btNil;*)
 end;
@@ -11106,7 +11132,7 @@ begin
   Result := FTop;
   
   //FillDWord(Result^, SizeOf(TThoriumStackEntry), 0);
-  //Result^._Type := etValue;
+  //Result^._Type := stValue;
   //Result^.Value._Type := vtBuiltIn;
   //Result^.Value.BuiltIn._Type := btNil;
   Inc(FCount);
@@ -11145,7 +11171,7 @@ begin
     begin
       for Idx := FCount - 1 downto -Amount do
       begin
-        if (FEntries[Idx]._Type = etValue) then
+        if (FEntries[Idx]._Type = stValue) then
           ThoriumFreeValue(FEntries[Idx].Value);
       end;
     end;
@@ -11159,9 +11185,9 @@ begin
     for Idx := FCount - 1 downto FCount - Amount do
     begin
       case CurrEntry^._Type of
-        etValue:
+        stValue:
           ThoriumFreeValue(CurrEntry^.Value);
-        etVarargs:
+        stVarargs:
         begin
           FreeMem(CurrEntry^.VarargsBuffer.DataOrigin);
           if CurrEntry^.VarargsBuffer.BufferOrigin <> nil then
@@ -11215,13 +11241,38 @@ var
 begin
   for Idx := FCount - 1 downto 0 do
   begin
-    if FEntries[Idx]._Type = etValue then
+    if FEntries[Idx]._Type = stValue then
       ThoriumFreeValue(FEntries[Idx].Value);
       // IF YOU EXPERIENCE A CRASH HERE, HAVE A LOOK IN THE COMMENT ABOVE!
   end;
   FCount := 0;
   FTop := FEntries;
   Dec(FTop);
+end;
+
+{ TThoriumRuntimeModule }
+
+constructor TThoriumRuntimeModule.Create(const ACompiledModule: TThoriumModule
+  );
+begin
+
+end;
+
+destructor TThoriumRuntimeModule.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TThoriumRuntimeModule.AssignInstructions(const ASource: TThoriumModule
+  );
+begin
+
+end;
+
+function TThoriumRuntimeModule.FilterInstruction(
+  var AInstruction: TThoriumInstruction): Boolean;
+begin
+
 end;
 
 { TThoriumVirtualMachine }
@@ -11292,7 +11343,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       _NewEntry^.Value.RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
       _NewEntry^.Value.Int := Value;
       {$ifdef Timecheck}EndTimecheck('int.s');{$endif}
@@ -11372,7 +11423,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       _NewEntry^.Value.RTTI := {$ifdef DebugToConsole}FThorium.FTypeFloat{$else}nil{$endif};
       _NewEntry^.Value.Float := Value;
       {$ifdef Timecheck}EndTimecheck('flt.s');{$endif}
@@ -11396,7 +11447,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       _NewEntry^.Value.RTTI := FThorium.FTypeString;
       New(_NewEntry^.Value.Str);
       {$ifdef Timecheck}EndTimecheck('str.s');{$endif}
@@ -11409,7 +11460,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       _NewEntry^.Value.RTTI := FThorium.FTypeString;
       New(_NewEntry^.Value.Str);
       _NewEntry^.Value.Str^ := FCurrentModule.FStringLibrary[Index];
@@ -11500,12 +11551,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
-      if _NewEntry^.Value.References = 1 then
-        ThoriumFreeValue(_NewEntry^.Value)
-      else
-        Dec(_NewEntry^.Value.References);
-      _NewEntry^.Value := FRegisters[SRI];
-      Inc(_NewEntry^.Value.References);
+      ThoriumFreeValue(_NewEntry^.Value);
+      _NewEntry^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
       {$ifdef Timecheck}EndTimecheck('copyr.s');{$endif}
     end;
   end;
@@ -11516,7 +11563,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       _NewEntry^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
       {$ifdef Timecheck}EndTimecheck('copyr.st');{$endif}
     end;
@@ -11540,7 +11587,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       _NewEntry^.Value := ThoriumDuplicateValue(FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value);
       {$ifdef Timecheck}EndTimecheck('copys.st');{$endif}
     end;
@@ -11584,7 +11631,7 @@ var
       _Operand1 := FStack.GetTop;
       _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
       ThoriumFreeValue(_NewEntry^.Value);
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       Move(_Operand1^, _NewEntry^, SizeOf(TThoriumStackEntry));
       FStack.Pop(1, False);
       {$ifdef Timecheck}EndTimecheck('moves.s');{$endif}
@@ -11598,7 +11645,7 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
       ThoriumFreeValue(_NewEntry^.Value);
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       Move(FRegisters[SRI], _NewEntry^.Value, SizeOf(TThoriumValue));
       {$ifdef Timecheck}EndTimecheck('mover.s');{$endif}
     end;
@@ -11610,7 +11657,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       Move(FRegisters[SRI], _NewEntry^.Value, SizeOf(TThoriumValue));
       {$ifdef Timecheck}EndTimecheck('mover.st');{$endif}
     end;
@@ -11676,7 +11723,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etValue;
+      _NewEntry^._Type := stValue;
       _NewEntry^.Value := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value;
       {$ifdef Timecheck}EndTimecheck('copys.st');{$endif}
     end;
@@ -12216,7 +12263,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etVarargs;
+      _NewEntry^._Type := stVarargs;
       if Pointers = 1 then
         _NewEntry^.VarargsBuffer.Data := GetMem(Length * SizeOf(ptruint))
       else
@@ -12426,7 +12473,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etVarargs;
+      _NewEntry^._Type := stVarargs;
       _NewEntry^.VarargsBuffer.Data := GetMem(Length * SizeOf(TVarRec));
       _NewEntry^.VarargsBuffer.DataOrigin := _NewEntry^.VarargsBuffer.Data;
       _NewEntry^.VarargsBuffer.Buffer := GetMem(Floats * SizeOf(Extended) + (Length - (ToClear + Floats)) * SizeOf(TThoriumInteger));
@@ -12627,15 +12674,15 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etStackFrame;
-      FRegisters[SRI].Func.FillStackFrame(_NewEntry^.Stackframe);
-      _NewEntry^.Stackframe.ReturnAddress := FCurrentInstructionIdx;
-      _NewEntry^.Stackframe.ReturnModule := nil;
-      _NewEntry^.Stackframe.PreviousStackFrame := FCurrentStackFrame;
-      _NewEntry^.Stackframe.RegisterDumpRange := HRI;
-      _NewEntry^.Stackframe.DropResult := False;
-      GetMem(_NewEntry^.Stackframe.RegisterDumpData, SizeOf(TThoriumValue)*(HRI+1));
-      Move(FRegisters[0], _NewEntry^.Stackframe.RegisterDumpData^, SizeOf(TThoriumValue)*(HRI+1));
+      _NewEntry^._Type := stStackFrame;
+      FRegisters[SRI].Func.FillStackFrame(_NewEntry^.StackFrame);
+      _NewEntry^.StackFrame.ReturnAddress := FCurrentInstructionIdx;
+      _NewEntry^.StackFrame.ReturnModule := nil;
+      _NewEntry^.StackFrame.PreviousStackFrame := FCurrentStackFrame;
+      _NewEntry^.StackFrame.RegisterDumpRange := HRI;
+      _NewEntry^.StackFrame.DropResult := False;
+      GetMem(_NewEntry^.StackFrame.RegisterDumpData, SizeOf(TThoriumValue)*(HRI+1));
+      Move(FRegisters[0], _NewEntry^.StackFrame.RegisterDumpData^, SizeOf(TThoriumValue)*(HRI+1));
 
       FCurrentStackFrame := FStack.FCount-1;
       I := FRegisters[SRI].Func.FEntryPoint;
@@ -12661,15 +12708,15 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^._Type := etStackFrame;
-      FRegisters[SRI].Func.FillStackFrame(_NewEntry^.Stackframe);
-      _NewEntry^.Stackframe.ReturnAddress := FCurrentInstructionIdx;
-      _NewEntry^.Stackframe.PreviousStackFrame := FCurrentStackFrame;
-      _NewEntry^.Stackframe.ReturnModule := FCurrentModule;
-      _NewEntry^.Stackframe.RegisterDumpRange := HRI;
-      _NewEntry^.Stackframe.DropResult := False;
-      GetMem(_NewEntry^.Stackframe.RegisterDumpData, SizeOf(TThoriumValue)*HRI);
-      Move(FRegisters[0], _NewEntry^.Stackframe.RegisterDumpData^, SizeOf(TThoriumValue)*HRI);
+      _NewEntry^._Type := stStackFrame;
+      FRegisters[SRI].Func.FillStackFrame(_NewEntry^.StackFrame);
+      _NewEntry^.StackFrame.ReturnAddress := FCurrentInstructionIdx;
+      _NewEntry^.StackFrame.PreviousStackFrame := FCurrentStackFrame;
+      _NewEntry^.StackFrame.ReturnModule := FCurrentModule;
+      _NewEntry^.StackFrame.RegisterDumpRange := HRI;
+      _NewEntry^.StackFrame.DropResult := False;
+      GetMem(_NewEntry^.StackFrame.RegisterDumpData, SizeOf(TThoriumValue)*HRI);
+      Move(FRegisters[0], _NewEntry^.StackFrame.RegisterDumpData^, SizeOf(TThoriumValue)*HRI);
 
       FCurrentInstructionIdx := FRegisters[SRI].Func.FEntryPoint - 1;
       FCurrentStackFrame := FStack.FCount-1;
@@ -12709,51 +12756,51 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.FastGetStackEntry(0, FCurrentStackFrame);
-      FCurrentStackFrame := _Operand1^.Stackframe.PreviousStackFrame;
-      FCurrentInstructionIdx := _Operand1^.Stackframe.ReturnAddress;
-      if _Operand1^.Stackframe.ReturnModule <> nil then
+      FCurrentStackFrame := _Operand1^.StackFrame.PreviousStackFrame;
+      FCurrentInstructionIdx := _Operand1^.StackFrame.ReturnAddress;
+      if _Operand1^.StackFrame.ReturnModule <> nil then
       begin
         FCurrentModule := _Operand1^.StackFrame.ReturnModule;
         FCurrentModuleIdx := FThorium.FModules.IndexOf(FCurrentModule);
       end;
       FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
-      if _Operand1^.Stackframe.RegisterDumpData <> nil then
+      if _Operand1^.StackFrame.RegisterDumpData <> nil then
       begin
-        Move(_Operand1^.Stackframe.RegisterDumpData^, FRegisters[0], SizeOf(TThoriumValue)*(_Operand1^.Stackframe.RegisterDumpRange+1));
-        FreeMem(_Operand1^.Stackframe.RegisterDumpData);
+        Move(_Operand1^.StackFrame.RegisterDumpData^, FRegisters[0], SizeOf(TThoriumValue)*(_Operand1^.StackFrame.RegisterDumpRange+1));
+        FreeMem(_Operand1^.StackFrame.RegisterDumpData);
       end;
-      if (_Operand1^.Stackframe.HasReturnValue) then
+      if (_Operand1^.StackFrame.HasReturnValue) then
       begin
-        if (_Operand1^.Stackframe.DropResult) then
+        if (_Operand1^.StackFrame.DropResult) then
         begin
           // Pop the result away
-          FStack.Pop(2+_Operand1^.Stackframe.ParameterCount, False);
+          FStack.Pop(2+_Operand1^.StackFrame.ParameterCount, False);
         end
         else
         begin
           // Assign the value immediatedly above the stack frame to the slot
           // reserved for the return value.
-          if _Operand1^.Stackframe.ParameterCount = 0 then
+          if _Operand1^.StackFrame.ParameterCount = 0 then
           begin
             // If there are no parameters, we can directly overwrite the stack
             // frame.
             _Operand1^ := _Operand1[1];
-            // _Operand1[1]._Type := etNull; // To avoid freeing by the pop
+            // _Operand1[1]._Type := stNull; // To avoid freeing by the pop
             FStack.Pop(1, False);
           end
           else
           begin
             // Otherwise we just overwrite the slot of the last parameter
             // ThoriumFreeValue(_Operand1[-(_Operand1^.Params)].Value);
-            _Operand1[-(_Operand1^.Stackframe.ParameterCount)] := _Operand1[1];
+            _Operand1[-(_Operand1^.StackFrame.ParameterCount)] := _Operand1[1];
             // Again, avoid freeing by the pop
-            // _Operand1[1]._Type := etNull;
-            FStack.Pop(1+_Operand1^.Stackframe.ParameterCount, False);
+            // _Operand1[1]._Type := stNull;
+            FStack.Pop(1+_Operand1^.StackFrame.ParameterCount, False);
           end;
         end;
       end
       else
-        FStack.Pop(1+_Operand1^.Stackframe.ParameterCount, False);
+        FStack.Pop(1+_Operand1^.StackFrame.ParameterCount, False);
       {$ifdef Timecheck}EndTimecheck('ret');{$endif}
     end;
   end;
@@ -12909,15 +12956,15 @@ begin
   begin
     FCurrentStackFrame := FStack.EntryCount;
     Frame := FStack.Push;
-    Frame^._Type := etStackFrame;
-    Frame^.Stackframe.PreviousStackFrame := -1;
-    Frame^.Stackframe.ReturnModule := nil;
-    Frame^.Stackframe.ReturnAddress := THORIUM_RETURN_EXIT;
-    Frame^.Stackframe.RegisterDumpRange := 0;
-    Frame^.Stackframe.RegisterDumpData := nil;
-    Frame^.Stackframe.HasReturnValue := False;
-    Frame^.Stackframe.ParameterCount := 0;
-    Frame^.Stackframe.DropResult := False;
+    Frame^._Type := stStackFrame;
+    Frame^.StackFrame.PreviousStackFrame := -1;
+    Frame^.StackFrame.ReturnModule := nil;
+    Frame^.StackFrame.ReturnAddress := THORIUM_RETURN_EXIT;
+    Frame^.StackFrame.RegisterDumpRange := 0;
+    Frame^.StackFrame.RegisterDumpData := nil;
+    Frame^.StackFrame.HasReturnValue := False;
+    Frame^.StackFrame.ParameterCount := 0;
+    Frame^.StackFrame.DropResult := False;
   end;
   try
     FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
@@ -12974,18 +13021,18 @@ begin
   begin
     ThisEntry := FStack.GetTop(I);
     case ThisEntry^._Type of
-      etValue: WriteLn(Format('  %4d Value (%s) %s', [J, ThisEntry^.Value.RTTI.Name, ThisEntry^.Value.RTTI.DoToString(ThisEntry^.Value)]));
-      etStackFrame:
+      stValue: WriteLn(Format('  %4d Value (%s) %s', [J, ThisEntry^.Value.RTTI.Name, ThisEntry^.Value.RTTI.DoToString(ThisEntry^.Value)]));
+      stStackFrame:
       begin
-        if ThisEntry^.Stackframe.ReturnAddress = THORIUM_RETURN_EXIT then
+        if ThisEntry^.StackFrame.ReturnAddress = THORIUM_RETURN_EXIT then
           WriteLn(Format('  %4d Stackframe (root)', [J]))
-        else if ThisEntry^.Stackframe.ReturnModule = nil then
-          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.Stackframe.ReturnAddress, FCurrentModule.Name]))
+        else if ThisEntry^.StackFrame.ReturnModule = nil then
+          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.StackFrame.ReturnAddress, FCurrentModule.Name]))
         else
-          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.Stackframe.ReturnAddress, ThisEntry^.Stackframe.ReturnModule.Name]));
+          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.StackFrame.ReturnAddress, ThisEntry^.StackFrame.ReturnModule.Name]));
       end;
-      etNull: WriteLn(Format('  %4d null', [J]));
-      etVarargs: WriteLn(Format('  %4d Varargs (%d)', [J, MemSize(ThisEntry^.VarargsBuffer.BufferOrigin)]));
+      stNull: WriteLn(Format('  %4d null', [J]));
+      stVarargs: WriteLn(Format('  %4d Varargs (%d)', [J, MemSize(ThisEntry^.VarargsBuffer.BufferOrigin)]));
     else
       WriteLn(Format('  %4d CORRUPTED', [J]));
     end;
@@ -13016,8 +13063,8 @@ begin
     WriteLn('  Current stack frame [[ ');
     WriteLn('    index (int) ', FCurrentStackFrame);
     Frame := FStack.GetStackEntry(0, FCurrentStackFrame);
-    WriteLn('    hasReturnValue (bool) ', Frame^.Stackframe.HasReturnValue);
-    WriteLn('    paramCount (int) ', Frame^.Stackframe.ParameterCount);
+    WriteLn('    hasReturnValue (bool) ', Frame^.StackFrame.HasReturnValue);
+    WriteLn('    paramCount (int) ', Frame^.StackFrame.ParameterCount);
     WriteLn('  ]]');
   end
   else
@@ -13074,15 +13121,15 @@ begin
   begin
     FCurrentStackFrame := FStack.EntryCount;
     Frame := FStack.Push;
-    Frame^._Type := etStackFrame;
-    Frame^.Stackframe.PreviousStackFrame := -1;
-    Frame^.Stackframe.ReturnModule := nil;
-    Frame^.Stackframe.ReturnAddress := THORIUM_RETURN_EXIT;
-    Frame^.Stackframe.RegisterDumpRange := 0;
-    Frame^.Stackframe.RegisterDumpData := nil;
-    Frame^.Stackframe.HasReturnValue := False;
-    Frame^.Stackframe.ParameterCount := 0;
-    Frame^.Stackframe.DropResult := False;
+    Frame^._Type := stStackFrame;
+    Frame^.StackFrame.PreviousStackFrame := -1;
+    Frame^.StackFrame.ReturnModule := nil;
+    Frame^.StackFrame.ReturnAddress := THORIUM_RETURN_EXIT;
+    Frame^.StackFrame.RegisterDumpRange := 0;
+    Frame^.StackFrame.RegisterDumpData := nil;
+    Frame^.StackFrame.HasReturnValue := False;
+    Frame^.StackFrame.ParameterCount := 0;
+    Frame^.StackFrame.DropResult := False;
   end;
   try
     FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
