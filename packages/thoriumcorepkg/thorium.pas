@@ -1052,6 +1052,26 @@ type
   (* Defines which data a stack entry contains. *)
   TThoriumStackEntryType = (etValue, etStackFrame, etVarargs, etNull);
 
+  TThoriumStackFrame = record
+    PreviousStackFrame: Integer;
+    ReturnAddress: TThoriumInstructionAddress;
+    ReturnModule: TThoriumModule;
+    ParameterCount: Cardinal;
+    HasReturnValue: Boolean;
+    RegisterDumpRange: TThoriumRegisterID;
+    RegisterDumpData: Pointer;
+    DropResult: Boolean;
+  end;
+
+  TThoriumVarargsBuffer = record
+    VAData: Pointer;
+    VADataOrigin: Pointer;
+    VABuffer: Pointer;
+    VABufferOrigin: Pointer;
+    VAToFree: PThoriumValue;
+    VAToFreeOrigin: PThoriumValue;
+  end;
+
   (* This record represents one entry on the Thorium stack. It may either
      contain a value, a stack frame or a set of varargs for a function call. *)
   TThoriumStackEntry = record
@@ -1062,23 +1082,15 @@ type
     );
     etStackFrame:
     (
-      PreviousStackFrame: LongInt;
-      ReturnAddress: TThoriumInstructionAddress;
-      ReturnModule: LongInt;
-      Params: LongInt;
-      HasReturnValue: Boolean;
-      RegisterDumpRange: Word;
-      RegisterDump: Pointer;
-      DropResult: Boolean;
+      Stackframe: TThoriumStackFrame;
     );
     etVarargs:
     (
-      VAData: Pointer;
-      VADataOrigin: Pointer;
-      VABuffer: Pointer;
-      VABufferOrigin: Pointer;
-      VAToFree: PThoriumValue;
-      VAToFreeOrigin: PThoriumValue;
+      VarargsBuffer: TThoriumVarargsBuffer;
+    );
+    etNull:
+    (
+
     );
   end;
 
@@ -1180,6 +1192,8 @@ type
     FPrototyped: Boolean;
     FPrototypedCalls: TThoriumJumpList;
     FVisibilityLevel: TThoriumVisibilityLevel;
+  protected
+    procedure FillStackFrame(var AStackframe: TThoriumStackFrame); inline;
   public
     property EntryPoint: Integer read FEntryPoint;
     property NestingLevel: Integer read FNestingLevel;
@@ -5936,6 +5950,16 @@ begin
   inherited Destroy;
 end;
 
+procedure TThoriumFunction.FillStackFrame(var AStackframe: TThoriumStackFrame);
+  inline;
+begin
+  with AStackframe do
+  begin
+    ParameterCount := FPrototype.FParameters.FList.Count;
+    HasReturnValue := FPrototype.FReturnType <> nil;
+  end;
+end;
+
 function TThoriumFunction.Call(AParameters: array of const): TThoriumValue;
 var
   Values: array of TThoriumValue;
@@ -6002,17 +6026,20 @@ begin
     end;
   end;
   Frame := Stack.Push;
+
   with Frame^ do
   begin
     _Type := etStackFrame;
-    PreviousStackFrame := -1;
-    ReturnAddress := THORIUM_JMP_EXIT;
-    ReturnModule := -1;
-    Params := Length(AParameters);
-    HasReturnValue := True;
-    RegisterDumpRange := 0;
-    RegisterDump := nil;
-    DropResult := False;
+    FillStackFrame(Stackframe);
+    with Stackframe do
+    begin
+      PreviousStackFrame := -1;
+      ReturnAddress := THORIUM_RETURN_EXIT;
+      ReturnModule := nil;
+      RegisterDumpRange := 0;
+      RegisterDumpData := nil;
+      DropResult := False;
+    end;
   end;
   VM.FCurrentStackFrame := Stack.EntryCount-1;
   VM.Execute(VM.FThorium.FModules.IndexOf(FModule), FEntryPoint, False);
@@ -11136,17 +11163,17 @@ begin
           ThoriumFreeValue(CurrEntry^.Value);
         etVarargs:
         begin
-          FreeMem(CurrEntry^.VADataOrigin);
-          if CurrEntry^.VABufferOrigin <> nil then
-            FreeMem(CurrEntry^.VABufferOrigin);
-          if CurrEntry^.VAToFreeOrigin <> nil then
+          FreeMem(CurrEntry^.VarargsBuffer.VADataOrigin);
+          if CurrEntry^.VarargsBuffer.VABufferOrigin <> nil then
+            FreeMem(CurrEntry^.VarargsBuffer.VABufferOrigin);
+          if CurrEntry^.VarargsBuffer.VAToFreeOrigin <> nil then
           begin
-            while CurrEntry^.VAToFree <> CurrEntry^.VAToFreeOrigin do
+            while CurrEntry^.VarargsBuffer.VAToFree <> CurrEntry^.VarargsBuffer.VAToFreeOrigin do
             begin
-              Dec(CurrEntry^.VAToFree);
-              ThoriumFreeValue(CurrEntry^.VAToFree[0]);
+              Dec(CurrEntry^.VarargsBuffer.VAToFree);
+              ThoriumFreeValue(CurrEntry^.VarargsBuffer.VAToFree[0]);
             end;
-            FreeMem(CurrEntry^.VAToFreeOrigin);
+            FreeMem(CurrEntry^.VarargsBuffer.VAToFreeOrigin);
           end;
         end;
       end;
@@ -11207,7 +11234,7 @@ begin
   FThorium := AThorium;
   FStack := TThoriumStack.Create;
   FModuleStackIndicies := TThoriumIntList.Create;
-  FCurrentModuleIdx := -1;
+//  FCurrentModuleIdx := -1;
   FCurrentModule := nil;
   FCurrentInstructionIdx := -1;
   FCurrentStackFrame := -1;
@@ -12191,12 +12218,12 @@ var
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etVarargs;
       if Pointers = 1 then
-        _NewEntry^.VAData := GetMem(Length * SizeOf(ptruint))
+        _NewEntry^.VarargsBuffer.VAData := GetMem(Length * SizeOf(ptruint))
       else
-        _NewEntry^.VAData := GetMem(Length);
-      _NewEntry^.VADataOrigin := _NewEntry^.VAData;
-      _NewEntry^.VABufferOrigin := nil;
-      _NewEntry^.VAToFreeOrigin := nil;
+        _NewEntry^.VarargsBuffer.VAData := GetMem(Length);
+      _NewEntry^.VarargsBuffer.VADataOrigin := _NewEntry^.VarargsBuffer.VAData;
+      _NewEntry^.VarargsBuffer.VABufferOrigin := nil;
+      _NewEntry^.VarargsBuffer.VAToFreeOrigin := nil;
 
       {$ifdef Timecheck}EndTimecheck('vastart');{$endif}
     end;
@@ -12209,12 +12236,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= $FF then
-        PByte(_Operand1^.VAData)^ := $FF
+        PByte(_Operand1^.VarargsBuffer.VAData)^ := $FF
       else if FRegisters[SRI].Int <= 0 then
-        PByte(_Operand1^.VAData)^ := 0
+        PByte(_Operand1^.VarargsBuffer.VAData)^ := 0
       else
-        PByte(_Operand1^.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VAData, 1);
+        PByte(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.VAData, 1);
       {$ifdef Timecheck}EndTimecheck('va.i8');{$endif}
     end;
   end;
@@ -12226,12 +12253,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= $FFFF then
-        PWord(_Operand1^.VAData)^ := $FFFF
+        PWord(_Operand1^.VarargsBuffer.VAData)^ := $FFFF
       else if FRegisters[SRI].Int <= 0 then
-        PWord(_Operand1^.VAData)^ := 0
+        PWord(_Operand1^.VarargsBuffer.VAData)^ := 0
       else
-        PWord(_Operand1^.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VAData, 2);
+        PWord(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.VAData, 2);
       {$ifdef Timecheck}EndTimecheck('va.i16');{$endif}
     end;
   end;
@@ -12243,12 +12270,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= $FFFFFFFF then
-        PDWord(_Operand1^.VAData)^ := $FFFFFFFF
+        PDWord(_Operand1^.VarargsBuffer.VAData)^ := $FFFFFFFF
       else if FRegisters[SRI].Int <= 0 then
-        PDWord(_Operand1^.VAData)^ := 0
+        PDWord(_Operand1^.VarargsBuffer.VAData)^ := 0
       else
-        PDWord(_Operand1^.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VAData, 4);
+        PDWord(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.VAData, 4);
       {$ifdef Timecheck}EndTimecheck('va.i32');{$endif}
     end;
   end;
@@ -12259,8 +12286,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PQWord(_Operand1^.VAData)^ := FRegisters[SRI].Int and $7FFFFFFFFFFFFFFF;
-      Inc(_Operand1^.VAData, 8);
+      PQWord(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int and $7FFFFFFFFFFFFFFF;
+      Inc(_Operand1^.VarargsBuffer.VAData, 8);
       {$ifdef Timecheck}EndTimecheck('va.i64');{$endif}
     end;
   end;
@@ -12272,12 +12299,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= 127 then
-        PShortInt(_Operand1^.VAData)^ := 127
+        PShortInt(_Operand1^.VarargsBuffer.VAData)^ := 127
       else if FRegisters[SRI].Int <= -128 then
-        PShortInt(_Operand1^.VAData)^ := -128
+        PShortInt(_Operand1^.VarargsBuffer.VAData)^ := -128
       else
-        PShortInt(_Operand1^.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VAData, 1);
+        PShortInt(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.VAData, 1);
       {$ifdef Timecheck}EndTimecheck('va.i8s');{$endif}
     end;
   end;
@@ -12289,12 +12316,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= 32767 then
-        PSmallInt(_Operand1^.VAData)^ := 32767
+        PSmallInt(_Operand1^.VarargsBuffer.VAData)^ := 32767
       else if FRegisters[SRI].Int <= -32768 then
-        PSmallInt(_Operand1^.VAData)^ := -32768
+        PSmallInt(_Operand1^.VarargsBuffer.VAData)^ := -32768
       else
-        PSmallInt(_Operand1^.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VAData, 2);
+        PSmallInt(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.VAData, 2);
       {$ifdef Timecheck}EndTimecheck('va.i16s');{$endif}
     end;
   end;
@@ -12306,12 +12333,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= 2147483647 then
-        PLongInt(_Operand1^.VAData)^ := 2147483647
+        PLongInt(_Operand1^.VarargsBuffer.VAData)^ := 2147483647
       else if FRegisters[SRI].Int <= -2147483648 then
-        PLongInt(_Operand1^.VAData)^ := -2147483648
+        PLongInt(_Operand1^.VarargsBuffer.VAData)^ := -2147483648
       else
-        PLongInt(_Operand1^.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VAData, 4);
+        PLongInt(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.VAData, 4);
       {$ifdef Timecheck}EndTimecheck('va.i32s');{$endif}
     end;
   end;
@@ -12322,8 +12349,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PInt64(_Operand1^.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VAData, 8);
+      PInt64(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.VAData, 8);
       {$ifdef Timecheck}EndTimecheck('va.i64s');{$endif}
     end;
   end;
@@ -12334,8 +12361,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PSingle(_Operand1^.VAData)^ := FRegisters[SRI].Float;
-      Inc(_Operand1^.VAData, 4);
+      PSingle(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Float;
+      Inc(_Operand1^.VarargsBuffer.VAData, 4);
       {$ifdef Timecheck}EndTimecheck('va.f32');{$endif}
     end;
   end;
@@ -12346,8 +12373,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PDouble(_Operand1^.VAData)^ := FRegisters[SRI].Float;
-      Inc(_Operand1^.VAData, 8);
+      PDouble(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Float;
+      Inc(_Operand1^.VarargsBuffer.VAData, 8);
       {$ifdef Timecheck}EndTimecheck('va.f64');{$endif}
     end;
   end;
@@ -12358,8 +12385,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PExtended(_Operand1^.VAData)^ := FRegisters[SRI].Float;
-      Inc(_Operand1^.VAData, 10);
+      PExtended(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Float;
+      Inc(_Operand1^.VarargsBuffer.VAData, 10);
       {$ifdef Timecheck}EndTimecheck('va.f80');{$endif}
     end;
   end;
@@ -12373,10 +12400,10 @@ var
       // okay, okay, use assignment instead of move to avoid hassle with the
       // stringmanager -.-
       _Operand1 := FStack.GetTopStackEntry;
-      // Move(FRegisters[SRI].BuiltIn.Str^, PString(_Operand1^.VAData)^, SizeOf(String));
-      PPointer(_Operand1^.VAData)^ := nil;
-      PString(_Operand1^.VAData)^ := FRegisters[SRI].Str^;
-      Inc(_Operand1^.VAData, SizeOf(Ptruint));
+      // Move(FRegisters[SRI].BuiltIn.Str^, PString(_Operand1^.VarargsBuffer.VAData)^, SizeOf(String));
+      PPointer(_Operand1^.VarargsBuffer.VAData)^ := nil;
+      PString(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Str^;
+      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(Ptruint));
       {$ifdef Timecheck}EndTimecheck('va.s');{$endif}
     end;
   end;
@@ -12387,8 +12414,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PPointer(_Operand1^.VAData)^ := FRegisters[SRI].HostObject;
-      Inc(_Operand1^.VAData, SizeOf(ptruint));
+      PPointer(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].HostObject;
+      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(ptruint));
       {$ifdef Timecheck}EndTimecheck('va.x');{$endif}
     end;
   end;
@@ -12400,12 +12427,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etVarargs;
-      _NewEntry^.VAData := GetMem(Length * SizeOf(TVarRec));
-      _NewEntry^.VADataOrigin := _NewEntry^.VAData;
-      _NewEntry^.VABuffer := GetMem(Floats * SizeOf(Extended) + (Length - (ToClear + Floats)) * SizeOf(TThoriumInteger));
-      _NewEntry^.VABufferOrigin := _NewEntry^.VABuffer;
-      _NewEntry^.VAToFree := GetMem(ToClear * SizeOf(TThoriumValue));
-      _NewEntry^.VAToFreeOrigin := _NewEntry^.VAToFree;
+      _NewEntry^.VarargsBuffer.VAData := GetMem(Length * SizeOf(TVarRec));
+      _NewEntry^.VarargsBuffer.VADataOrigin := _NewEntry^.VarargsBuffer.VAData;
+      _NewEntry^.VarargsBuffer.VABuffer := GetMem(Floats * SizeOf(Extended) + (Length - (ToClear + Floats)) * SizeOf(TThoriumInteger));
+      _NewEntry^.VarargsBuffer.VABufferOrigin := _NewEntry^.VarargsBuffer.VABuffer;
+      _NewEntry^.VarargsBuffer.VAToFree := GetMem(ToClear * SizeOf(TThoriumValue));
+      _NewEntry^.VarargsBuffer.VAToFreeOrigin := _NewEntry^.VarargsBuffer.VAToFree;
       {$ifdef Timecheck}EndTimecheck('vastart.t');{$endif}
     end;
   end;
@@ -12416,14 +12443,14 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PExtended(_Operand1^.VABuffer)^ := FRegisters[SRI].Float;
-      with PVarRec(_Operand1^.VAData)^ do
+      PExtended(_Operand1^.VarargsBuffer.VABuffer)^ := FRegisters[SRI].Float;
+      with PVarRec(_Operand1^.VarargsBuffer.VAData)^ do
       begin
         VType := vtExtended;
-        VExtended := _Operand1^.VABuffer;
+        VExtended := _Operand1^.VarargsBuffer.VABuffer;
       end;
-      Inc(_Operand1^.VABuffer, SizeOf(Extended));
-      Inc(_Operand1^.VAData, SizeOf(TVarRec));
+      Inc(_Operand1^.VarargsBuffer.VABuffer, SizeOf(Extended));
+      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(TVarRec));
       {$ifdef Timecheck}EndTimecheck('vat.f');{$endif}
     end;
   end;
@@ -12434,14 +12461,14 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PThoriumInteger(_Operand1^.VABuffer)^ := FRegisters[SRI].Int;
-      with PVarRec(_Operand1^.VAData)^ do
+      PThoriumInteger(_Operand1^.VarargsBuffer.VABuffer)^ := FRegisters[SRI].Int;
+      with PVarRec(_Operand1^.VarargsBuffer.VAData)^ do
       begin
         VType := vtInt64;
-        VInt64 := _Operand1^.VABuffer;
+        VInt64 := _Operand1^.VarargsBuffer.VABuffer;
       end;
-      Inc(_Operand1^.VABuffer, SizeOf(TThoriumInteger));
-      Inc(_Operand1^.VAData, SizeOf(TVarRec));
+      Inc(_Operand1^.VarargsBuffer.VABuffer, SizeOf(TThoriumInteger));
+      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(TVarRec));
       {$ifdef Timecheck}EndTimecheck('vat.i');{$endif}
     end;
   end;
@@ -12452,14 +12479,14 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      with PVarRec(_Operand1^.VAData)^ do
+      with PVarRec(_Operand1^.VarargsBuffer.VAData)^ do
       begin
         VType := vtAnsiString;
         VAnsiString := PPointer(FRegisters[SRI].Str)^;
       end;
-      //Move(FRegisters[SRI], _Operand1^.VAToFree[0], SizeOf(TThoriumValue));
-      //Inc(_Operand1^.VAToFree);
-      Inc(_Operand1^.VAData, SizeOf(TVarRec));
+      //Move(FRegisters[SRI], _Operand1^.VarargsBuffer.VAToFree[0], SizeOf(TThoriumValue));
+      //Inc(_Operand1^.VarargsBuffer.VAToFree);
+      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(TVarRec));
       {$ifdef Timecheck}EndTimecheck('vat.s');{$endif}
     end;
   end;
@@ -12470,14 +12497,14 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      with PVarRec(_Operand1^.VAData)^ do
+      with PVarRec(_Operand1^.VarargsBuffer.VAData)^ do
       begin
         VType := vtPointer;
         VPointer := FRegisters[SRI].HostObject;
       end;
-      Move(FRegisters[SRI], _Operand1^.VAToFree[0], SizeOf(TThoriumValue));
-      Inc(_Operand1^.VAToFree);
-      Inc(_Operand1^.VAData, SizeOf(TVarRec));
+      Move(FRegisters[SRI], _Operand1^.VarargsBuffer.VAToFree[0], SizeOf(TThoriumValue));
+      Inc(_Operand1^.VarargsBuffer.VAToFree);
+      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(TVarRec));
       {$ifdef Timecheck}EndTimecheck('vat.x');{$endif}
     end;
   end;
@@ -12601,15 +12628,14 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etStackFrame;
-      _NewEntry^.ReturnAddress := FCurrentInstructionIdx;
-      _NewEntry^.PreviousStackFrame := FCurrentStackFrame;
-      _NewEntry^.ReturnModule := THORIUM_MODULE_INDEX_CURRENT;
-      _NewEntry^.RegisterDumpRange := HRI;
-      _NewEntry^.HasReturnValue := FRegisters[SRI].Func.FPrototype.FReturnType <> nil;
-      _NewEntry^.Params := FRegisters[SRI].Func.FPrototype.FParameters.FList.Count;
-      _NewEntry^.DropResult := False;
-      GetMem(_NewEntry^.RegisterDump, SizeOf(TThoriumValue)*(HRI+1));
-      Move(FRegisters[0], _NewEntry^.RegisterDump^, SizeOf(TThoriumValue)*(HRI+1));
+      FRegisters[SRI].Func.FillStackFrame(_NewEntry^.Stackframe);
+      _NewEntry^.Stackframe.ReturnAddress := FCurrentInstructionIdx;
+      _NewEntry^.Stackframe.ReturnModule := nil;
+      _NewEntry^.Stackframe.PreviousStackFrame := FCurrentStackFrame;
+      _NewEntry^.Stackframe.RegisterDumpRange := HRI;
+      _NewEntry^.Stackframe.DropResult := False;
+      GetMem(_NewEntry^.Stackframe.RegisterDumpData, SizeOf(TThoriumValue)*(HRI+1));
+      Move(FRegisters[0], _NewEntry^.Stackframe.RegisterDumpData^, SizeOf(TThoriumValue)*(HRI+1));
 
       FCurrentStackFrame := FStack.FCount-1;
       I := FRegisters[SRI].Func.FEntryPoint;
@@ -12631,26 +12657,25 @@ var
 
   procedure fcall; inline;
   begin
-    with TThoriumInstructionFCALL(FCurrentInstruction^) do with FRegisters[SRI].Func do with FPrototype do
+    with TThoriumInstructionFCALL(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etStackFrame;
-      _NewEntry^.ReturnAddress := FCurrentInstructionIdx;
-      _NewEntry^.PreviousStackFrame := FCurrentStackFrame;
-      _NewEntry^.ReturnModule := FCurrentModuleIdx;
-      _NewEntry^.RegisterDumpRange := HRI;
-      _NewEntry^.HasReturnValue := ReturnType <> nil;
-      _NewEntry^.Params := FParameters.Count;
-      _NewEntry^.DropResult := False;
-      GetMem(_NewEntry^.RegisterDump, SizeOf(TThoriumValue)*HRI);
-      Move(FRegisters[0], _NewEntry^.RegisterDump^, SizeOf(TThoriumValue)*HRI);
+      FRegisters[SRI].Func.FillStackFrame(_NewEntry^.Stackframe);
+      _NewEntry^.Stackframe.ReturnAddress := FCurrentInstructionIdx;
+      _NewEntry^.Stackframe.PreviousStackFrame := FCurrentStackFrame;
+      _NewEntry^.Stackframe.ReturnModule := FCurrentModule;
+      _NewEntry^.Stackframe.RegisterDumpRange := HRI;
+      _NewEntry^.Stackframe.DropResult := False;
+      GetMem(_NewEntry^.Stackframe.RegisterDumpData, SizeOf(TThoriumValue)*HRI);
+      Move(FRegisters[0], _NewEntry^.Stackframe.RegisterDumpData^, SizeOf(TThoriumValue)*HRI);
 
-      FCurrentInstructionIdx := EntryPoint - 1;
+      FCurrentInstructionIdx := FRegisters[SRI].Func.FEntryPoint - 1;
       FCurrentStackFrame := FStack.FCount-1;
       { TODO : Improve performance by making module index accessible directly... }
-      FCurrentModuleIdx := FThorium.FModules.IndexOf(FModule);
-      FCurrentModule := FModule;
+      FCurrentModuleIdx := FThorium.FModules.IndexOf(FRegisters[SRI].Func.FModule);
+      FCurrentModule := FRegisters[SRI].Func.FModule;
       FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
       {$ifdef Timecheck}EndTimecheck('fcall');{$endif}
     end;
@@ -12684,31 +12709,31 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.FastGetStackEntry(0, FCurrentStackFrame);
-      FCurrentStackFrame := _Operand1^.PreviousStackFrame;
-      FCurrentInstructionIdx := _Operand1^.ReturnAddress;
-      if _Operand1^.ReturnModule <> THORIUM_MODULE_INDEX_CURRENT then
+      FCurrentStackFrame := _Operand1^.Stackframe.PreviousStackFrame;
+      FCurrentInstructionIdx := _Operand1^.Stackframe.ReturnAddress;
+      if _Operand1^.Stackframe.ReturnModule <> nil then
       begin
-        FCurrentModuleIdx := _Operand1^.ReturnModule;
-        FCurrentModule := TThoriumModule(FThorium.FModules[FCurrentModuleIdx]);
+        FCurrentModule := _Operand1^.StackFrame.ReturnModule;
+        FCurrentModuleIdx := FThorium.FModules.IndexOf(FCurrentModule);
       end;
       FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
-      if _Operand1^.RegisterDump <> nil then
+      if _Operand1^.Stackframe.RegisterDumpData <> nil then
       begin
-        Move(_Operand1^.RegisterDump^, FRegisters[0], SizeOf(TThoriumValue)*(_Operand1^.RegisterDumpRange+1));
-        FreeMem(_Operand1^.RegisterDump);
+        Move(_Operand1^.Stackframe.RegisterDumpData^, FRegisters[0], SizeOf(TThoriumValue)*(_Operand1^.Stackframe.RegisterDumpRange+1));
+        FreeMem(_Operand1^.Stackframe.RegisterDumpData);
       end;
-      if (_Operand1^.HasReturnValue) then
+      if (_Operand1^.Stackframe.HasReturnValue) then
       begin
-        if (_Operand1^.DropResult) then
+        if (_Operand1^.Stackframe.DropResult) then
         begin
           // Pop the result away
-          FStack.Pop(2+_Operand1^.Params, False);
+          FStack.Pop(2+_Operand1^.Stackframe.ParameterCount, False);
         end
         else
         begin
           // Assign the value immediatedly above the stack frame to the slot
           // reserved for the return value.
-          if _Operand1^.Params = 0 then
+          if _Operand1^.Stackframe.ParameterCount = 0 then
           begin
             // If there are no parameters, we can directly overwrite the stack
             // frame.
@@ -12720,15 +12745,15 @@ var
           begin
             // Otherwise we just overwrite the slot of the last parameter
             // ThoriumFreeValue(_Operand1[-(_Operand1^.Params)].Value);
-            _Operand1[-(_Operand1^.Params)] := _Operand1[1];
+            _Operand1[-(_Operand1^.Stackframe.ParameterCount)] := _Operand1[1];
             // Again, avoid freeing by the pop
             // _Operand1[1]._Type := etNull;
-            FStack.Pop(1+_Operand1^.Params, False);
+            FStack.Pop(1+_Operand1^.Stackframe.ParameterCount, False);
           end;
         end;
       end
       else
-        FStack.Pop(1+_Operand1^.Params, False);
+        FStack.Pop(1+_Operand1^.Stackframe.ParameterCount, False);
       {$ifdef Timecheck}EndTimecheck('ret');{$endif}
     end;
   end;
@@ -12885,14 +12910,14 @@ begin
     FCurrentStackFrame := FStack.EntryCount;
     Frame := FStack.Push;
     Frame^._Type := etStackFrame;
-    Frame^.PreviousStackFrame := -1;
-    Frame^.ReturnModule := -1;
-    Frame^.ReturnAddress := THORIUM_JMP_EXIT;
-    Frame^.RegisterDumpRange := 0;
-    Frame^.RegisterDump := nil;
-    Frame^.HasReturnValue := False;
-    Frame^.Params := 0;
-    Frame^.DropResult := False;
+    Frame^.Stackframe.PreviousStackFrame := -1;
+    Frame^.Stackframe.ReturnModule := nil;
+    Frame^.Stackframe.ReturnAddress := THORIUM_RETURN_EXIT;
+    Frame^.Stackframe.RegisterDumpRange := 0;
+    Frame^.Stackframe.RegisterDumpData := nil;
+    Frame^.Stackframe.HasReturnValue := False;
+    Frame^.Stackframe.ParameterCount := 0;
+    Frame^.Stackframe.DropResult := False;
   end;
   try
     FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
@@ -12952,15 +12977,15 @@ begin
       etValue: WriteLn(Format('  %4d Value (%s) %s', [J, ThisEntry^.Value.RTTI.Name, ThisEntry^.Value.RTTI.DoToString(ThisEntry^.Value)]));
       etStackFrame:
       begin
-        if ThisEntry^.ReturnAddress = THORIUM_JMP_EXIT then
+        if ThisEntry^.Stackframe.ReturnAddress = THORIUM_RETURN_EXIT then
           WriteLn(Format('  %4d Stackframe (root)', [J]))
-        else if ThisEntry^.ReturnModule < 0 then
-          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.ReturnAddress, FCurrentModule.Name]))
+        else if ThisEntry^.Stackframe.ReturnModule = nil then
+          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.Stackframe.ReturnAddress, FCurrentModule.Name]))
         else
-          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.ReturnAddress, FThorium.FModules[ThisEntry^.ReturnModule]]));
+          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.Stackframe.ReturnAddress, ThisEntry^.Stackframe.ReturnModule.Name]));
       end;
       etNull: WriteLn(Format('  %4d null', [J]));
-      etVarargs: WriteLn(Format('  %4d Varargs (%d)', [J, MemSize(ThisEntry^.VABufferOrigin)]));
+      etVarargs: WriteLn(Format('  %4d Varargs (%d)', [J, MemSize(ThisEntry^.VarargsBuffer.VABufferOrigin)]));
     else
       WriteLn(Format('  %4d CORRUPTED', [J]));
     end;
@@ -12991,8 +13016,8 @@ begin
     WriteLn('  Current stack frame [[ ');
     WriteLn('    index (int) ', FCurrentStackFrame);
     Frame := FStack.GetStackEntry(0, FCurrentStackFrame);
-    WriteLn('    hasReturnValue (bool) ', Frame^.HasReturnValue);
-    WriteLn('    paramCount (int) ', Frame^.Params);
+    WriteLn('    hasReturnValue (bool) ', Frame^.Stackframe.HasReturnValue);
+    WriteLn('    paramCount (int) ', Frame^.Stackframe.ParameterCount);
     WriteLn('  ]]');
   end
   else
@@ -13050,14 +13075,14 @@ begin
     FCurrentStackFrame := FStack.EntryCount;
     Frame := FStack.Push;
     Frame^._Type := etStackFrame;
-    Frame^.PreviousStackFrame := -1;
-    Frame^.ReturnModule := -1;
-    Frame^.ReturnAddress := THORIUM_JMP_EXIT;
-    Frame^.RegisterDumpRange := 0;
-    Frame^.RegisterDump := nil;
-    Frame^.HasReturnValue := False;
-    Frame^.Params := 0;
-    Frame^.DropResult := False;
+    Frame^.Stackframe.PreviousStackFrame := -1;
+    Frame^.Stackframe.ReturnModule := nil;
+    Frame^.Stackframe.ReturnAddress := THORIUM_RETURN_EXIT;
+    Frame^.Stackframe.RegisterDumpRange := 0;
+    Frame^.Stackframe.RegisterDumpData := nil;
+    Frame^.Stackframe.HasReturnValue := False;
+    Frame^.Stackframe.ParameterCount := 0;
+    Frame^.Stackframe.DropResult := False;
   end;
   try
     FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
