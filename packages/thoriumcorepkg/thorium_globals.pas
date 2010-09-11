@@ -37,7 +37,7 @@ uses
 
 {%REGION 'Versioning'}
 const
-  THORIUM_FILE_VERSION = 17;
+  THORIUM_FILE_VERSION = 18;
 
   THORIUM_MAJOR_VERSION : Word = 1;
   THORIUM_MINOR_VERSION : Word = 0;
@@ -386,6 +386,7 @@ type
     tiEXT_S, tiEXT,
     tiFNC, tiXFNC, tiXMETH,
     tiMOVER_G, tiCOPYR_G, tiMOVEG, tiCOPYG,
+    tiMOVER_FG, tiCOPYR_FG, tiMOVEFG, tiCOPYFG,
     tiMOVER_L, tiCOPYR_L, tiMOVEL, tiCOPYL,
     tiMOVER_P, tiCOPYR_P, tiMOVEP, tiCOPYP,
     tiCOPYR_S, tiCOPYR_ST, tiCOPYR_FS, tiCOPYS_ST, tiCOPYFS, tiCOPYS, tiCOPYR,
@@ -648,6 +649,86 @@ type
     Offset: LongInt;
     TRI: Word;
     Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionMOVER_FG = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    Offset: LongInt;
+    {$ifdef ENDIAN_BIG}
+    {$ifndef CPU64}
+    ModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    ModuleRef: Pointer;
+    {$ifdef ENDIAN_LITTLE}
+    {$ifndef CPU64}
+    ModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    Reserved: array [0..4] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYR_FG = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    Offset: LongInt;
+    {$ifdef ENDIAN_BIG}
+    {$ifndef CPU64}
+    ModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    ModuleRef: Pointer;
+    {$ifdef ENDIAN_LITTLE}
+    {$ifndef CPU64}
+    ModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    Reserved: array [0..4] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionMOVEFG = record
+    Instruction: TThoriumInstructionCode;
+    Offset: LongInt;
+    TRI: Word;
+    {$ifdef ENDIAN_BIG}
+    {$ifndef CPU64}
+    ModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    ModuleRef: Pointer;
+    {$ifdef ENDIAN_LITTLE}
+    {$ifndef CPU64}
+    ModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    Reserved: array [0..4] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYFG = record
+    Instruction: TThoriumInstructionCode;
+    Offset: LongInt;
+    TRI: Word;
+    {$ifdef ENDIAN_BIG}
+    {$ifndef CPU64}
+    ModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    ModuleRef: Pointer;
+    {$ifdef ENDIAN_LITTLE}
+    {$ifndef CPU64}
+    ModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    Reserved: array [0..4] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -1876,6 +1957,7 @@ const
     'ext.s', 'ext',
     'fnc', 'xfnc', 'xmeth',
     'mover.g', 'copyr.g', 'moveg', 'copyg',
+    'mover.fg', 'copyr.fg', 'movefg', 'copyfg',
     'mover.l', 'copyr.l', 'movel', 'copyl',
     'mover.p', 'copyr.p', 'movep', 'copyp',
     'copyr.s', 'copyr.st', 'copyr.fs', 'copys.st', 'copyfs', 'copys', 'copyr',
