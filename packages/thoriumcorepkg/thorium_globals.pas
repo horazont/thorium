@@ -1883,19 +1883,7 @@ type
     Instruction: TThoriumInstructionCode;
     SRI: Word;
     HRI: Word;
-    // This is filled when the VM imports the module
-    {$ifdef ENDIAN_BIG}
-    {$ifndef CPU64}
-    RuntimeModuleRefPointerOverhead: LongInt;
-    {$endif}
-    {$endif}
-    RuntimeModuleRef: Pointer;
-    {$ifdef ENDIAN_LITTLE}
-    {$ifndef CPU64}
-    RuntimeModuleRefPointerOverhead: LongInt;
-    {$endif}
-    {$endif}
-    Reserved: array [0..5] of Word;
+    Reserved: array [0..9] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;

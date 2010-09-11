@@ -1166,7 +1166,9 @@ begin
 
   // If public, add the function to the global function table.
   if AVisibility > vsPrivate then
-    FPublicFunctions.Add(Func.Duplicate);
+    FPublicFunctions.Add(Func)
+  else
+    FPrivateFunctions.Add(Func);
 end;
 
 procedure TThoriumDefaultCompiler.JumpingLogicalExpression(TrueJumps,
@@ -2697,6 +2699,7 @@ begin
     Statement(Offset);
     JumpsOut.AddEntry(GenCode(jmp(THORIUM_JMP_INVALID)));
     SetupJumps(FalseJumps, GetNextInstructionAddress);
+    EmbedHint('if:body:end');
 
     while FCurrentSym = tsElseIf do
     begin
@@ -2710,6 +2713,7 @@ begin
 
       EmbedHint('if:elif:body');
       Statement(Offset, THORIUM_DEFAULT_ALL_STATEMENTS);
+      EmbedHint('if:elif:body:end');
       JumpsOut.AddEntry(GenCode(jmp(THORIUM_JMP_INVALID)));
       SetupJumps(FalseJumps, GetNextInstructionAddress);
     end;
@@ -2719,6 +2723,7 @@ begin
       EmbedHint('if:else');
       Proceed;
       Statement(Offset, THORIUM_DEFAULT_ALL_STATEMENTS);
+      EmbedHint('if:else:end');
     end;
 
     SetupJumps(JumpsOut, GetNextInstructionAddress);
@@ -2745,7 +2750,7 @@ begin
   if not ExprType.CanAssignTo(Assignment, FCurrentFunc.Prototype.ReturnType) then
     CompilerError('Incompatible types: `'+ExprType.Name+''' (expression) and `'+FCurrentFunc.Prototype.ReturnType.Name+''' (return type).');
 
-  PopAndClearByTableStack(FCurrentFunctionTableStack + 1);
+  PopAndClearByTable(FTableSizes[FCurrentFunctionTableStack + 1]);
   case State of
     vsDynamic: GenCode(copyr_st(RegID));
     vsAccessable: GenCode(copyr_st(RegID));

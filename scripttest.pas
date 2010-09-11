@@ -90,7 +90,7 @@ begin
 
     Engine.InitializeVirtualMachine;
     try
-      Module.PublicFunction[0].Call([]);
+      Engine.VirtualMachine.CallFunction(Engine.VirtualMachine.GetRuntimeFunction(Module.PublicFunction[0]), []);
     finally
       Engine.ReleaseVirtualMachine;
     end;
