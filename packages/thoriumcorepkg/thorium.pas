@@ -11525,6 +11525,186 @@ var
     end;
   end;
 
+  procedure mover_g; inline;
+  begin
+    with TThoriumInstructionMOVER_G(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      ThoriumFreeValue(FCurrentModule.FGlobalValues[Offset]);
+      FCurrentModule.FGlobalValues[Offset] := FRegisters[SRI];
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure copyr_g; inline;
+  begin
+    with TThoriumInstructionCOPYR_G(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      ThoriumFreeValue(FCurrentModule.FGlobalValues[Offset]);
+      FCurrentModule.FGlobalValues[Offset] := ThoriumDuplicateValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure moveg; inline;
+  begin
+    with TThoriumInstructionMOVEG(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := FCurrentModule.FGlobalValues[Offset];
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure copyg; inline;
+  begin
+    with TThoriumInstructionMOVEG(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := ThoriumDuplicateValue(FCurrentModule.FGlobalValues[Offset]);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure mover_fg; inline;
+  begin
+    with TThoriumInstructionMOVER_FG(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      ThoriumFreeValue(TThoriumRuntimeModule(ModuleRef).FGlobalValues[Offset]);
+      TThoriumRuntimeModule(ModuleRef).FGlobalValues[Offset] := FRegisters[SRI];
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure copyr_fg; inline;
+  begin
+    with TThoriumInstructionCOPYR_FG(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      ThoriumFreeValue(TThoriumRuntimeModule(ModuleRef).FGlobalValues[Offset]);
+      TThoriumRuntimeModule(ModuleRef).FGlobalValues[Offset] := ThoriumDuplicateValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure movefg; inline;
+  begin
+    with TThoriumInstructionMOVEFG(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := TThoriumRuntimeModule(ModuleRef).FGlobalValues[Offset];
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure copyfg; inline;
+  begin
+    with TThoriumInstructionMOVEFG(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI] := ThoriumDuplicateValue(TThoriumRuntimeModule(ModuleRef).FGlobalValues[Offset]);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure mover_l; inline;
+  begin
+    with TThoriumInstructionMOVER_L(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FCurrentStackFrame, Offset);
+      Assert(_Operand1^._Type = stValue);
+      ThoriumFreeValue(_Operand1^.Value);
+      _Operand1^.Value := FRegisters[SRI];
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure copyr_l; inline;
+  begin
+    with TThoriumInstructionCOPYR_L(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FCurrentStackFrame, Offset);
+      Assert(_Operand1^._Type = stValue);
+      ThoriumFreeValue(_Operand1^.Value);
+      _Operand1^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure movel; inline;
+  begin
+    with TThoriumInstructionMOVEL(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      Assert(FStack.FastGetStackEntry(FCurrentStackFrame, Offset)^._Type = stValue);
+      FRegisters[TRI] := FStack.FastGetStackEntry(FCurrentStackFrame, Offset)^.Value;
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure copyl; inline;
+  begin
+    with TThoriumInstructionCOPYL(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      Assert(FStack.FastGetStackEntry(FCurrentStackFrame, Offset)^._Type = stValue);
+      FRegisters[TRI] := ThoriumDuplicateValue(FStack.FastGetStackEntry(FCurrentStackFrame, Offset)^.Value);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure mover_p; inline;
+  begin
+    with TThoriumInstructionMOVER_P(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FCurrentStackFrame, Offset);
+      Assert(_Operand1^._Type = stValue);
+      ThoriumFreeValue(_Operand1^.Value);
+      _Operand1^.Value := FRegisters[SRI];
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure copyr_p; inline;
+  begin
+    with TThoriumInstructionCOPYR_P(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.FastGetStackEntry(FCurrentStackFrame, Offset);
+      Assert(_Operand1^._Type = stValue);
+      ThoriumFreeValue(_Operand1^.Value);
+      _Operand1^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure movep; inline;
+  begin
+    with TThoriumInstructionMOVEP(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      Assert(FStack.FastGetStackEntry(FCurrentStackFrame, Offset)^._Type = stValue);
+      FRegisters[TRI] := FStack.FastGetStackEntry(FCurrentStackFrame, Offset)^.Value;
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure copyp; inline;
+  begin
+    with TThoriumInstructionCOPYP(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      Assert(FStack.FastGetStackEntry(FCurrentStackFrame, Offset)^._Type = stValue);
+      FRegisters[TRI] := ThoriumDuplicateValue(FStack.FastGetStackEntry(FCurrentStackFrame, Offset)^.Value);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
   procedure copyr_st; inline;
   begin
     with TThoriumInstructionCOPYR_ST(FCurrentInstruction^) do
@@ -12592,6 +12772,22 @@ begin
     tiFNC: fnc;
     tiXFNC: xfnc;
     tiXMETH: xmeth;
+    tiMOVER_G: mover_g;
+    tiCOPYR_G: copyr_g;
+    tiMOVEG: moveg;
+    tiCOPYG: copyg;
+    tiMOVER_FG: mover_fg;
+    tiCOPYR_FG: copyr_fg;
+    tiMOVEFG: movefg;
+    tiCOPYFG: copyfg;
+    tiMOVER_L: mover_l;
+    tiCOPYR_L: copyr_l;
+    tiMOVEL: movel;
+    tiCOPYL: copyl;
+    tiMOVER_P: mover_p;
+    tiCOPYR_P: copyr_p;
+    tiMOVEP: movep;
+    tiCOPYP: copyp;
     tiCOPYR_ST: copyr_st;
     tiCOPYR: copyr;
     tiMOVER_ST: mover_st;
