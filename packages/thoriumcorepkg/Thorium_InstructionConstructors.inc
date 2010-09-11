@@ -163,6 +163,138 @@ begin
   end;
 end;
 
+function mover_g(ASRI: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVER_G(Result) do
+  begin
+    Instruction := tiMOVER_G;
+    SRI := ASRI;
+    Offset := AOffset;
+  end;
+end;
+
+function copyr_g(ASRI: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYR_G(Result) do
+  begin
+    Instruction := tiCOPYR_G;
+    SRI := ASRI;
+    Offset := AOffset;
+  end;
+end;
+
+function moveg(AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVEG(Result) do
+  begin
+    Instruction := tiMOVEG;
+    Offset := AOffset;
+    TRI := ATRI;
+  end;
+end;
+
+function copyg(AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYG(Result) do
+  begin
+    Instruction := tiCOPYG;
+    Offset := AOffset;
+    TRI := ATRI;
+  end;
+end;
+
+function mover_l(ASRI: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVER_L(Result) do
+  begin
+    Instruction := tiMOVER_L;
+    SRI := ASRI;
+    Offset := AOffset;
+  end;
+end;
+
+function copyr_l(ASRI: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYR_L(Result) do
+  begin
+    Instruction := tiCOPYR_L;
+    SRI := ASRI;
+    Offset := AOffset;
+  end;
+end;
+
+function movel(AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVEL(Result) do
+  begin
+    Instruction := tiMOVEL;
+    Offset := AOffset;
+    TRI := ATRI;
+  end;
+end;
+
+function copyl(AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYL(Result) do
+  begin
+    Instruction := tiCOPYL;
+    Offset := AOffset;
+    TRI := ATRI;
+  end;
+end;
+
+function mover_p(ASRI: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVER_P(Result) do
+  begin
+    Instruction := tiMOVER_P;
+    SRI := ASRI;
+    Offset := AOffset;
+  end;
+end;
+
+function copyr_p(ASRI: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYR_P(Result) do
+  begin
+    Instruction := tiCOPYR_P;
+    SRI := ASRI;
+    Offset := AOffset;
+  end;
+end;
+
+function movep(AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVEP(Result) do
+  begin
+    Instruction := tiMOVEP;
+    Offset := AOffset;
+    TRI := ATRI;
+  end;
+end;
+
+function copyp(AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYP(Result) do
+  begin
+    Instruction := tiCOPYP;
+    Offset := AOffset;
+    TRI := ATRI;
+  end;
+end;
+
 function copyr_s(ASRI: Word; AScope: Word; AOffset: LongInt): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);

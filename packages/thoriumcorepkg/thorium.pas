@@ -3818,7 +3818,7 @@ begin
     tiMOVES_ST: with TThoriumInstructionMOVES_ST(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x)', [Scope, Offset]);
 
     tiPOP_S: with TThoriumInstructionPOP_S(AInstruction) do Result := Result + Format('$0x%.8x', [Amount]);
-    tiPOPP_S: with TThoriumInstructionPOPP_S(AInstruction) do Result := Result + Format('$0x%.8x', [Amount]);
+    tiSTACKHINT: with TThoriumInstructionSTACKHINT(AInstruction) do Result := Result + Format('$0x%.8x', [Amount]);
 
     tiCLR: with TThoriumInstructionCLR(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
 

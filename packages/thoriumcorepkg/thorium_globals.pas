@@ -37,7 +37,7 @@ uses
 
 {%REGION 'Versioning'}
 const
-  THORIUM_FILE_VERSION = 16;
+  THORIUM_FILE_VERSION = 17;
 
   THORIUM_MAJOR_VERSION : Word = 1;
   THORIUM_MINOR_VERSION : Word = 0;
@@ -385,9 +385,12 @@ type
     tiSTR_S, tiSTRL_S, tiSTR, tiSTRL,
     tiEXT_S, tiEXT,
     tiFNC, tiXFNC, tiXMETH,
+    tiMOVER_G, tiCOPYR_G, tiMOVEG, tiCOPYG,
+    tiMOVER_L, tiCOPYR_L, tiMOVEL, tiCOPYL,
+    tiMOVER_P, tiCOPYR_P, tiMOVEP, tiCOPYP,
     tiCOPYR_S, tiCOPYR_ST, tiCOPYR_FS, tiCOPYS_ST, tiCOPYFS, tiCOPYS, tiCOPYR,
     tiMOVES_S, tiMOVER_S, tiMOVER_ST, tiMOVER, tiMOVES, tiMOVEST, tiMOVER_FS, tiMOVEFS, tiMOVES_ST,
-    tiPOP_S, tiPOPP_S,
+    tiPOP_S, tiSTACKHINT,
     tiCLR,
     tiCASTIF, tiCASTIE, tiCASTFE, tiCASTSE, tiCASTEI, tiCASTEF, tiCASTES, tiCASTE,
     tiCMPI, tiCMPIF, tiCMPIE, tiCMPF, tiCMPFI, tiCMPFE, tiCMPS, tiCMPSE, tiCMPE, tiCMPEI, tiCMPEF, tiCMPES,
@@ -613,6 +616,114 @@ type
     CodeLine: Cardinal;
   end;
 
+  TThoriumInstructionMOVER_G = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    Offset: LongInt;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYR_G = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    Offset: LongInt;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionMOVEG = record
+    Instruction: TThoriumInstructionCode;
+    Offset: LongInt;
+    TRI: Word;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYG = record
+    Instruction: TThoriumInstructionCode;
+    Offset: LongInt;
+    TRI: Word;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionMOVER_L = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    Offset: LongInt;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYR_L = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    Offset: LongInt;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionMOVEL = record
+    Instruction: TThoriumInstructionCode;
+    Offset: LongInt;
+    TRI: Word;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYL = record
+    Instruction: TThoriumInstructionCode;
+    Offset: LongInt;
+    TRI: Word;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionMOVER_P = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    Offset: LongInt;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYR_P = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    Offset: LongInt;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionMOVEP = record
+    Instruction: TThoriumInstructionCode;
+    Offset: LongInt;
+    TRI: Word;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYP = record
+    Instruction: TThoriumInstructionCode;
+    Offset: LongInt;
+    TRI: Word;
+    Reserved: array [0..8] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
   TThoriumInstructionCOPYR_S = record
     Instruction: TThoriumInstructionCode;
     SRI: Word;
@@ -770,7 +881,7 @@ type
     CodeLine: Cardinal;
   end;
 
-  TThoriumInstructionPOPP_S = record
+  TThoriumInstructionSTACKHINT = record
     Instruction: TThoriumInstructionCode;
     Amount: Cardinal;
     Reserved: array [0..9] of Word;
@@ -1764,9 +1875,12 @@ const
     'str.s', 'strl.s', 'str', 'strl',
     'ext.s', 'ext',
     'fnc', 'xfnc', 'xmeth',
+    'mover.g', 'copyr.g', 'moveg', 'copyg',
+    'mover.l', 'copyr.l', 'movel', 'copyl',
+    'mover.p', 'copyr.p', 'movep', 'copyp',
     'copyr.s', 'copyr.st', 'copyr.fs', 'copys.st', 'copyfs', 'copys', 'copyr',
     'moves.s', 'mover.s', 'mover.st', 'mover', 'moves', 'movest', 'mover.fs', 'movefs', 'moves_st',
-    'pop.s', 'popp.s',
+    'pop.s', '.stackhint',
     'clr',
     'castif', 'castie', 'castfe', 'castse', 'castei', 'castef','castes', 'caste',
     'cmpi', 'cmpif', 'cmpie', 'cmpf', 'cmpfi', 'cmpfe', 'cmps', 'cmpse', 'cmpe', 'cmpei', 'cmpef', 'cmpes',
