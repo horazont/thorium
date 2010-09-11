@@ -388,8 +388,8 @@ type
     tiMOVER_FG, tiCOPYR_FG, tiMOVEFG, tiCOPYFG,
     tiMOVER_L, tiCOPYR_L, tiMOVEL, tiCOPYL,
     tiMOVER_P, tiCOPYR_P, tiMOVEP, tiCOPYP,
-    tiCOPYR_S, tiCOPYR_ST, tiCOPYR_FS, tiCOPYS_ST, tiCOPYFS, tiCOPYS, tiCOPYR,
-    tiMOVES_S, tiMOVER_S, tiMOVER_ST, tiMOVER, tiMOVES, tiMOVEST, tiMOVER_FS, tiMOVEFS, tiMOVES_ST,
+    tiCOPYR_ST, tiCOPYR,
+    tiMOVER_ST, tiMOVER, tiMOVEST,
     tiPOP_S, tiSTACKHINT,
     tiCLR,
     tiCASTIF, tiCASTIE, tiCASTFE, tiCASTSE, tiCASTEI, tiCASTEF, tiCASTES, tiCASTE,
@@ -407,8 +407,8 @@ type
     tiXOR,
     tiSHL,
     tiSHR,
-    tiINCI_S, tiINCF_S, tiINCI_FS, tiINCF_FS, tiINCI, tiINCF,
-    tiDECI_S, tiDECF_S, tiDECI_FS, tiDECF_FS, tiDECI, tiDECF,
+    tiINCI, tiINCF,
+    tiDECI, tiDECF,
     tiXPGET, tiXPSET,
     tiXFGET, tiXFSET, tiXSFGET, tiXSFSET,
     tiXIGET, tiXISET,
@@ -1883,7 +1883,19 @@ type
     Instruction: TThoriumInstructionCode;
     SRI: Word;
     HRI: Word;
-    Reserved: array [0..9] of Word;
+    // This is filled when the VM imports the module
+    {$ifdef ENDIAN_BIG}
+    {$ifndef CPU64}
+    RuntimeModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    RuntimeModuleRef: Pointer;
+    {$ifdef ENDIAN_LITTLE}
+    {$ifndef CPU64}
+    RuntimeModuleRefPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    Reserved: array [0..5] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -1959,8 +1971,8 @@ const
     'mover.fg', 'copyr.fg', 'movefg', 'copyfg',
     'mover.l', 'copyr.l', 'movel', 'copyl',
     'mover.p', 'copyr.p', 'movep', 'copyp',
-    'copyr.s', 'copyr.st', 'copyr.fs', 'copys.st', 'copyfs', 'copys', 'copyr',
-    'moves.s', 'mover.s', 'mover.st', 'mover', 'moves', 'movest', 'mover.fs', 'movefs', 'moves_st',
+    'copyr.st', 'copyr',
+    'mover.st', 'mover', 'movest',
     'pop.s', '.stackhint',
     'clr',
     'castif', 'castie', 'castfe', 'castse', 'castei', 'castef','castes', 'caste',
@@ -1978,8 +1990,8 @@ const
     'xor',
     'shl',
     'shr',
-    'inci.s', 'incf.s', 'inci.fs', 'incf.fs', 'inci', 'incf',
-    'deci.s', 'decf.s', 'deci.fs', 'decf.fs', 'deci', 'decf',
+    'inci', 'incf',
+    'deci', 'decf',
     'xpget', 'xpset',
     'xfget', 'xfset', 'xsfget', 'xsfset',
     'xiget', 'xiset',
@@ -2056,6 +2068,25 @@ const
 {%ENDREGION}
 
 implementation
+
+uses
+  Thorium_Utils;
+
+
+var
+  MOVEFG: TThoriumInstructionMOVEFG;
+  COPYFG: TThoriumInstructionCOPYFG;
+  MOVER_FG: TThoriumInstructionMOVER_FG;
+  COPYR_FG: TThoriumInstructionCOPYR_FG;
+
+initialization
+
+if not (Offset(MOVEFG, MOVEFG.ModuleRef) = Offset(COPYFG, COPYFG.ModuleRef)) then
+  raise EAssertionFailed.Create('ModuleRef is located at a different offset in copyfg');
+if not (Offset(MOVEFG, MOVEFG.ModuleRef) = Offset(MOVER_FG, MOVER_FG.ModuleRef)) then
+  raise EAssertionFailed.Create('ModuleRef is located at a different offset in mover_fg');
+if not (Offset(MOVEFG, MOVEFG.ModuleRef) = Offset(COPYR_FG, COPYR_FG.ModuleRef)) then
+  raise EAssertionFailed.Create('ModuleRef is located at a different offset in copyr_fg');
 
 end.
 

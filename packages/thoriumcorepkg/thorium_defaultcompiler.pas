@@ -3036,6 +3036,8 @@ begin
   else
   begin
     Entry := FTable.AddVariableIdentifier(AValueIdent.FullStr, Offset, ATypeIdent.FinalType, FCurrentScope = isGlobal, True);
+    if FCurrentScope = isGlobal then
+      Inc(FGlobalValueCount^);
     Inc(Offset);
     if AVisibility = vsPublic then
       AddPublicVariable(AValueIdent.FullStr).AssignFromTableEntry(Entry^);

@@ -155,6 +155,7 @@ type
   TThoriumLibraryConstant = class;
   TThoriumLibraryProperty = class;
   TThoriumLibrary = class;
+  TThoriumRuntimeModule = class;
   TThoriumVirtualMachine = class;
   TThoriumDebuggingVirtualMachine = class;
   TThorium = class;
@@ -195,7 +196,7 @@ type
          respective property. *)
       EThoriumRuntimeExecutionException = class (EThoriumRuntimeException)
       public
-        constructor Create(Module: TThoriumModule;
+        constructor Create(Module: TThoriumRuntimeModule;
           InstructionAddr: TThoriumInstructionAddress; Instruction: PThoriumInstruction;
           OriginalException: Exception);
         destructor Destroy; override;
@@ -330,6 +331,7 @@ type
     Kind: TThoriumDebugEvent; Obj: TObject) of object;
   TThoriumDebugCallbackValue = procedure (Sender: TThoriumDebuggingVirtualMachine;
     Kind: TThoriumDebugEvent; Value: LongInt) of object;
+  TThoriumVMResolveModulePtr = function (const AModuleRef: Pointer): TThoriumRuntimeModule of object;
 
 
   (* Only internally used. *)
@@ -1056,7 +1058,7 @@ type
   TThoriumStackFrame = record
     PreviousStackFrame: Integer;
     ReturnAddress: TThoriumInstructionAddress;
-    ReturnModule: TThoriumModule;
+    ReturnModule: TThoriumRuntimeModule;
     ParameterCount: Cardinal;
     HasReturnValue: Boolean;
     RegisterDumpRange: TThoriumRegisterID;
@@ -1912,6 +1914,7 @@ type
     FCodeHook1: PThoriumInstructionArray;
     FCodeHook2: PThoriumInstructionArray;
     FError: Boolean;
+    FGlobalValueCount: PInteger;
     FHostFuncUsage: TFPList;
     FHostFuncRelocations: TFPList;
     FHostTypeUsage: TFPList;
@@ -2037,6 +2040,7 @@ type
   private
     FCompiled: Boolean;
     FCompress: Boolean;
+    FGlobalValueCount: Integer;
     FHostFuncUsage: TFPList;
     FHostFuncRelocations: TFPList;
     FHostTypeUsage: TFPList;
@@ -2154,15 +2158,25 @@ type
 
   TThoriumRuntimeModule = class (TObject)
   public
-    constructor Create(const ACompiledModule: TThoriumModule);
+    constructor Create(const ACompiledModule: TThoriumModule;
+      const ResolveModulePtrCallback: TThoriumVMResolveModulePtr);
     destructor Destroy; override;
   private
     FGlobalValues: array of TThoriumValue;
     FInstructions: TThoriumInstructions;
+    FResolveModulePtrCallback: TThoriumVMResolveModulePtr;
+    FStringLibrary: TStringList;
+    FOrigin: TThoriumModule;
   protected
     procedure AssignInstructions(const ASource: TThoriumModule);
+    function DoResolveModulePtr(const AModuleRef: Pointer): TThoriumRuntimeModule;
     function FilterInstruction(var AInstruction: TThoriumInstruction): Boolean; virtual;
   end;
+
+  TThoriumRuntimeModules = specialize TFPGList<TThoriumRuntimeModule>;
+  // Need to use ptrint instead of TThoriumModule as the map uses greater and
+  // less operators, which are not supported by classes -.-
+  TThoriumRuntimeModuleMap = specialize TFPGMap<ptrint, TThoriumRuntimeModule>;
 
   (* This class executes previously generated Thorium bytecode. *)
 
@@ -2174,26 +2188,30 @@ type
   private
     FThorium: TThorium;
     FStringType: TThoriumTypeString;
-    FModuleStackIndicies: TThoriumIntList;
+    FModules: TThoriumRuntimeModules;
+    FModuleMap: TThoriumRuntimeModuleMap;
 
     FRegisters: TThoriumRegisters;
     FStateRegister: Word;
 
-    FCurrentModuleIdx: Integer;
-    FCurrentModule: TThoriumModule;
+    FCurrentModule: TThoriumRuntimeModule;
     FCurrentInstructionIdx: Integer;
     FCurrentInstruction: PThoriumInstruction;
     FCurrentStackFrame: Integer;
 
-    function StackScopeToIndex(Scope: Int64): Integer;
     procedure ExecuteInstruction; inline;
   protected
     FStack: TThoriumStack;
+  protected
+    procedure ImportModules;
+    function ImportModule(AModule: TThoriumModule): TThoriumRuntimeModule;
+    function ResolveModulePtr(const AModuleRef: Pointer): TThoriumRuntimeModule;
   public
     procedure DumpStack;
     procedure DumpState;
+    function GetRuntimeModule(const ACompiledModule: TThoriumModule): TThoriumRuntimeModule;
     function GetStack: TThoriumStack;
-    procedure Execute(StartModuleIndex: Integer; StartInstruction: Integer; CreateDefaultStackFrame: Boolean = True); virtual;
+    procedure Execute(StartModule: TThoriumRuntimeModule; StartInstruction: Integer; CreateDefaultStackFrame: Boolean = True); virtual;
   end;
 
   { TThoriumDebuggingVirtualMachine }
@@ -2217,7 +2235,7 @@ type
     property Stack: TThoriumStack read FStack;
     property StepMode: TThoriumDebuggerStepMode read FStepMode write FStepMode;
   public
-    procedure Execute(StartModuleIndex: Integer; StartInstruction: Integer;
+    procedure Execute(StartModule: TThoriumRuntimeModule; StartInstruction: Integer;
        CreateDefaultStackFrame: Boolean=False); override;
     procedure StepInto;
     procedure StepOver;
@@ -3836,21 +3854,12 @@ begin
     tiMOVEFG,
     tiCOPYFG: with TThoriumInstructionMOVEFG(AInstruction) do Result := Result + Format('@%s($0x%8.8x) %%%s', [TThoriumModule(ModuleRef).Name, Offset, ThoriumRegisterToStr(TRI)]);
 
-    tiCOPYR_S: with TThoriumInstructionCOPYR_S(AInstruction) do Result := Result + Format('%%%s %%sp($0x%.4x, $0x%.8x)', [ThoriumRegisterToStr(SRI), Scope, Offset]);
     tiCOPYR_ST: with TThoriumInstructionCOPYR_ST(AInstruction) do Result := Result + Format('%%s', [ThoriumRegisterToStr(SRI)]);
-    tiCOPYR_FS: with TThoriumInstructionCOPYR_FS(AInstruction) do Result := Result + Format('%%s $0x%.8x(, $0x%.8x)', [ThoriumRegisterToStr(SRI), ModuleIndex, Offset]);
-    tiCOPYS_ST: with TThoriumInstructionCOPYS_ST(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x)', [Scope, Offset]);
-    tiCOPYFS: with TThoriumInstructionCOPYFS(AInstruction) do Result := Result + Format('$0x%.8x(, $0x%.8x) %%%s', [ModuleIndex, Offset, ThoriumRegisterToStr(TRI)]);
-    tiCOPYS: with TThoriumInstructionCOPYS(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x) %%%s', [Scope, Offset, ThoriumRegisterToStr(TRI)]);
     tiCOPYR: with TThoriumInstructionCOPYR(AInstruction) do Result := Result + Format('%%%s %%%s', [ThoriumRegisterToStr(SRI), ThoriumRegisterToStr(TRI)]);
 
-    tiMOVES_S: with TThoriumInstructionMOVES_S(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x)', [Scope, Offset]);
-    tiMOVER_S: with TThoriumInstructionMOVER_S(AInstruction) do Result := Result + Format('%%%s %%sp($0x%.4x, $0x%.8x)', [ThoriumRegisterToStr(SRI), Scope, Offset]);
     tiMOVER_ST: with TThoriumInstructionMOVER_ST(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(SRI)]);
     tiMOVER: with TThoriumInstructionMOVER(AInstruction) do Result := Result + Format('%%%s %%%s', [ThoriumRegisterToStr(SRI), ThoriumRegisterToStr(TRI)]);
-    tiMOVES: with TThoriumInstructionMOVES(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x) %%%s', [Scope, Offset, ThoriumRegisterToStr(TRI)]);
     tiMOVEST: with TThoriumInstructionMOVEST(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
-    tiMOVES_ST: with TThoriumInstructionMOVES_ST(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x)', [Scope, Offset]);
 
     tiPOP_S: with TThoriumInstructionPOP_S(AInstruction) do Result := Result + Format('$0x%.8x', [Amount]);
     tiSTACKHINT: with TThoriumInstructionSTACKHINT(AInstruction) do Result := Result + Format('$0x%.8x', [Amount]);
@@ -3900,17 +3909,9 @@ begin
 
     tiSHR: with TThoriumInstructionSHR(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(Op1), ThoriumRegisterToStr(Op2), ThoriumRegisterToStr(TRI)]);
 
-    tiINCI_S: with TThoriumInstructionINCI_S(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x)', [Scope, Offset]);
-    tiINCF_S: with TThoriumInstructionINCF_S(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x)', [Scope, Offset]);
-    tiINCI_FS: with TThoriumInstructionINCI_FS(AInstruction) do Result := Result + Format('$0x%.8x(, $0x%.8x)', [ModuleIndex, Offset]);
-    tiINCF_FS: with TThoriumInstructionINCF_FS(AInstruction) do Result := Result + Format('$0x%.8x(, $0x%.8x)', [ModuleIndex, Offset]);
     tiINCI: with TThoriumInstructionINCI(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
     tiINCF: with TThoriumInstructionINCF(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
 
-    tiDECI_S: with TThoriumInstructionDECI_S(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x)', [Scope, Offset]);
-    tiDECF_S: with TThoriumInstructionDECF_S(AInstruction) do Result := Result + Format('%%sp($0x%.4x, $0x%.8x)', [Scope, Offset]);
-    tiDECI_FS: with TThoriumInstructionDECI_FS(AInstruction) do Result := Result + Format('$0x%.8x(, $0x%.8x)', [ModuleIndex, Offset]);
-    tiDECF_FS: with TThoriumInstructionDECF_FS(AInstruction) do Result := Result + Format('$0x%.8x(, $0x%.8x)', [ModuleIndex, Offset]);
     tiDECI: with TThoriumInstructionDECI(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
     tiDECF: with TThoriumInstructionDECF(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
 
@@ -4022,7 +4023,7 @@ end;
 
 { EThoriumRuntimeExecutionException }
 
-constructor EThoriumRuntimeExecutionException.Create(Module: TThoriumModule;
+constructor EThoriumRuntimeExecutionException.Create(Module: TThoriumRuntimeModule;
   InstructionAddr: TThoriumInstructionAddress; Instruction: PThoriumInstruction;
   OriginalException: Exception);
 begin
@@ -4032,7 +4033,7 @@ begin
     begin
       if Module <> nil then
       begin
-        CreateFmt('Instruction at %8.8x ''%s'' raised exception %s (''%s'') in module %s at code line %d.', [InstructionAddr, ThoriumInstructionToStr(Instruction^), OriginalException.ClassName, OriginalException.Message, Module.Name, Instruction^.CodeLine]);
+        CreateFmt('Instruction at %8.8x ''%s'' raised exception %s (''%s'') in module %s at code line %d.', [InstructionAddr, ThoriumInstructionToStr(Instruction^), OriginalException.ClassName, OriginalException.Message, Module.FOrigin.Name, Instruction^.CodeLine]);
       end
       else
       begin
@@ -4043,7 +4044,7 @@ begin
     begin
       if Module <> nil then
       begin
-        CreateFmt('Instruction at %8.8x ''%s'' raised unknown exception in module %s at code line %d.', [InstructionAddr, ThoriumInstructionToStr(Instruction^), Module.Name, Instruction^.CodeLine]);
+        CreateFmt('Instruction at %8.8x ''%s'' raised unknown exception in module %s at code line %d.', [InstructionAddr, ThoriumInstructionToStr(Instruction^), Module.FOrigin.Name, Instruction^.CodeLine]);
       end
       else
       begin
@@ -4057,7 +4058,7 @@ begin
     begin
       if Module <> nil then
       begin
-        CreateFmt('Unknown instruction at %8.8x raised exception %s (''%s'') in module %s at unknown code line.', [InstructionAddr, OriginalException.ClassName, OriginalException.Message, Module.Name]);
+        CreateFmt('Unknown instruction at %8.8x raised exception %s (''%s'') in module %s at unknown code line.', [InstructionAddr, OriginalException.ClassName, OriginalException.Message, Module.FOrigin.Name]);
       end
       else
       begin
@@ -4068,7 +4069,7 @@ begin
     begin
       if Module <> nil then
       begin
-        CreateFmt('Unknown instruction at %8.8x raised unknown exception in module %s at unknown code line.', [InstructionAddr, Module.Name]);
+        CreateFmt('Unknown instruction at %8.8x raised unknown exception in module %s at unknown code line.', [InstructionAddr, Module.FOrigin.Name]);
       end
       else
       begin
@@ -6077,7 +6078,7 @@ begin
     end;
   end;
   VM.FCurrentStackFrame := Stack.EntryCount-1;
-  VM.Execute(VM.FThorium.FModules.IndexOf(FModule), FEntryPoint, False);
+  VM.Execute(VM.GetRuntimeModule(FModule), FEntryPoint, False);
   if FPrototype.HasReturnValue then
   begin
     Move(Stack.GetTop(0)^.Value, Result, SizeOf(TThoriumValue));
@@ -8691,6 +8692,7 @@ end;
 constructor TThoriumCustomCompiler.Create(ATarget: TThoriumModule);
 begin
   FError:= False;
+  FGlobalValueCount := @ATarget.FGlobalValueCount;
   FHostFuncUsage := ATarget.FHostFuncUsage;
   FHostFuncRelocations := ATarget.FHostFuncRelocations;
   FHostTypeUsage := ATarget.FHostTypeUsage;
@@ -9850,8 +9852,8 @@ var
     end;
     {$PACKRECORDS DEFAULT}
   const
-    InstructionSet1 = [tiINTB, tiSTR, tiCOPYR_S, tiCOPYR_ST, tiCOPYR_FS,
-      tiCOPYR, tiMOVER_S, tiMOVER_ST, tiMOVEST, tiCLR, tiCMPI, tiCMPIF,
+    InstructionSet1 = [tiINTB, tiSTR, tiCOPYR_ST,
+      tiCOPYR, tiMOVER_ST, tiMOVEST, tiCLR, tiCMPI, tiCMPIF,
       tiCMPIE, tiCMPF, tiCMPFI, tiCMPFE, tiCMPS, tiCMPSE, tiCMPE, tiCMPEI,
       tiCMPEF, tiCMPES, tiADDI, tiADDF, tiADDS, tiSUBI, tiSUBF, tiMULI,
       tiMULF, tiDIVI, tiDIVF, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR,
@@ -9862,8 +9864,8 @@ var
       tiMULF, tiDIVI, tiDIVF, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR];
     InstructionSet3 = [tiSTRL, tiADDI, tiADDF, tiADDS, tiSUBI, tiSUBF, tiMULI,
       tiMULF, tiDIVI, tiDIVF, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR];
-    InstructionSet4 = [tiCOPYS];
-    InstructionSet5 = [tiINT, tiFLT, tiEXT, tiFNC, tiXFNC, tiCOPYFS, tiXFGET,
+    InstructionSet4 = [];
+    InstructionSet5 = [tiINT, tiFLT, tiEXT, tiFNC, tiXFNC, tiXFGET,
       tiXFSET];
     InstructionSet6 = [tiXFSET, tiXFGET];
   begin
@@ -9952,25 +9954,6 @@ var
     Result -= 1;
   end;
 
-  function Opt_Expression_3_2: Integer;
-  // When a value is copyied to a register from stack and pushed to stack top
-  // immediately after this, this gets erased by this function.
-  var
-    Copy, Move: PThoriumInstruction;
-  begin
-    Result := 0;
-    Copy := Instruction;
-    Move := @Instruction[1];
-    if (Copy^.Instruction <> tiCOPYS) or (Move^.Instruction <> tiMOVER_ST) then
-      Exit;
-    if (TThoriumInstructionCOPYS(Copy^).TRI = TThoriumInstructionMOVER_ST(Move^).SRI) then
-    begin
-      Copy^.Instruction := tiCOPYS_ST;
-      FInstructions.DeleteInstructions(I+1, 1);
-      Result -= 1;
-    end;
-  end;
-
   function Opt_Expression_4_2: Integer;
   // When a value is moved to a register from stack and pushed to stack top
   // immediately after this, this gets erased by this function.
@@ -9986,24 +9969,6 @@ var
     begin
       FInstructions.DeleteInstructions(I, 2);
       Result -= 2;
-    end;
-  end;
-
-  function Opt_Expression_5_2: Integer;
-  // When a value is moved from a stack to a register and from that register to
-  // the stack top, this function will convert this to one instruction
-  var
-    Move1, Move2: PThoriumInstruction;
-  begin
-    Result := 0;
-    Move1 := Instruction;
-    Move2 := @Instruction[1];
-    if (Move1^.Instruction = tiMOVES) and (Move2^.Instruction = tiMOVER_ST)
-      and (TThoriumInstructionMOVES(Move1^).TRI = TThoriumInstructionMOVER_ST(Move2^).SRI) then
-    begin
-      TThoriumInstruction(Move1^).Instruction := tiMOVES_ST;
-      FInstructions.DeleteInstructions(I+1, 1);
-      Result -= 1;
     end;
   end;
 
@@ -10307,13 +10272,7 @@ begin
           HandleOffset(Opt_Expression_2_2);
         if DoneSomething then Break;
         if (Remaining >= 2) then
-          HandleOffset(Opt_Expression_3_2);
-        if DoneSomething then Break;
-        if (Remaining >= 2) then
           HandleOffset(Opt_Expression_4_2);
-        if DoneSomething then Break;
-        if (Remaining >= 2) then
-          HandleOffset(Opt_Expression_5_2);
         if DoneSomething then Break;
         if (Remaining >= 1) then
           HandleOffset(Opt_Jump_1);
@@ -10511,6 +10470,7 @@ begin
   FSourceLength := 0;
   FStringLibrary := TStringList.Create;
   FThorium := AThorium;
+  FGlobalValueCount := 0;
 end;
 
 constructor TThoriumModule.Create(AThorium: TThorium; AName: String);
@@ -11252,27 +11212,69 @@ end;
 
 { TThoriumRuntimeModule }
 
-constructor TThoriumRuntimeModule.Create(const ACompiledModule: TThoriumModule
-  );
+constructor TThoriumRuntimeModule.Create(const ACompiledModule: TThoriumModule;
+  const ResolveModulePtrCallback: TThoriumVMResolveModulePtr);
 begin
-
+  FOrigin := ACompiledModule;
+  SetLength(FGlobalValues, ACompiledModule.FGlobalValueCount);
+  FillByte(FGlobalValues[0], SizeOf(TThoriumValue) * Length(FGlobalValues), 0);
+  FInstructions := TThoriumInstructions.Create;
+  AssignInstructions(ACompiledModule);
+  FStringLibrary := TStringList.Create;
+  FStringLibrary.Assign(ACompiledModule.FStringLibrary);
 end;
 
 destructor TThoriumRuntimeModule.Destroy;
+var
+  I: Integer;
 begin
+  FStringLibrary.Free;
+  for I := 0 to High(FGlobalValues) do
+    ThoriumFreeValue(FGlobalValues[I]);
+  FInstructions.Free;
   inherited Destroy;
 end;
 
 procedure TThoriumRuntimeModule.AssignInstructions(const ASource: TThoriumModule
   );
+var
+  I: Integer;
+  MyInstruction: TThoriumInstruction;
 begin
+  FInstructions.Capacity := ASource.FInstructions.Count;
+  for I := 0 to ASource.FInstructions.Count - 1 do
+  begin
+    MyInstruction := ASource.FInstructions.GetInstruction(I)^;
+    if FilterInstruction(MyInstruction) then
+      FInstructions.AppendCode(MyInstruction);
+  end;
+end;
 
+function TThoriumRuntimeModule.DoResolveModulePtr(const AModuleRef: Pointer
+  ): TThoriumRuntimeModule;
+begin
+  if FResolveModulePtrCallback = nil then
+    raise EThoriumException.Create('No module ptr resolution callback assigned.');
+  Result := FResolveModulePtrCallback(AModuleRef);
 end;
 
 function TThoriumRuntimeModule.FilterInstruction(
   var AInstruction: TThoriumInstruction): Boolean;
 begin
-
+  Result := True;
+  case AInstruction.Instruction of
+    tiNOOP, tiEmbeddedHint:
+      Exit(False);
+    tiMOVEFG, tiCOPYFG, tiMOVER_FG, tiCOPYR_FG:
+    begin
+      TThoriumInstructionMOVEFG(AInstruction).ModuleRef := DoResolveModulePtr(TThoriumInstructionMOVEFG(AInstruction).ModuleRef);
+    end;
+    tiFCALL:
+    begin
+      // Init this with nil, it will be resolved at the first call during runtime.
+      TThoriumInstructionFCALL(AInstruction).RuntimeModuleRef := nil;
+    end;
+  end;
 end;
 
 { TThoriumVirtualMachine }
@@ -11284,58 +11286,36 @@ begin
   inherited Create;
   FThorium := AThorium;
   FStack := TThoriumStack.Create;
-  FModuleStackIndicies := TThoriumIntList.Create;
-//  FCurrentModuleIdx := -1;
+  FModules := TThoriumRuntimeModules.Create;
+  FModuleMap := TThoriumRuntimeModuleMap.Create;
+  ImportModules;
   FCurrentModule := nil;
   FCurrentInstructionIdx := -1;
   FCurrentStackFrame := -1;
-  for I := 0 to FThorium.FModules.Count - 1 do
-  begin
-    FModuleStackIndicies.AddEntry(FStack.FCount);
-    if TThoriumModule(FThorium.FModules[I]).FInstructions.Count > 0 then
-      Execute(I, 0, False);
-  end;
   FillByte(FRegisters, SizeOf(TThoriumRegisters), 0);
+  for I := 0 to FModules.Count - 1 do
+  begin
+    if FModules[I].FInstructions.Count > 0 then
+      Execute(FModules[I], 0, False);
+  end;
   FStringType := FThorium.FTypeString;
 end;
 
 destructor TThoriumVirtualMachine.Destroy;
+var
+  I: Integer;
 begin
-  FModuleStackIndicies.Free;
+  for I := 0 to FModules.Count - 1 do
+    FModules[I].Free;
+  FModules.Free;
   FStack.Free;
   inherited Destroy;
-end;
-
-function TThoriumVirtualMachine.StackScopeToIndex(Scope: Int64): Integer;
-begin
-  case Scope of
-    THORIUM_STACK_SCOPE_NOSCOPE: Result := 0;
-    THORIUM_STACK_SCOPE_FROMTOP: Result := FStack.FCount-1;
-    THORIUM_STACK_SCOPE_MODULEROOT: Result := FModuleStackIndicies.Items[FCurrentModuleIdx];
-    THORIUM_STACK_SCOPE_PARAMETERS: Result := FCurrentStackFrame;
-    THORIUM_STACK_SCOPE_LOCAL: Result := FCurrentStackFrame + 1;
-  else
-    Result := 0;
-  end;
 end;
 
 procedure TThoriumVirtualMachine.ExecuteInstruction; inline;
 var
   _NewEntry, _Operand1: PThoriumStackEntry;
   I, J: Integer;
-
-  function FastStackScopeToIndex(Scope: SmallInt): Integer; inline;
-  begin
-    case Scope of
-      THORIUM_STACK_SCOPE_NOSCOPE: Result := 0;
-      THORIUM_STACK_SCOPE_FROMTOP: Result := FStack.FCount-1;
-      THORIUM_STACK_SCOPE_MODULEROOT: Result := FModuleStackIndicies.Items[FCurrentModuleIdx];
-      THORIUM_STACK_SCOPE_PARAMETERS: Result := FCurrentStackFrame;
-      THORIUM_STACK_SCOPE_LOCAL: Result := FCurrentStackFrame + 1;
-    else
-      Result := 0;
-    end;
-  end;
 
   procedure int_s; inline;
   begin
@@ -11545,18 +11525,6 @@ var
     end;
   end;
 
-  procedure copyr_s; inline;
-  begin
-    with TThoriumInstructionCOPYR_S(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
-      ThoriumFreeValue(_NewEntry^.Value);
-      _NewEntry^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
-      {$ifdef Timecheck}EndTimecheck('copyr.s');{$endif}
-    end;
-  end;
-
   procedure copyr_st; inline;
   begin
     with TThoriumInstructionCOPYR_ST(FCurrentInstruction^) do
@@ -11569,50 +11537,6 @@ var
     end;
   end;
 
-  procedure copyr_fs; inline;
-  begin
-    with TThoriumInstructionCOPYR_FS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _NewEntry := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
-      ThoriumFreeValue(_NewEntry^.Value);
-      _NewEntry^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
-      {$ifdef Timecheck}EndTimecheck('copyr.fs');{$endif}
-    end;
-  end;
-
-  procedure copys_st; inline;
-  begin
-    with TThoriumInstructionCOPYS_ST(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _NewEntry := FStack.Push;
-      _NewEntry^._Type := stValue;
-      _NewEntry^.Value := ThoriumDuplicateValue(FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value);
-      {$ifdef Timecheck}EndTimecheck('copys.st');{$endif}
-    end;
-  end;
-
-  procedure copyfs; inline;
-  begin
-    with TThoriumInstructionCOPYFS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI] := ThoriumDuplicateValue(FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset)^.Value);
-      {$ifdef Timecheck}EndTimecheck('copyfs');{$endif}
-    end;
-  end;
-
-  procedure copys; inline;
-  begin
-    with TThoriumInstructionCOPYS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI] := ThoriumDuplicateValue(FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value);
-      {$ifdef Timecheck}EndTimecheck('copys');{$endif}
-    end;
-  end;
-
   procedure copyr; inline;
   begin
     with TThoriumInstructionCOPYR(FCurrentInstruction^) do
@@ -11620,34 +11544,6 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       FRegisters[TRI] := ThoriumDuplicateValue(FRegisters[SRI]);
       {$ifdef Timecheck}EndTimecheck('copyr');{$endif}
-    end;
-  end;
-
-  procedure moves_s; inline;
-  begin
-    with TThoriumInstructionMOVES_S(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.GetTop;
-      _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
-      ThoriumFreeValue(_NewEntry^.Value);
-      _NewEntry^._Type := stValue;
-      Move(_Operand1^, _NewEntry^, SizeOf(TThoriumStackEntry));
-      FStack.Pop(1, False);
-      {$ifdef Timecheck}EndTimecheck('moves.s');{$endif}
-    end;
-  end;
-
-  procedure mover_s; inline;
-  begin
-    with TThoriumInstructionMOVER_S(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _NewEntry := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
-      ThoriumFreeValue(_NewEntry^.Value);
-      _NewEntry^._Type := stValue;
-      Move(FRegisters[SRI], _NewEntry^.Value, SizeOf(TThoriumValue));
-      {$ifdef Timecheck}EndTimecheck('mover.s');{$endif}
     end;
   end;
 
@@ -11673,16 +11569,6 @@ var
     end;
   end;
 
-  procedure moves; inline;
-  begin
-    with TThoriumInstructionMOVES(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      Move(FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value, FRegisters[TRI], SizeOf(TThoriumValue));
-      {$ifdef Timecheck}EndTimecheck('copys');{$endif}
-    end;
-  end;
-
   procedure movest; inline;
   begin
     with TThoriumInstructionMOVEST(FCurrentInstruction^) do
@@ -11692,40 +11578,6 @@ var
       Move(_Operand1^.Value, FRegisters[TRI], SizeOf(TThoriumValue));
       FStack.Pop(1, False);
       {$ifdef Timecheck}EndTimecheck('moves');{$endif}
-    end;
-  end;
-
-  procedure mover_fs; inline;
-  begin
-    with TThoriumInstructionMOVER_FS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _NewEntry := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
-      ThoriumFreeValue(_NewEntry^.Value);
-      _NewEntry^.Value := ThoriumDuplicateValue(FRegisters[SRI]);
-      {$ifdef Timecheck}EndTimecheck('copyr.fs');{$endif}
-    end;
-  end;
-
-  procedure movefs; inline;
-  begin
-    with TThoriumInstructionMOVEFS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI] := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset)^.Value;
-      {$ifdef Timecheck}EndTimecheck('copyfs');{$endif}
-    end;
-  end;
-
-  procedure moves_st; inline;
-  begin
-    with TThoriumInstructionMOVES_ST(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _NewEntry := FStack.Push;
-      _NewEntry^._Type := stValue;
-      _NewEntry^.Value := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset)^.Value;
-      {$ifdef Timecheck}EndTimecheck('copys.st');{$endif}
     end;
   end;
 
@@ -12057,50 +11909,6 @@ var
     end;
   end;
 
-  procedure inci_s; inline;
-  begin
-    with TThoriumInstructionINCI_S(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
-      _Operand1^.Value.Int := _Operand1^.Value.Int + 1;
-      {$ifdef Timecheck}EndTimecheck('inci.s');{$endif}
-    end;
-  end;
-
-  procedure incf_s; inline;
-  begin
-    with TThoriumInstructionINCF_S(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
-      _Operand1^.Value.Float := _Operand1^.Value.Float + 1;
-      {$ifdef Timecheck}EndTimecheck('incf.s');{$endif}
-    end;
-  end;
-
-  procedure inci_fs; inline;
-  begin
-    with TThoriumInstructionINCI_FS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
-      _Operand1^.Value.Int := _Operand1^.Value.Int + 1;
-      {$ifdef Timecheck}EndTimecheck('inci.fs');{$endif}
-    end;
-  end;
-
-  procedure incf_fs; inline;
-  begin
-    with TThoriumInstructionINCF_FS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
-      _Operand1^.Value.Float := _Operand1^.Value.Float + 1;
-      {$ifdef Timecheck}EndTimecheck('incf.fs');{$endif}
-    end;
-  end;
-
   procedure inci; inline;
   begin
     with TThoriumInstructionINCI(FCurrentInstruction^) do
@@ -12118,50 +11926,6 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       FRegisters[TRI].Float+=1;
       {$ifdef Timecheck}EndTimecheck('incf');{$endif}
-    end;
-  end;
-
-  procedure deci_s; inline;
-  begin
-    with TThoriumInstructionDECI_S(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
-      _Operand1^.Value.Int := _Operand1^.Value.Int - 1;
-      {$ifdef Timecheck}EndTimecheck('deci.s');{$endif}
-    end;
-  end;
-
-  procedure decf_s; inline;
-  begin
-    with TThoriumInstructionDECF_S(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.FastGetStackEntry(FastStackScopeToIndex(Scope), Offset);
-      _Operand1^.Value.Float := _Operand1^.Value.Float - 1;
-      {$ifdef Timecheck}EndTimecheck('decf.s');{$endif}
-    end;
-  end;
-
-  procedure deci_fs; inline;
-  begin
-    with TThoriumInstructionDECI_FS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
-      _Operand1^.Value.Int := _Operand1^.Value.Int - 1;
-      {$ifdef Timecheck}EndTimecheck('deci.fs');{$endif}
-    end;
-  end;
-
-  procedure decf_fs; inline;
-  begin
-    with TThoriumInstructionDECF_FS(FCurrentInstruction^) do
-    begin
-      {$ifdef Timecheck}BeginTimecheck;{$endif}
-      _Operand1 := FStack.FastGetStackEntry(FModuleStackIndicies.Items[ModuleIndex], Offset);
-      _Operand1^.Value.Float := _Operand1^.Value.Float - 1;
-      {$ifdef Timecheck}EndTimecheck('decf.fs');{$endif}
     end;
   end;
 
@@ -12720,9 +12484,9 @@ var
 
       FCurrentInstructionIdx := FRegisters[SRI].Func.FEntryPoint - 1;
       FCurrentStackFrame := FStack.FCount-1;
-      { TODO : Improve performance by making module index accessible directly... }
-      FCurrentModuleIdx := FThorium.FModules.IndexOf(FRegisters[SRI].Func.FModule);
-      FCurrentModule := FRegisters[SRI].Func.FModule;
+      if RuntimeModuleRef = nil then
+        RuntimeModuleRef := ResolveModulePtr(FRegisters[SRI].Func.FModule);
+      FCurrentModule := TThoriumRuntimeModule(RuntimeModuleRef);
       FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
       {$ifdef Timecheck}EndTimecheck('fcall');{$endif}
     end;
@@ -12761,7 +12525,6 @@ var
       if _Operand1^.StackFrame.ReturnModule <> nil then
       begin
         FCurrentModule := _Operand1^.StackFrame.ReturnModule;
-        FCurrentModuleIdx := FThorium.FModules.IndexOf(FCurrentModule);
       end;
       FCurrentInstruction := FCurrentModule.FInstructions.Instruction[FCurrentInstructionIdx];
       if _Operand1^.StackFrame.RegisterDumpData <> nil then
@@ -12829,22 +12592,11 @@ begin
     tiFNC: fnc;
     tiXFNC: xfnc;
     tiXMETH: xmeth;
-    tiCOPYR_S: copyr_s;
     tiCOPYR_ST: copyr_st;
-    tiCOPYR_FS: copyr_fs;
-    tiCOPYS_ST: copys_st;
-    tiCOPYFS: copyfs;
-    tiCOPYS: copys;
     tiCOPYR: copyr;
-    tiMOVES_S: moves_s;
-    tiMOVER_S: mover_s;
     tiMOVER_ST: mover_st;
     tiMOVER: mover;
-    tiMOVES: moves;
     tiMOVEST: movest;
-    tiMOVER_FS: mover_fs;
-    tiMOVEFS: movefs;
-    tiMOVES_ST: moves_st;
     tiPOP_S: pop_s;
     tiCLR: clr;
     tiCASTIF: castif;
@@ -12872,16 +12624,8 @@ begin
     tiXOR: _xor;
     tiSHL: _shl;
     tiSHR: _shr;
-    tiINCI_S: inci_s;
-    tiINCF_S: incf_s;
-    tiINCI_FS: inci_fs;
-    tiINCF_FS: incf_fs;
     tiINCI: inci;
     tiINCF: incf;
-    tiDECI_S: deci_s;
-    tiDECF_S: decf_s;
-    tiDECI_FS: deci_fs;
-    tiDECF_FS: decf_fs;
     tiDECI: deci;
     tiDECF: decf;
     tiXFGET: xfget;
@@ -12934,12 +12678,38 @@ begin
   //System.Inc(FCurrentInstructionIdx);
 end;
 
+procedure TThoriumVirtualMachine.ImportModules;
+var
+  I: Integer;
+begin
+  for I := 0 to FThorium.FModules.Count - 1 do
+    ImportModule(FThorium.FModules[I]);
+end;
+
+function TThoriumVirtualMachine.ImportModule(AModule: TThoriumModule
+  ): TThoriumRuntimeModule;
+var
+  I: Integer;
+begin
+  if FModuleMap.Find(ptrint(AModule), I) then
+    Exit(FModuleMap.Data[I]);
+
+  Result := TThoriumRuntimeModule.Create(AModule, @ResolveModulePtr);
+  FModuleMap.Add(ptrint(AModule), Result);
+end;
+
+function TThoriumVirtualMachine.ResolveModulePtr(const AModuleRef: Pointer
+  ): TThoriumRuntimeModule;
+begin
+  Result := ImportModule(TThoriumModule(AModuleRef));
+end;
+
 function TThoriumVirtualMachine.GetStack: TThoriumStack;
 begin
   Result := FStack;
 end;
 
-procedure TThoriumVirtualMachine.Execute(StartModuleIndex: Integer; StartInstruction: Integer; CreateDefaultStackFrame: Boolean = True);
+procedure TThoriumVirtualMachine.Execute(StartModule: TThoriumRuntimeModule; StartInstruction: Integer; CreateDefaultStackFrame: Boolean = True);
 var
   Frame: PThoriumStackEntry;
   {$ifdef DebugToConsole}
@@ -12947,8 +12717,7 @@ var
   {$endif}
 begin
   FCurrentInstructionIdx := StartInstruction;
-  FCurrentModuleIdx := StartModuleIndex;
-  FCurrentModule := FThorium.Module[FCurrentModuleIdx];
+  FCurrentModule := StartModule;
   if (FCurrentInstructionIdx > FCurrentModule.FInstructions.Count - 1) or
     (FCurrentInstructionIdx < 0) then
     raise EThoriumRuntimeException.Create('Instruction index out of bounds.');
@@ -13027,9 +12796,9 @@ begin
         if ThisEntry^.StackFrame.ReturnAddress = THORIUM_RETURN_EXIT then
           WriteLn(Format('  %4d Stackframe (root)', [J]))
         else if ThisEntry^.StackFrame.ReturnModule = nil then
-          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.StackFrame.ReturnAddress, FCurrentModule.Name]))
+          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.StackFrame.ReturnAddress, FCurrentModule.FOrigin.Name]))
         else
-          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.StackFrame.ReturnAddress, ThisEntry^.StackFrame.ReturnModule.Name]));
+          WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.StackFrame.ReturnAddress, ThisEntry^.StackFrame.ReturnModule.FOrigin.Name]));
       end;
       stNull: WriteLn(Format('  %4d null', [J]));
       stVarargs: WriteLn(Format('  %4d Varargs (%d)', [J, MemSize(ThisEntry^.VarargsBuffer.BufferOrigin)]));
@@ -13069,8 +12838,18 @@ begin
   end
   else
     WriteLn('  Raw mode (no stack frame)');
-  WriteLn('  Current module (string) ', FCurrentModule.Name);
+  WriteLn('  Current module (string) ', FCurrentModule.FOrigin.Name);
   WriteLn(']]');
+end;
+
+function TThoriumVirtualMachine.GetRuntimeModule(
+  const ACompiledModule: TThoriumModule): TThoriumRuntimeModule;
+var
+  Idx: Integer;
+begin
+  if not FModuleMap.Find(ptrint(ACompiledModule), Idx) then
+    raise EThoriumRuntimeException.CreateFmt('Module ''%s'' was not loaded in the virtual machine.', [ACompiledModule.Name]);
+  Result := FModuleMap.Data[Idx];
 end;
 
 { TThoriumDebuggingVirtualMachine }
@@ -13099,7 +12878,7 @@ begin
   Result := @FRegisters[ARegID];
 end;
 
-procedure TThoriumDebuggingVirtualMachine.Execute(StartModuleIndex: Integer;
+procedure TThoriumDebuggingVirtualMachine.Execute(StartModule: TThoriumRuntimeModule;
   StartInstruction: Integer; CreateDefaultStackFrame: Boolean);
 var
   Frame: PThoriumStackEntry;
@@ -13112,8 +12891,7 @@ begin
   if (FOnDebugObject = nil) or (FOnDebugValue = nil) then
     raise EThoriumDebuggerException.Create('Debug callbacks are not defined.');
   FCurrentInstructionIdx := StartInstruction;
-  FCurrentModuleIdx := StartModuleIndex;
-  FCurrentModule := FThorium.Module[FCurrentModuleIdx];
+  FCurrentModule := StartModule;
   if (FCurrentInstructionIdx > FCurrentModule.FInstructions.Count - 1) or
     (FCurrentInstructionIdx < 0) then
     raise EThoriumRuntimeException.Create('Instruction index out of bounds.');

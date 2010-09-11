@@ -343,19 +343,6 @@ begin
   end;
 end;
 
-function copyr_s(ASRI: Word; AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionCOPYR_S(Result) do
-  begin
-    Instruction := tiCOPYR_S;
-    SRI := ASRI;
-    Scope := AScope;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
 function copyr_st(ASRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
@@ -363,44 +350,6 @@ begin
   begin
     Instruction := tiCOPYR_ST;
     SRI := ASRI;
-    CodeLine := 0;
-  end;
-end;
-
-function copyr_fs(ASRI: Word; AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionCOPYR_FS(Result) do
-  begin
-    Instruction := tiCOPYR_FS;
-    SRI := ASRI;
-    ModuleIndex := AModuleIndex;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function copys_st(AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionCOPYS_ST(Result) do
-  begin
-    Instruction := tiCOPYS_ST;
-    Scope := AScope;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function copyfs(AModuleIndex: LongInt; AOffset: LongInt; ATRI: Word): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionCOPYFS(Result) do
-  begin
-    Instruction := tiCOPYFS;
-    ModuleIndex := AModuleIndex;
-    Offset := AOffset;
-    TRI := ATRI;
     CodeLine := 0;
   end;
 end;
@@ -413,44 +362,6 @@ begin
     Instruction := tiCOPYR;
     SRI := ASRI;
     TRI := ATRI;
-    CodeLine := 0;
-  end;
-end;
-
-function copys(AScope: Word; AOffset: LongInt; ATRI: Word): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionCOPYS(Result) do
-  begin
-    Instruction := tiCOPYS;
-    Scope := AScope;
-    Offset := AOffset;
-    TRI := ATRI;
-    CodeLine := 0;
-  end;
-end;
-
-function moves_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionMOVES_S(Result) do
-  begin
-    Instruction := tiMOVES_S;
-    Scope := AScope;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function mover_s(ASRI: Word; AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionMOVER_S(Result) do
-  begin
-    Instruction := tiMOVER_S;
-    SRI := ASRI;
-    Scope := AScope;
-    Offset := AOffset;
     CodeLine := 0;
   end;
 end;
@@ -478,19 +389,6 @@ begin
   end;
 end;
 
-function moves(AScope: Word; AOffset: LongInt; ATRI: Word): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionMOVES(Result) do
-  begin
-    Instruction := tiMOVES;
-    Scope := AScope;
-    Offset := AOffset;
-    TRI := ATRI;
-    CodeLine := 0;
-  end;
-end;
-
 function movest(ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
@@ -498,44 +396,6 @@ begin
   begin
     Instruction := tiMOVEST;
     TRI := ATRI;
-    CodeLine := 0;
-  end;
-end;
-
-function mover_fs(ASRI: Word; AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionMOVER_FS(Result) do
-  begin
-    Instruction := tiMOVER_FS;
-    SRI := ASRI;
-    ModuleIndex := AModuleIndex;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function movefs(AModuleIndex: LongInt; AOffset: LongInt; ATRI: Word): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionMOVEFS(Result) do
-  begin
-    Instruction := tiMOVEFS;
-    ModuleIndex := AModuleIndex;
-    Offset := AOffset;
-    TRI := ATRI;
-    CodeLine := 0;
-  end;
-end;
-
-function moves_st(AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionMOVES_ST(Result) do
-  begin
-    Instruction := tiMOVES_ST;
-    Scope := AScope;
-    Offset := AOffset;
     CodeLine := 0;
   end;
 end;
@@ -1251,54 +1111,6 @@ begin
 
 end; *)
 
-function inci_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionINCI_S(Result) do
-  begin
-    Instruction := tiINCI_S;
-    Scope := AScope;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function incf_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionINCF_S(Result) do
-  begin
-    Instruction := tiINCF_S;
-    Scope := AScope;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function inci_fs(AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionINCF_FS(Result) do
-  begin
-    Instruction := tiINCF_FS;
-    ModuleIndex := AModuleIndex;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function incf_fs(AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionINCF_FS(Result) do
-  begin
-    Instruction := tiINCF_FS;
-    ModuleIndex := AModuleIndex;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
 function inci(ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
@@ -1317,54 +1129,6 @@ begin
   begin
     Instruction := tiINCF;
     TRI := ATRI;
-    CodeLine := 0;
-  end;
-end;
-
-function deci_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionDECI_S(Result) do
-  begin
-    Instruction := tiDECI_S;
-    Scope := AScope;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function decf_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionDECF_S(Result) do
-  begin
-    Instruction := tiDECF_S;
-    Scope := AScope;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function deci_fs(AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionDECF_FS(Result) do
-  begin
-    Instruction := tiDECF_FS;
-    ModuleIndex := AModuleIndex;
-    Offset := AOffset;
-    CodeLine := 0;
-  end;
-end;
-
-function decf_fs(AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
-begin
-  FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionDECF_FS(Result) do
-  begin
-    Instruction := tiDECF_FS;
-    ModuleIndex := AModuleIndex;
-    Offset := AOffset;
     CodeLine := 0;
   end;
 end;
@@ -1989,42 +1753,6 @@ function copyr_pOperation(const SRI: TThoriumRegisterID; const Offset: Integer):
 begin
   NewNonCastOperation(Result);
   Result.OperationInstruction.Instruction := TThoriumInstructionREG(copyr_p(SRI, Offset));
-  Result.OperationInstruction.TargetRIOffset := 0;
-  Result.OperationInstruction.Value1RIOffset := -1;
-  Result.OperationInstruction.Value2RIOffset := -1;
-end;
-
-function movesOperation(const Scope, Offset: Integer; const TRI: TThoriumRegisterID): TThoriumOperationDescription;
-begin
-  NewNonCastOperation(Result);
-  Result.OperationInstruction.Instruction := TThoriumInstructionREG(moves(Scope, Offset, TRI));
-  Result.OperationInstruction.TargetRIOffset := 3;
-  Result.OperationInstruction.Value1RIOffset := -1;
-  Result.OperationInstruction.Value2RIOffset := -1;
-end;
-
-function copyr_sOperation(const SRI: TThoriumRegisterID; const Scope, Offset: Integer): TThoriumOperationDescription;
-begin
-  NewNonCastOperation(Result);
-  Result.OperationInstruction.Instruction := TThoriumInstructionREG(copyr_s(SRI, Scope, Offset));
-  Result.OperationInstruction.TargetRIOffset := 0;
-  Result.OperationInstruction.Value1RIOffset := -1;
-  Result.OperationInstruction.Value2RIOffset := -1;
-end;
-
-function movefsOperation(const Module, Offset: Integer; const TRI: TThoriumRegisterID): TThoriumOperationDescription;
-begin
-  NewNonCastOperation(Result);
-  Result.OperationInstruction.Instruction := TThoriumInstructionREG(movefs(Module, Offset, TRI));
-  Result.OperationInstruction.TargetRIOffset := 4;
-  Result.OperationInstruction.Value1RIOffset := -1;
-  Result.OperationInstruction.Value2RIOffset := -1;
-end;
-
-function copyr_fsOperation(const SRI: TThoriumRegisterID; const Module, Offset: Integer): TThoriumOperationDescription;
-begin
-  NewNonCastOperation(Result);
-  Result.OperationInstruction.Instruction := TThoriumInstructionREG(copyr_fs(SRI, Module, Offset));
   Result.OperationInstruction.TargetRIOffset := 0;
   Result.OperationInstruction.Value1RIOffset := -1;
   Result.OperationInstruction.Value2RIOffset := -1;
