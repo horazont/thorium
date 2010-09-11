@@ -1064,12 +1064,12 @@ type
   end;
 
   TThoriumVarargsBuffer = record
-    VAData: Pointer;
-    VADataOrigin: Pointer;
-    VABuffer: Pointer;
-    VABufferOrigin: Pointer;
-    VAToFree: PThoriumValue;
-    VAToFreeOrigin: PThoriumValue;
+    Data: Pointer;
+    DataOrigin: Pointer;
+    Buffer: Pointer;
+    BufferOrigin: Pointer;
+    ToFree: PThoriumValue;
+    ToFreeOrigin: PThoriumValue;
   end;
 
   (* This record represents one entry on the Thorium stack. It may either
@@ -11163,17 +11163,17 @@ begin
           ThoriumFreeValue(CurrEntry^.Value);
         etVarargs:
         begin
-          FreeMem(CurrEntry^.VarargsBuffer.VADataOrigin);
-          if CurrEntry^.VarargsBuffer.VABufferOrigin <> nil then
-            FreeMem(CurrEntry^.VarargsBuffer.VABufferOrigin);
-          if CurrEntry^.VarargsBuffer.VAToFreeOrigin <> nil then
+          FreeMem(CurrEntry^.VarargsBuffer.DataOrigin);
+          if CurrEntry^.VarargsBuffer.BufferOrigin <> nil then
+            FreeMem(CurrEntry^.VarargsBuffer.BufferOrigin);
+          if CurrEntry^.VarargsBuffer.ToFreeOrigin <> nil then
           begin
-            while CurrEntry^.VarargsBuffer.VAToFree <> CurrEntry^.VarargsBuffer.VAToFreeOrigin do
+            while CurrEntry^.VarargsBuffer.ToFree <> CurrEntry^.VarargsBuffer.ToFreeOrigin do
             begin
-              Dec(CurrEntry^.VarargsBuffer.VAToFree);
-              ThoriumFreeValue(CurrEntry^.VarargsBuffer.VAToFree[0]);
+              Dec(CurrEntry^.VarargsBuffer.ToFree);
+              ThoriumFreeValue(CurrEntry^.VarargsBuffer.ToFree[0]);
             end;
-            FreeMem(CurrEntry^.VarargsBuffer.VAToFreeOrigin);
+            FreeMem(CurrEntry^.VarargsBuffer.ToFreeOrigin);
           end;
         end;
       end;
@@ -12218,12 +12218,12 @@ var
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etVarargs;
       if Pointers = 1 then
-        _NewEntry^.VarargsBuffer.VAData := GetMem(Length * SizeOf(ptruint))
+        _NewEntry^.VarargsBuffer.Data := GetMem(Length * SizeOf(ptruint))
       else
-        _NewEntry^.VarargsBuffer.VAData := GetMem(Length);
-      _NewEntry^.VarargsBuffer.VADataOrigin := _NewEntry^.VarargsBuffer.VAData;
-      _NewEntry^.VarargsBuffer.VABufferOrigin := nil;
-      _NewEntry^.VarargsBuffer.VAToFreeOrigin := nil;
+        _NewEntry^.VarargsBuffer.Data := GetMem(Length);
+      _NewEntry^.VarargsBuffer.DataOrigin := _NewEntry^.VarargsBuffer.Data;
+      _NewEntry^.VarargsBuffer.BufferOrigin := nil;
+      _NewEntry^.VarargsBuffer.ToFreeOrigin := nil;
 
       {$ifdef Timecheck}EndTimecheck('vastart');{$endif}
     end;
@@ -12236,12 +12236,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= $FF then
-        PByte(_Operand1^.VarargsBuffer.VAData)^ := $FF
+        PByte(_Operand1^.VarargsBuffer.Data)^ := $FF
       else if FRegisters[SRI].Int <= 0 then
-        PByte(_Operand1^.VarargsBuffer.VAData)^ := 0
+        PByte(_Operand1^.VarargsBuffer.Data)^ := 0
       else
-        PByte(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VarargsBuffer.VAData, 1);
+        PByte(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.Data, 1);
       {$ifdef Timecheck}EndTimecheck('va.i8');{$endif}
     end;
   end;
@@ -12253,12 +12253,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= $FFFF then
-        PWord(_Operand1^.VarargsBuffer.VAData)^ := $FFFF
+        PWord(_Operand1^.VarargsBuffer.Data)^ := $FFFF
       else if FRegisters[SRI].Int <= 0 then
-        PWord(_Operand1^.VarargsBuffer.VAData)^ := 0
+        PWord(_Operand1^.VarargsBuffer.Data)^ := 0
       else
-        PWord(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VarargsBuffer.VAData, 2);
+        PWord(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.Data, 2);
       {$ifdef Timecheck}EndTimecheck('va.i16');{$endif}
     end;
   end;
@@ -12270,12 +12270,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= $FFFFFFFF then
-        PDWord(_Operand1^.VarargsBuffer.VAData)^ := $FFFFFFFF
+        PDWord(_Operand1^.VarargsBuffer.Data)^ := $FFFFFFFF
       else if FRegisters[SRI].Int <= 0 then
-        PDWord(_Operand1^.VarargsBuffer.VAData)^ := 0
+        PDWord(_Operand1^.VarargsBuffer.Data)^ := 0
       else
-        PDWord(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VarargsBuffer.VAData, 4);
+        PDWord(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.Data, 4);
       {$ifdef Timecheck}EndTimecheck('va.i32');{$endif}
     end;
   end;
@@ -12286,8 +12286,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PQWord(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int and $7FFFFFFFFFFFFFFF;
-      Inc(_Operand1^.VarargsBuffer.VAData, 8);
+      PQWord(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Int and $7FFFFFFFFFFFFFFF;
+      Inc(_Operand1^.VarargsBuffer.Data, 8);
       {$ifdef Timecheck}EndTimecheck('va.i64');{$endif}
     end;
   end;
@@ -12299,12 +12299,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= 127 then
-        PShortInt(_Operand1^.VarargsBuffer.VAData)^ := 127
+        PShortInt(_Operand1^.VarargsBuffer.Data)^ := 127
       else if FRegisters[SRI].Int <= -128 then
-        PShortInt(_Operand1^.VarargsBuffer.VAData)^ := -128
+        PShortInt(_Operand1^.VarargsBuffer.Data)^ := -128
       else
-        PShortInt(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VarargsBuffer.VAData, 1);
+        PShortInt(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.Data, 1);
       {$ifdef Timecheck}EndTimecheck('va.i8s');{$endif}
     end;
   end;
@@ -12316,12 +12316,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= 32767 then
-        PSmallInt(_Operand1^.VarargsBuffer.VAData)^ := 32767
+        PSmallInt(_Operand1^.VarargsBuffer.Data)^ := 32767
       else if FRegisters[SRI].Int <= -32768 then
-        PSmallInt(_Operand1^.VarargsBuffer.VAData)^ := -32768
+        PSmallInt(_Operand1^.VarargsBuffer.Data)^ := -32768
       else
-        PSmallInt(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VarargsBuffer.VAData, 2);
+        PSmallInt(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.Data, 2);
       {$ifdef Timecheck}EndTimecheck('va.i16s');{$endif}
     end;
   end;
@@ -12333,12 +12333,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
       if FRegisters[SRI].Int >= 2147483647 then
-        PLongInt(_Operand1^.VarargsBuffer.VAData)^ := 2147483647
+        PLongInt(_Operand1^.VarargsBuffer.Data)^ := 2147483647
       else if FRegisters[SRI].Int <= -2147483648 then
-        PLongInt(_Operand1^.VarargsBuffer.VAData)^ := -2147483648
+        PLongInt(_Operand1^.VarargsBuffer.Data)^ := -2147483648
       else
-        PLongInt(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VarargsBuffer.VAData, 4);
+        PLongInt(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.Data, 4);
       {$ifdef Timecheck}EndTimecheck('va.i32s');{$endif}
     end;
   end;
@@ -12349,8 +12349,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PInt64(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Int;
-      Inc(_Operand1^.VarargsBuffer.VAData, 8);
+      PInt64(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Int;
+      Inc(_Operand1^.VarargsBuffer.Data, 8);
       {$ifdef Timecheck}EndTimecheck('va.i64s');{$endif}
     end;
   end;
@@ -12361,8 +12361,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PSingle(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Float;
-      Inc(_Operand1^.VarargsBuffer.VAData, 4);
+      PSingle(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Float;
+      Inc(_Operand1^.VarargsBuffer.Data, 4);
       {$ifdef Timecheck}EndTimecheck('va.f32');{$endif}
     end;
   end;
@@ -12373,8 +12373,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PDouble(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Float;
-      Inc(_Operand1^.VarargsBuffer.VAData, 8);
+      PDouble(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Float;
+      Inc(_Operand1^.VarargsBuffer.Data, 8);
       {$ifdef Timecheck}EndTimecheck('va.f64');{$endif}
     end;
   end;
@@ -12385,8 +12385,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PExtended(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Float;
-      Inc(_Operand1^.VarargsBuffer.VAData, 10);
+      PExtended(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Float;
+      Inc(_Operand1^.VarargsBuffer.Data, 10);
       {$ifdef Timecheck}EndTimecheck('va.f80');{$endif}
     end;
   end;
@@ -12400,10 +12400,10 @@ var
       // okay, okay, use assignment instead of move to avoid hassle with the
       // stringmanager -.-
       _Operand1 := FStack.GetTopStackEntry;
-      // Move(FRegisters[SRI].BuiltIn.Str^, PString(_Operand1^.VarargsBuffer.VAData)^, SizeOf(String));
-      PPointer(_Operand1^.VarargsBuffer.VAData)^ := nil;
-      PString(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].Str^;
-      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(Ptruint));
+      // Move(FRegisters[SRI].BuiltIn.Str^, PString(_Operand1^.VarargsBuffer.Data)^, SizeOf(String));
+      PPointer(_Operand1^.VarargsBuffer.Data)^ := nil;
+      PString(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].Str^;
+      Inc(_Operand1^.VarargsBuffer.Data, SizeOf(Ptruint));
       {$ifdef Timecheck}EndTimecheck('va.s');{$endif}
     end;
   end;
@@ -12414,8 +12414,8 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PPointer(_Operand1^.VarargsBuffer.VAData)^ := FRegisters[SRI].HostObject;
-      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(ptruint));
+      PPointer(_Operand1^.VarargsBuffer.Data)^ := FRegisters[SRI].HostObject;
+      Inc(_Operand1^.VarargsBuffer.Data, SizeOf(ptruint));
       {$ifdef Timecheck}EndTimecheck('va.x');{$endif}
     end;
   end;
@@ -12427,12 +12427,12 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
       _NewEntry^._Type := etVarargs;
-      _NewEntry^.VarargsBuffer.VAData := GetMem(Length * SizeOf(TVarRec));
-      _NewEntry^.VarargsBuffer.VADataOrigin := _NewEntry^.VarargsBuffer.VAData;
-      _NewEntry^.VarargsBuffer.VABuffer := GetMem(Floats * SizeOf(Extended) + (Length - (ToClear + Floats)) * SizeOf(TThoriumInteger));
-      _NewEntry^.VarargsBuffer.VABufferOrigin := _NewEntry^.VarargsBuffer.VABuffer;
-      _NewEntry^.VarargsBuffer.VAToFree := GetMem(ToClear * SizeOf(TThoriumValue));
-      _NewEntry^.VarargsBuffer.VAToFreeOrigin := _NewEntry^.VarargsBuffer.VAToFree;
+      _NewEntry^.VarargsBuffer.Data := GetMem(Length * SizeOf(TVarRec));
+      _NewEntry^.VarargsBuffer.DataOrigin := _NewEntry^.VarargsBuffer.Data;
+      _NewEntry^.VarargsBuffer.Buffer := GetMem(Floats * SizeOf(Extended) + (Length - (ToClear + Floats)) * SizeOf(TThoriumInteger));
+      _NewEntry^.VarargsBuffer.BufferOrigin := _NewEntry^.VarargsBuffer.Buffer;
+      _NewEntry^.VarargsBuffer.ToFree := GetMem(ToClear * SizeOf(TThoriumValue));
+      _NewEntry^.VarargsBuffer.ToFreeOrigin := _NewEntry^.VarargsBuffer.ToFree;
       {$ifdef Timecheck}EndTimecheck('vastart.t');{$endif}
     end;
   end;
@@ -12443,14 +12443,14 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PExtended(_Operand1^.VarargsBuffer.VABuffer)^ := FRegisters[SRI].Float;
-      with PVarRec(_Operand1^.VarargsBuffer.VAData)^ do
+      PExtended(_Operand1^.VarargsBuffer.Buffer)^ := FRegisters[SRI].Float;
+      with PVarRec(_Operand1^.VarargsBuffer.Data)^ do
       begin
         VType := vtExtended;
-        VExtended := _Operand1^.VarargsBuffer.VABuffer;
+        VExtended := _Operand1^.VarargsBuffer.Buffer;
       end;
-      Inc(_Operand1^.VarargsBuffer.VABuffer, SizeOf(Extended));
-      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(TVarRec));
+      Inc(_Operand1^.VarargsBuffer.Buffer, SizeOf(Extended));
+      Inc(_Operand1^.VarargsBuffer.Data, SizeOf(TVarRec));
       {$ifdef Timecheck}EndTimecheck('vat.f');{$endif}
     end;
   end;
@@ -12461,14 +12461,14 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      PThoriumInteger(_Operand1^.VarargsBuffer.VABuffer)^ := FRegisters[SRI].Int;
-      with PVarRec(_Operand1^.VarargsBuffer.VAData)^ do
+      PThoriumInteger(_Operand1^.VarargsBuffer.Buffer)^ := FRegisters[SRI].Int;
+      with PVarRec(_Operand1^.VarargsBuffer.Data)^ do
       begin
         VType := vtInt64;
-        VInt64 := _Operand1^.VarargsBuffer.VABuffer;
+        VInt64 := _Operand1^.VarargsBuffer.Buffer;
       end;
-      Inc(_Operand1^.VarargsBuffer.VABuffer, SizeOf(TThoriumInteger));
-      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(TVarRec));
+      Inc(_Operand1^.VarargsBuffer.Buffer, SizeOf(TThoriumInteger));
+      Inc(_Operand1^.VarargsBuffer.Data, SizeOf(TVarRec));
       {$ifdef Timecheck}EndTimecheck('vat.i');{$endif}
     end;
   end;
@@ -12479,14 +12479,14 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      with PVarRec(_Operand1^.VarargsBuffer.VAData)^ do
+      with PVarRec(_Operand1^.VarargsBuffer.Data)^ do
       begin
         VType := vtAnsiString;
         VAnsiString := PPointer(FRegisters[SRI].Str)^;
       end;
-      //Move(FRegisters[SRI], _Operand1^.VarargsBuffer.VAToFree[0], SizeOf(TThoriumValue));
-      //Inc(_Operand1^.VarargsBuffer.VAToFree);
-      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(TVarRec));
+      //Move(FRegisters[SRI], _Operand1^.VarargsBuffer.ToFree[0], SizeOf(TThoriumValue));
+      //Inc(_Operand1^.VarargsBuffer.ToFree);
+      Inc(_Operand1^.VarargsBuffer.Data, SizeOf(TVarRec));
       {$ifdef Timecheck}EndTimecheck('vat.s');{$endif}
     end;
   end;
@@ -12497,14 +12497,14 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _Operand1 := FStack.GetTopStackEntry;
-      with PVarRec(_Operand1^.VarargsBuffer.VAData)^ do
+      with PVarRec(_Operand1^.VarargsBuffer.Data)^ do
       begin
         VType := vtPointer;
         VPointer := FRegisters[SRI].HostObject;
       end;
-      Move(FRegisters[SRI], _Operand1^.VarargsBuffer.VAToFree[0], SizeOf(TThoriumValue));
-      Inc(_Operand1^.VarargsBuffer.VAToFree);
-      Inc(_Operand1^.VarargsBuffer.VAData, SizeOf(TVarRec));
+      Move(FRegisters[SRI], _Operand1^.VarargsBuffer.ToFree[0], SizeOf(TThoriumValue));
+      Inc(_Operand1^.VarargsBuffer.ToFree);
+      Inc(_Operand1^.VarargsBuffer.Data, SizeOf(TVarRec));
       {$ifdef Timecheck}EndTimecheck('vat.x');{$endif}
     end;
   end;
@@ -12985,7 +12985,7 @@ begin
           WriteLn(Format('  %4d Stackframe (return to 0x%8.8x in %s)', [J, ThisEntry^.Stackframe.ReturnAddress, ThisEntry^.Stackframe.ReturnModule.Name]));
       end;
       etNull: WriteLn(Format('  %4d null', [J]));
-      etVarargs: WriteLn(Format('  %4d Varargs (%d)', [J, MemSize(ThisEntry^.VarargsBuffer.VABufferOrigin)]));
+      etVarargs: WriteLn(Format('  %4d Varargs (%d)', [J, MemSize(ThisEntry^.VarargsBuffer.BufferOrigin)]));
     else
       WriteLn(Format('  %4d CORRUPTED', [J]));
     end;
