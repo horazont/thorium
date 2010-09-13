@@ -91,11 +91,12 @@ begin
     htLongInt,
     ncRegister
   );
+  inherited;
 end;
 
 class function TThoriumLibString.GetName: String;
 begin
-  Result:='core.strings';
+  Result:='thorium.strings';
 end;
 
 end.

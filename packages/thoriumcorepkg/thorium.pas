@@ -232,22 +232,21 @@ type
 
   (* This record completely defines a type of the host environment, including
      host class types. *)
-  TThoriumExternalFunctionVarType = record
-    HostType: TThoriumHostType;
-    Extended: TThoriumHostObjectType;
+  TThoriumHostTypeSpec = record
+    HostType: PTypeInfo;
 
-    (* If storing is true, the script will call PassControlToHost on
-       TThoriumRTTIObject types before the method is called. *)
+    (* If storing is true, the script will call EnableHostControl when the
+       parameter is passed to the function. *)
     Storing: Boolean;
   end;
 
   (* A pointer to a record which completely defines a type of the host
      environment. *)
-  PThoriumExternalFunctionVarType = ^TThoriumExternalFunctionVarType;
+  PThoriumHostTypeSpec = ^TThoriumHostTypeSpec;
 
   (* This record defines a field of an host environmental record. *)
   TThoriumHostRecordField = record
-    FieldType: TThoriumExternalFunctionVarType;
+    FieldType: TThoriumHostTypeSpec;
     FieldName: String;
     Offset: Cardinal;
   end;
@@ -428,14 +427,20 @@ type
     constructor Create;
   private
     FCalculatingHash: Boolean;
+    FFrozen: Boolean;
     FHashGenerated: Boolean;
   protected
     FHash: TThoriumHash;
   protected
     procedure CalcHash; virtual; abstract;
+    procedure ForceFrozen;
+    procedure ForceUnfrozen;
+    procedure HardUnfreeze;
     procedure InvalidateHash;
   public
     function GetHash: TThoriumHash;
+  public
+    procedure Freeze;
   end;
 
   (* Only internally used. *)
@@ -614,6 +619,18 @@ type
     property TypeKind: TThoriumTypeKind;
   end;                                                  *)
 
+  TThoriumNativeCallSpecification = record
+    Offset: Integer;
+    Mask: Integer;
+    ValueMode: TThoriumNativeCallValueMode;
+    FloatMode: TThoriumNativeCallFloatMode;
+    RefMode: TThoriumNativeCallRefMode;
+  end;
+
+  IThoriumNativeCallCompatible = interface ['{02E24A87-41F3-4D0A-98D7-F889E3FE2394}']
+    function GetNativeCallSpecification(const HostType: PTypeInfo; out Spec: TThoriumNativeCallSpecification): Boolean;
+  end;
+
   IThoriumCallable = interface ['{C9317686-61BE-4D72-AF95-9E0FF25C752E}']
     function GetParameters: TThoriumParameters;
     function GetReturnType: TThoriumType;
@@ -669,7 +686,6 @@ type
     function CanPerformOperation(var Operation: TThoriumOperationDescription; const TheObject: TThoriumType = nil; const ExName: String = ''): Boolean; virtual;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; virtual; abstract;
     function DuplicateValue(const Input: TThoriumValue): TThoriumValue; virtual;
-    class function FromExternalType(const ExternalType: PThoriumExternalFunctionVarType): TThoriumType;
     function HasFieldAccess: Boolean; virtual;
     function HasIndexedAccess: Boolean; virtual;
     (*function GetClassType: TClass;*)
@@ -745,6 +761,7 @@ type
        Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType=nil; const ExName: String = ''): Boolean; override;
+    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
        override;
@@ -805,6 +822,7 @@ type
        Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType=nil; const ExName: String = ''): Boolean; override;
+    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
          override;
@@ -846,6 +864,7 @@ type
        Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType=nil; const ExName: String=''): Boolean; override;
+    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
     function HasIndexedAccess: Boolean; override;
     function HasFieldAccess: Boolean; override;
     function NeedsClear: Boolean; override;
@@ -1258,36 +1277,33 @@ type
 
   (* This class represents a set of host environment types used as a parameter
      specification for host functions and methods. *)
-  TThoriumHostFunctionParameterSpec = class (TObject)
+  TThoriumHostFunctionParameterSpec = class (TThoriumHashableObject)
     constructor Create;
     destructor Destroy; override;
   private
     FCapacity: Integer;
     FCount: Integer;
-    FParams: PThoriumExternalFunctionVarType;
+    FParams: PThoriumHostTypeSpec;
+    function GetParameterInfo(Index: Integer): PThoriumHostTypeSpec;
+    function GetParameter(Index: Integer): PTypeInfo;
+    function GetStoring(Index: Integer): Boolean;
+    procedure SetParameter(Index: Integer; const AValue: PTypeInfo);
+    procedure SetStoring(Index: Integer; const AValue: Boolean);
   protected
     procedure Expand;
-    function GetCompleteType(AIndex: Integer): PThoriumExternalFunctionVarType;
-    function GetExtendedType(AIndex: Integer): TThoriumHostObjectType;
-    function GetParamType(AIndex: Integer): TThoriumHostType;
     procedure SetCapacity(AValue: Integer);
-    procedure SetExtendedType(AIndex: Integer; AValue: TThoriumHostObjectType);
-    procedure SetParamType(AIndex: Integer; AValue: TThoriumHostType);
   public
-    property Types[Index: Integer]: TThoriumHostType read GetParamType write SetParamType;
-    property ExtendedTypes[Index: Integer]: TThoriumHostObjectType read GetExtendedType write SetExtendedType;
-    property CompleteTypes[Index: Integer]: PThoriumExternalFunctionVarType read GetCompleteType;
     property Capacity: Integer read FCapacity write SetCapacity;
     property Count: Integer read FCount;
-
-    function AddType(AType: TThoriumHostType): Integer;
-    function AddExtendedType(AType: TThoriumHostObjectType): Integer;
-    function AllTypes: PThoriumExternalFunctionVarType;
-    function IndexOfType(AType: TThoriumHostType; Nth: Integer = 0): Integer;
-    procedure InsertType(AType: TThoriumHostType; AIndex: Integer);
-    procedure InsertExtendedType(AType: TThoriumHostObjectType; AIndex: Integer);
-    procedure DeleteType(AIndex: Integer);
+    property Parameters[Index: Integer]: PTypeInfo read GetParameter write SetParameter; default;
+    property Storing[Index: Integer]: Boolean read GetStoring write SetStoring;
+  public
+    function Add(const AType: PTypeInfo; const IsStoring: Boolean = False): Integer;
     procedure Clear;
+    procedure Delete(const AIndex: Integer);
+    function IndexOf(const AType: PTypeInfo; const Nth: Integer): Integer;
+    procedure Insert(const AIndex: Integer; const AType: PTypeInfo;
+      const IsStoring: Boolean = False);
   end;
 
   { TThoriumHostCallableBase }
@@ -1295,12 +1311,13 @@ type
   (* A base class for any callable object published by the host environment. *)
   TThoriumHostCallableBase = class (TThoriumHashableObject)
   public
-    constructor Create; virtual;
+    constructor Create(ALibrary: TThoriumLibrary); virtual;
     destructor Destroy; override;
   protected
+    FLibrary: TThoriumLibrary;
     FName: String;
     FParameters: TThoriumHostFunctionParameterSpec;
-    FReturnType: TThoriumExternalFunctionVarType;
+    FReturnType: TThoriumHostTypeSpec;
     FPrototype: TThoriumTypeHostFunction;
     function GetPrototype: TThoriumTypeHostFunction;
   protected
@@ -1310,8 +1327,7 @@ type
   public
     property Parameters: TThoriumHostFunctionParameterSpec read FParameters;
     property Prototype: TThoriumTypeHostFunction read GetPrototype;
-    property ReturnType: TThoriumExternalFunctionVarType read FReturnType write FReturnType;
-    property ReturnTypeExtended: TThoriumHostObjectType read FReturnType.Extended write FReturnType.Extended;
+    property ReturnType: TThoriumHostTypeSpec read FReturnType write FReturnType;
     property ReturnTypeStoring: Boolean read FReturnType.Storing write FReturnType.Storing;
     property Name: String read FName write FName;
   end;
@@ -1332,7 +1348,7 @@ type
   (* This host function class is based on a specific callback which will be
      called when the virtual machine calls the function. *)
   TThoriumHostFunctionSimpleMethod = class (TThoriumHostFunctionBase)
-    constructor Create; override;
+    constructor Create(ALibrary: TThoriumLibrary); override;
   private
     FMethod: TThoriumSimpleMethod;
   protected
@@ -1347,7 +1363,7 @@ type
      environment directly without the need for a wrapper. *)
   TThoriumHostFunctionNativeCall = class (TThoriumHostFunctionBase)
   public
-    constructor Create; override;
+    constructor Create(ALibrary: TThoriumLibrary); override;
     destructor Destroy; override;
   private
     FCallingConvention: TThoriumNativeCallingConvention;
@@ -1371,7 +1387,7 @@ type
      pointer without the need for a wrapper. *)
   TThoriumHostMethodAsFunctionNativeCall = class (TThoriumHostFunctionNativeCall)
   public
-    constructor Create; override;
+    constructor Create(ALibrary: TThoriumLibrary); override;
   private
     FDataPointer: Pointer;
   protected
@@ -1386,7 +1402,7 @@ type
   (* The base class for any method published by the host environment. *)
   TThoriumHostMethodBase = class (TThoriumHostCallableBase)
   public
-    constructor Create; override;
+    constructor Create(ALibrary: TThoriumLibrary); override;
   protected
     FHostObjectType: TThoriumHostObjectType;
   protected
@@ -1399,7 +1415,7 @@ type
      when the virtual machine calls the method. *)
   TThoriumHostMethodSimple = class (TThoriumHostMethodBase)
   public
-    constructor Create; override;
+    constructor Create(ALibrary: TThoriumLibrary); override;
   private
     FClassMethod: TThoriumClassMethod;
   protected
@@ -1414,7 +1430,7 @@ type
      the need for a wrapper. *)
   TThoriumHostMethodNativeCall = class (TThoriumHostMethodBase)
   public
-    constructor Create; override;
+    constructor Create(ALibrary: TThoriumLibrary); override;
     destructor Destroy; override;
   private
     FCallingConvention: TThoriumNativeCallingConvention;
@@ -1523,20 +1539,20 @@ type
   public
     property BaseClass: TClass read FBaseClass;
 
-    class function NewNativeCallMethod(const AName: String;
+    function NewNativeCallMethod(const AName: String;
       const ACodePointer: Pointer;
-      const AParameters: array of TThoriumHostType;
-      const AReturnType: TThoriumHostType = htNone;
+      const AParameters: array of PTypeInfo;
+      const AReturnType: PTypeInfo = nil;
       const ACallingConvention: TThoriumNativeCallingConvention = ncRegister): TThoriumHostMethodNativeCall;
-    class function NewNativeCallStaticMethod(const AName: String;
+    function NewNativeCallStaticMethod(const AName: String;
       const ACodePointer: Pointer; const ADataPointer: Pointer;
-      const AParameters: array of TThoriumHostType;
-      const AReturnType: TThoriumHostType = htNone;
+      const AParameters: array of PTypeInfo;
+      const AReturnType: PTypeInfo = nil;
       const ACallingConvention: TThoriumNativeCallingConvention = ncRegister): TThoriumHostMethodAsFunctionNativeCall;
-    class function NewNativeCallStaticFunction(const AName: String;
+    function NewNativeCallStaticFunction(const AName: String;
       const ACodePointer: Pointer;
-      const AParameters: array of TThoriumHostType;
-      const AReturnType: TThoriumHostType = htNone;
+      const AParameters: array of PTypeInfo;
+      const AReturnType: PTypeInfo = htNone;
       const ACallingConvention: TThoriumNativeCallingConvention = ncRegister): TThoriumHostFunctionNativeCall;
   end;
 
@@ -1693,7 +1709,6 @@ type
     destructor Destroy; override;
   private
     FConstants: TThoriumLibraryConstantList;
-    FFrozen: Boolean;
     FName: String;
     FHostCallables: TThoriumHostCallableList;
     FProperties: TThoriumLibraryPropertyList;
@@ -1707,9 +1722,6 @@ type
   protected
     procedure AddDependency(const ALibName: String);
     procedure AddDependency(const ALib: TThoriumLibrary); virtual;
-    procedure FreezeLibrary; virtual;
-    procedure ForceFrozen;
-    procedure ForceUnfrozen;
     procedure InitializeLibrary; virtual;
     class function GetName: String; virtual; abstract;
     procedure RaiseRTTIRequired(const AStr: String);
@@ -1723,19 +1735,31 @@ type
     function RegisterConstant(const AName: String;
       const AValue: TThoriumValue): PThoriumValue;
 
+    function RegisterConstant(const AName: String;
+      const AValue; const AType: PTypeInfo): PThoriumValue;
+
+    function RegisterConstant(const AName: String;
+      const AValue: TThoriumInteger): PThoriumValue;
+
+    function RegisterConstant(const AName: String;
+      const AValue: TThoriumFloat): PThoriumValue;
+
+    function RegisterConstant(const AName: String;
+      const AValue: TThoriumString): PThoriumValue;
+
     function RegisterFinishedObjectType(const AName: String;
       const AInstance: TThoriumHostObjectType;
       const ATypeInfo: PTypeInfo): TThoriumHostObjectType;
 
     function RegisterNativeCallFunction(const AName: String;
-      const ACodePointer: Pointer; const AParameters: array of TThoriumHostType;
-      const AReturnType: TThoriumHostType;
+      const ACodePointer: Pointer; const AParameters: array of PTypeInfo;
+      const AReturnType: PTypeInfo;
       const ACallingConvention: TThoriumNativeCallingConvention): TThoriumHostFunctionNativeCall;
 
     function RegisterNativeCallMethodAsFunction(const AName: String;
       const ACodePointer: Pointer; const ADataPointer: Pointer;
-      const AParameters: array of TThoriumHostType;
-      const AReturnType: TThoriumHostType;
+      const AParameters: array of PTypeInfo;
+      const AReturnType: PTypeInfo;
       const ACallingConvention: TThoriumNativeCallingConvention): TThoriumHostMethodAsFunctionNativeCall;
 
     function RegisterPropertyCallback(const AName: String;
@@ -1765,8 +1789,8 @@ type
 
     function RegisterSimpleMethod(const AName: String;
       const AFunction: TThoriumSimpleMethod;
-      const AParameters: array of TThoriumHostType;
-      const AReturnType: TThoriumHostType): TThoriumHostFunctionSimpleMethod;
+      const AParameters: array of PTypeInfo;
+      const AReturnType: PTypeInfo): TThoriumHostFunctionSimpleMethod;
 
     function RegisterType(const AName: String; const AInstance: TThoriumType;
       const ATypes: array of PTypeInfo): TThoriumType;
@@ -2358,10 +2382,10 @@ function ThoriumInstructionToStr(AInstruction: TThoriumInstruction): String;
 procedure ThoriumFreeValue(var AValue: TThoriumValue);
 function ThoriumDuplicateValue(const AValue: TThoriumValue): TThoriumValue; inline;
 
-function HostRecordField(const AType: TThoriumExternalFunctionVarType;
+function HostRecordField(const AType: TThoriumHostTypeSpec;
   const AName: String; const AOffset: Cardinal): TThoriumHostRecordField;
 function HostVarType(const AHostType: TThoriumHostType;
-  const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumExternalFunctionVarType;
+  const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumHostTypeSpec;
 
 
 operator := (Input: TThoriumInstructionArray): TThoriumGenericOperation;
@@ -2479,7 +2503,7 @@ end;
 
 (* Generates NativeCall subscript code which can later be used to call a native
 function without knowing its signature at (program) compile time. *)
-procedure GenericPrecompile(var AInstructions: Pointer; var AVAOffset: Integer; Parameters: TThoriumHostFunctionParameterSpec; ReturnType: TThoriumExternalFunctionVarType; HasData: Boolean; CallingConvention: TThoriumNativeCallingConvention);
+(*procedure GenericPrecompile(var AInstructions: Pointer; var AVAOffset: Integer; Parameters: TThoriumHostFunctionParameterSpec; ReturnType: TThoriumHostTypeSpec; HasData: Boolean; CallingConvention: TThoriumNativeCallingConvention);
 var
   Instructions: array of TThoriumNativeCallInstruction;
   Capacity: Integer;
@@ -2812,6 +2836,14 @@ begin
     FreeMem(AInstructions);
   AInstructions := GetMem(Count * SizeOf(TThoriumNativeCallInstruction));
   Move(Instructions[0], AInstructions^, Count * SizeOf(TThoriumNativeCallInstruction));
+end;    *)
+
+procedure GenericPrecompile(var AInstructions: Pointer;
+    AParameters: TThoriumHostFunctionParameterSpec; AThParameters: TThoriumParameters;
+    AReturnType: TThoriumHostTypeSpec; AThReturnType: TThoriumType; HasData: Boolean;
+    CallingConvention: TThoriumNativeCallingConvention);
+begin
+
 end;
 
 procedure GenericCallbackPrecompile(var Instructions: Pointer; Parmeters: array of TThoriumHostType; ReturnType: TThoriumHostType);
@@ -3265,7 +3297,7 @@ const
     @iSkipRegister, @iIncStrRef, @iPtrDeref, @iDecStrRef, @iData, @iVA, @iInt, @iInt, @iSingle, @iDouble, @iExtended,
     @iIntRef, @iIntRef, @iSingleRef, @iDoubleRef, @iExtendedRef, @iCall, @iCallRetInt, @iCallRetInt,
     @iCallRetSingle, @iCallRetDouble, @iCallRetExtended, @iCallRetString, @iCallRetExt,
-    @iDecStack, @iRevSingle, @iRevExtended, @lExit
+    @iDecStack, @iRevSingle, @iRevExtended, @lExit, nil, nil, nil, nil, nil, nil, nil
   );
 var
   IntRegPtr: Pointer = @IntReg;
@@ -3718,7 +3750,7 @@ end;
 
 {%REGION 'Thorium helper funtions' /fold}
 
-function HostRecordField(const AType: TThoriumExternalFunctionVarType;
+function HostRecordField(const AType: TThoriumHostTypeSpec;
   const AName: String; const AOffset: Cardinal): TThoriumHostRecordField;
 begin
   Result.FieldType := AType;
@@ -3727,9 +3759,10 @@ begin
 end;
 
 function HostVarType(const AHostType: TThoriumHostType;
-  const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumExternalFunctionVarType;
+  const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumHostTypeSpec;
 begin
-  Result.HostType := AHostType;
+  raise EThoriumException.Create('needs to be reimplemented.');
+(*  Result.HostType := AHostType;
   Result.Extended := AExtended;
   if Result.HostType and (htTypeSection or htSizeSection) <> htExt then
   begin
@@ -3737,7 +3770,7 @@ begin
     Result.Storing := False;
   end
   else
-    Result.Storing := AStoring;
+    Result.Storing := AStoring;*)
 end;
 
 operator:=(Input: TThoriumInstructionArray): TThoriumGenericOperation;
@@ -4221,6 +4254,26 @@ end;
 constructor TThoriumHashableObject.Create;
 begin
   FHashGenerated := False;
+  FFrozen := False;
+end;
+
+procedure TThoriumHashableObject.ForceFrozen;
+begin
+  if FFrozen then
+    raise EThoriumException.CreateFmt('%s must be frozen to perform this operation.', [ClassName]);
+end;
+
+procedure TThoriumHashableObject.ForceUnfrozen;
+begin
+  if not FFrozen then
+    raise EThoriumException.CreateFmt('%s must be unfrozen to perform this operation.', [ClassName]);
+end;
+
+procedure TThoriumHashableObject.HardUnfreeze;
+begin
+  // Hard unfreeze (you know, somewhat like to unfreeze Han Solo with a
+  // flamethrower ...)
+  FFrozen := False;
 end;
 
 procedure TThoriumHashableObject.InvalidateHash;
@@ -4230,6 +4283,7 @@ end;
 
 function TThoriumHashableObject.GetHash: TThoriumHash;
 begin
+  ForceFrozen;
   if FCalculatingHash then
   begin
     // Recursive hash request.
@@ -4244,6 +4298,11 @@ begin
     FHashGenerated := True;
   end;
   Result := FHash;
+end;
+
+procedure TThoriumHashableObject.Freeze;
+begin
+  FFrozen := True;
 end;
 
 { TThoriumIntList }
@@ -4531,39 +4590,6 @@ begin
   Result := Input;
 end;
 
-class function TThoriumType.FromExternalType(
-  const ExternalType: PThoriumExternalFunctionVarType): TThoriumType;
-var
-  TempType: TThoriumType;
-begin
-  case ExternalType^.HostType and (htTypeSection or htSizeSection) of
-    htIntU8, htIntS8, htIntU16, htIntS16, htIntU32, htIntS32, htIntU64,
-    htIntS64:
-      TempType := TThoriumTypeInteger.Create;
-
-    htFlt32, htFlt64, htFlt80:
-      TempType := TThoriumTypeFloat.Create;
-
-    htStr:
-      TempType := TThoriumTypeString.Create;
-
-    htExt:
-      TempType := TThoriumTypeHostType.Create(ExternalType^.Extended);
-
-    htAny:
-      TempType := nil;
-  else
-    raise EThoriumCompilerException.CreateFmt('Unknown host type: %2.2x', [ExternalType^.HostType]);
-  end;
-  if ExternalType^.HostType and htArray = htArray then
-  begin
-    Result := TThoriumTypeArray.Create(TempType);
-    with TThoriumTypeArray(Result) do
-      ArrayDimensionKind := akDynamic;
-  end
-  else
-    Result := TempType;
-end;
 
 function TThoriumType.HasFieldAccess: Boolean;
 begin
@@ -4922,6 +4948,13 @@ begin
   Result := inherited;
 end;
 
+function TThoriumTypeInteger.CreateValueFromPtr(const Ptr: Pointer
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := PThoriumInteger(Ptr)^;
+end;
+
 function TThoriumTypeInteger.DoAddition(const AValue, BValue: TThoriumValue
   ): TThoriumValue;
 begin
@@ -5227,6 +5260,13 @@ begin
   Result := inherited;
 end;
 
+function TThoriumTypeFloat.CreateValueFromPtr(const Ptr: Pointer
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Float := PThoriumFloat(Ptr)^;
+end;
+
 function TThoriumTypeFloat.DoAddition(const AValue, BValue: TThoriumValue
   ): TThoriumValue;
 begin
@@ -5444,6 +5484,14 @@ begin
   Result := inherited;
 end;
 
+function TThoriumTypeString.CreateValueFromPtr(const Ptr: Pointer
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  New(Result.Str);
+  Result.Str^ := PThoriumString(Ptr)^;
+end;
+
 function TThoriumTypeString.HasIndexedAccess: Boolean;
 begin
   Result := True;
@@ -5606,10 +5654,16 @@ end;
 
 { TThoriumTypeHostFunction }
 
-constructor TThoriumTypeHostFunction.Create(
-  const AHostFunction: TThoriumHostCallableBase);
+constructor TThoriumTypeHostFunction.Create(const AHostFunction: TThoriumHostCallableBase);
+var
+  I: Integer;
+  TypeSpec: TThoriumType;
 begin
-  raise EThoriumException.Create('TThoriumTypeHostFunction is not implemented yet.');
+  inherited Create;
+  for I := 0 to AHostFunction.FParameters.Count - 1 do
+  begin
+    TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(TypeInfo(AHostFunction.FParameters));
+  end;
 end;
 
 function TThoriumTypeHostFunction.GetHasReturnValue: Boolean;
@@ -6532,64 +6586,64 @@ begin
   FHash := TThoriumHash(MD5Buffer(Signature[1], Length(Signature)));
 end;
 
-class function TThoriumRTTIObjectType.NewNativeCallMethod(const AName: String;
-  const ACodePointer: Pointer; const AParameters: array of TThoriumHostType;
-  const AReturnType: TThoriumHostType;
+function TThoriumRTTIObjectType.NewNativeCallMethod(const AName: String;
+  const ACodePointer: Pointer; const AParameters: array of PTypeInfo;
+  const AReturnType: PTypeInfo;
   const ACallingConvention: TThoriumNativeCallingConvention
   ): TThoriumHostMethodNativeCall;
 var
   I: Integer;
 begin
-  Result := TThoriumHostMethodNativeCall.Create;
+  Result := TThoriumHostMethodNativeCall.Create(Self.FLibrary);
   with Result do
   begin
     Name := AName;
     CodePointer := ACodePointer;
     for I := 0 to High(AParameters) do
-      Parameters.AddType(AParameters[I]);
+      Parameters.Add(AParameters[I]);
     FReturnType.HostType := AReturnType;
     CallingConvention := ACallingConvention;
   end;
 end;
 
-class function TThoriumRTTIObjectType.NewNativeCallStaticMethod(
+function TThoriumRTTIObjectType.NewNativeCallStaticMethod(
   const AName: String; const ACodePointer: Pointer; const ADataPointer: Pointer;
-  const AParameters: array of TThoriumHostType;
-  const AReturnType: TThoriumHostType;
+  const AParameters: array of PTypeInfo;
+  const AReturnType: PTypeInfo;
   const ACallingConvention: TThoriumNativeCallingConvention
   ): TThoriumHostMethodAsFunctionNativeCall;
 var
   I: Integer;
 begin
-  Result := TThoriumHostMethodAsFunctionNativeCall.Create;
+  Result := TThoriumHostMethodAsFunctionNativeCall.Create(Self.FLibrary);
   with Result do
   begin
     Name := AName;
     CodePointer := ACodePointer;
     DataPointer := ADataPointer;
     for I := 0 to High(AParameters) do
-      Parameters.AddType(AParameters[I]);
+      Parameters.Add(AParameters[I]);
     FReturnType.HostType := AReturnType;
     CallingConvention := ACallingConvention;
   end;
 end;
 
-class function TThoriumRTTIObjectType.NewNativeCallStaticFunction(
+function TThoriumRTTIObjectType.NewNativeCallStaticFunction(
   const AName: String; const ACodePointer: Pointer;
-  const AParameters: array of TThoriumHostType;
-  const AReturnType: TThoriumHostType;
+  const AParameters: array of PTypeInfo;
+  const AReturnType: PTypeInfo;
   const ACallingConvention: TThoriumNativeCallingConvention
   ): TThoriumHostFunctionNativeCall;
 var
   I: Integer;
 begin
-  Result := TThoriumHostFunctionNativeCall.Create;
+  Result := TThoriumHostFunctionNativeCall.Create(Self.FLibrary);
   with Result do
   begin
     Name := AName;
     CodePointer := ACodePointer;
     for I := 0 to High(AParameters) do
-      Parameters.AddType(AParameters[I]);
+      Parameters.Add(AParameters[I]);
     FReturnType.HostType := AReturnType;
     CallingConvention := ACallingConvention;
   end;
@@ -6641,7 +6695,7 @@ var
   BufferSize: Ptruint;
   FieldHash: TThoriumHash;
 begin
-  BufferSize := EntrySize * Length(FFields);
+  (*BufferSize := EntrySize * Length(FFields);
   Buffer := GetMem(BufferSize);
   try
     for I := 0 to Length(FFields) - 1 do
@@ -6656,7 +6710,8 @@ begin
     FHash := TThoriumHash(MD5Buffer(Buffer, BufferSize));
   finally
     FreeMem(Buffer);
-  end;
+  end;*)
+  raise Exception.Create('Needs to be reimplemented');
 end;
 
 function TThoriumHostRecordType.CanAssignTo(
@@ -6700,7 +6755,7 @@ var
   FieldDefinition: PThoriumHostRecordField;
   Mask: Cardinal;
 begin
-  FieldDefinitionIdx := IndexOfFieldDefinition(FieldIdent);
+(*  FieldDefinitionIdx := IndexOfFieldDefinition(FieldIdent);
   Result := FieldDefinitionIdx >= 0;
   if not Result then
     Exit;
@@ -6712,7 +6767,8 @@ begin
   else
     Mask := 0;
   end;
-  ID := Mask or (QWord(FieldDefinitionIdx) shl 32);
+  ID := Mask or (QWord(FieldDefinitionIdx) shl 32);*)
+  raise EThoriumException.Create('Not reimplemented yet.');
 end;
 
 function TThoriumHostRecordType.GetFieldStoring(const AFieldID: QWord
@@ -6910,7 +6966,6 @@ end;
 constructor TThoriumLibrary.Create(AThorium: TThorium);
 begin
   FConstants := TThoriumLibraryConstantList.Create;
-  FFrozen := False;
   FName := GetName;
   FHostCallables := TThoriumHostCallableList.Create;
   FProperties := TThoriumLibraryPropertyList.Create;
@@ -6924,9 +6979,7 @@ end;
 
 destructor TThoriumLibrary.Destroy;
 begin
-  // Hard unfreeze (you know, somewhat like to unfreeze Han Solo with a
-  // flamethrower ...)
-  FFrozen := False;
+  HardUnfreeze;
   Clear;
   FTypes.Free;
   FRequiredLibraries.Free;
@@ -6981,31 +7034,9 @@ begin
   FRequiredLibraries.Add(ALib);
 end;
 
-procedure TThoriumLibrary.FreezeLibrary;
-var
-  I: Integer;
-begin
-  ForceUnfrozen;
-  for I := 0 to FHostCallables.Count - 1 do
-    FHostCallables[I].CreatePrototype;
-  FFrozen := True;
-end;
-
-procedure TThoriumLibrary.ForceFrozen;
-begin
-  if not FFrozen then
-    raise EThoriumException.CreateFmt('This operation is not valid for an unfreezed library (%s).', [FName]);
-end;
-
-procedure TThoriumLibrary.ForceUnfrozen;
-begin
-  if FFrozen then
-    raise EThoriumException.CreateFmt('This operation is not valid for a freezed library (%s).', [FName]);
-end;
-
 procedure TThoriumLibrary.InitializeLibrary;
 begin
-  FreezeLibrary;
+  Freeze;
 end;
 
 procedure TThoriumLibrary.RaiseRTTIRequired(const AStr: String);
@@ -7086,6 +7117,39 @@ begin
   FConstants.Add(AConst);
 end;
 
+function TThoriumLibrary.RegisterConstant(const AName: String; const AValue;
+  const AType: PTypeInfo): PThoriumValue;
+var
+  Value: TThoriumValue;
+  TypeSpec: TThoriumType;
+begin
+  TypeSpec := DeepFindTypeForHostType(AType);
+  if TypeSpec = nil then
+    raise EThoriumException.Create('Could not find type declaration for given PTypeInfo.');
+  Value := TypeSpec.CreateValueFromPtr(@AValue);
+  Value.RTTI := TypeSpec;
+  Result := RegisterConstant(AName, Value);
+  ThoriumFreeValue(Value);
+end;
+
+function TThoriumLibrary.RegisterConstant(const AName: String;
+  const AValue: TThoriumInteger): PThoriumValue;
+begin
+  Result := RegisterConstant(AName, AValue, TypeInfo(TThoriumInteger));
+end;
+
+function TThoriumLibrary.RegisterConstant(const AName: String;
+  const AValue: TThoriumFloat): PThoriumValue;
+begin
+  Result := RegisterConstant(AName, AValue, TypeInfo(TThoriumFloat));
+end;
+
+function TThoriumLibrary.RegisterConstant(const AName: String;
+  const AValue: TThoriumString): PThoriumValue;
+begin
+  Result := RegisterConstant(AName, AValue, TypeInfo(TThoriumString));
+end;
+
 function TThoriumLibrary.RegisterFinishedObjectType(const AName: String;
   const AInstance: TThoriumHostObjectType; const ATypeInfo: PTypeInfo
   ): TThoriumHostObjectType;
@@ -7094,8 +7158,8 @@ begin
 end;
 
 function TThoriumLibrary.RegisterNativeCallFunction(const AName: String;
-  const ACodePointer: Pointer; const AParameters: array of TThoriumHostType;
-  const AReturnType: TThoriumHostType;
+  const ACodePointer: Pointer; const AParameters: array of PTypeInfo;
+  const AReturnType: PTypeInfo;
   const ACallingConvention: TThoriumNativeCallingConvention
   ): TThoriumHostFunctionNativeCall;
 var
@@ -7104,14 +7168,14 @@ var
 begin
   ForceUnfrozen;
   CasedName := ThoriumCase(AName);
-  Result := TThoriumHostFunctionNativeCall.Create;
+  Result := TThoriumHostFunctionNativeCall.Create(Self);
   try
     with Result do
     begin
       FName := CasedName;
       FCodePointer := ACodePointer;
       for I := 0 to High(AParameters) do
-        FParameters.AddType(AParameters[I]);
+        FParameters.Add(AParameters[I]);
       FReturnType.HostType := AReturnType;
       FCallingConvention := ACallingConvention;
     end;
@@ -7128,8 +7192,8 @@ end;
 
 function TThoriumLibrary.RegisterNativeCallMethodAsFunction(
   const AName: String; const ACodePointer: Pointer;
-  const ADataPointer: Pointer; const AParameters: array of TThoriumHostType;
-  const AReturnType: TThoriumHostType;
+  const ADataPointer: Pointer; const AParameters: array of PTypeInfo;
+  const AReturnType: PTypeInfo;
   const ACallingConvention: TThoriumNativeCallingConvention
   ): TThoriumHostMethodAsFunctionNativeCall;
 var
@@ -7138,7 +7202,7 @@ var
 begin
   ForceUnfrozen;
   CasedName := ThoriumCase(AName);
-  Result := TThoriumHostMethodAsFunctionNativeCall.Create;
+  Result := TThoriumHostMethodAsFunctionNativeCall.Create(Self);
   try
     with Result do
     begin
@@ -7146,7 +7210,7 @@ begin
       FCodePointer := ACodePointer;
       FDataPointer := ADataPointer;
       for I := 0 to High(AParameters) do
-        FParameters.AddType(AParameters[I]);
+        FParameters.Add(AParameters[I]);
       FReturnType.HostType := AReturnType;
       FCallingConvention := ACallingConvention;
     end;
@@ -7271,22 +7335,22 @@ end;
 
 function TThoriumLibrary.RegisterSimpleMethod(const AName: String;
   const AFunction: TThoriumSimpleMethod;
-  const AParameters: array of TThoriumHostType;
-  const AReturnType: TThoriumHostType): TThoriumHostFunctionSimpleMethod;
+  const AParameters: array of PTypeInfo;
+  const AReturnType: PTypeInfo): TThoriumHostFunctionSimpleMethod;
 var
   CasedName: String;
   I: Integer;
 begin
   ForceUnfrozen;
   CasedName := ThoriumCase(AName);
-  Result := TThoriumHostFunctionSimpleMethod.Create;
+  Result := TThoriumHostFunctionSimpleMethod.Create(Self);
   try
     with Result do
     begin
       FName := CasedName;
       FMethod := AFunction;
       for I := 0 to High(AParameters) do
-        FParameters.AddType(AParameters[I]);
+        FParameters.Add(AParameters[I]);
       FReturnType.HostType := AReturnType;
     end;
   except
@@ -7469,6 +7533,41 @@ begin
   inherited Destroy;
 end;
 
+function TThoriumHostFunctionParameterSpec.GetParameterInfo(Index: Integer
+  ): PThoriumHostTypeSpec;
+begin
+  if (Index < 0) or (Index >= FCount) then
+    raise EListError.CreateFmt('Parameter index out of bounds (%d must be in [0..%d])', [Index, FCount-1]);
+  Result := @FParams[Index];
+end;
+
+function TThoriumHostFunctionParameterSpec.GetParameter(Index: Integer
+  ): PTypeInfo;
+begin
+  Result := GetParameterInfo(Index)^.HostType;
+end;
+
+function TThoriumHostFunctionParameterSpec.GetStoring(Index: Integer): Boolean;
+begin
+  Result := GetParameterInfo(Index)^.Storing;
+end;
+
+procedure TThoriumHostFunctionParameterSpec.SetParameter(Index: Integer;
+  const AValue: PTypeInfo);
+begin
+  ForceUnfrozen;
+  if AValue = nil then
+    raise EThoriumException.Create('Cannot set parameter type to nil.');
+  GetParameterInfo(Index)^.HostType := AValue;
+end;
+
+procedure TThoriumHostFunctionParameterSpec.SetStoring(Index: Integer;
+  const AValue: Boolean);
+begin
+  ForceUnfrozen;
+  GetParameterInfo(Index)^.Storing := AValue;
+end;
+
 procedure TThoriumHostFunctionParameterSpec.Expand;
 begin
   if (FCapacity = 0) then
@@ -7479,135 +7578,88 @@ begin
     SetCapacity(FCapacity + 128);
 end;
 
-function TThoriumHostFunctionParameterSpec.GetCompleteType(AIndex: Integer
-  ): PThoriumExternalFunctionVarType;
-begin
-  if (AIndex < 0) or (AIndex >= FCount) then
-    raise EListError.CreateFmt('Parameter type index out of bounds (%d must be in [0..%d])', [AIndex, FCount-1]);
-  Result := @FParams[AIndex];
-end;
-
-function TThoriumHostFunctionParameterSpec.GetExtendedType(AIndex: Integer): TThoriumHostObjectType;
-begin
-  if (AIndex < 0) or (AIndex >= FCount) then
-    raise EListError.CreateFmt('Parameter type index out of bounds (%d must be in [0..%d])', [AIndex, FCount-1]);
-  if FParams[AIndex].HostType = htExt then
-    Result := FParams[AIndex].Extended
-  else
-    Result := nil;
-end;
-
-function TThoriumHostFunctionParameterSpec.GetParamType(AIndex: Integer): TThoriumHostType;
-begin
-  if (AIndex < 0) or (AIndex >= FCount) then
-    raise EListError.CreateFmt('Parameter type index out of bounds (%d must be in [0..%d])', [AIndex, FCount-1]);
-  Result := FParams[AIndex].HostType;
-end;
-
 procedure TThoriumHostFunctionParameterSpec.SetCapacity(AValue: Integer);
 begin
   if AValue < FCapacity then
     Exit;
   FCapacity := AValue;
-  ReAllocMem(FParams, FCapacity * SizeOf(TThoriumExternalFunctionVarType));
+  ReAllocMem(FParams, FCapacity * SizeOf(TThoriumHostTypeSpec));
 end;
 
-procedure TThoriumHostFunctionParameterSpec.SetExtendedType(
-  AIndex: Integer; AValue: TThoriumHostObjectType);
+function TThoriumHostFunctionParameterSpec.Add(const AType: PTypeInfo;
+  const IsStoring: Boolean): Integer;
 begin
-  if (AIndex < 0) or (AIndex >= FCount) then
-    raise EListError.CreateFmt('Parameter type index out of bounds (%d must be in [0..%d])', [AIndex, FCount-1]);
-  if AValue = nil then
-    raise EThoriumException.Create('Cannot set nil as extended type. Use delete or SetParamType (prop. Types) instead.');
-  FParams[AIndex].HostType := htExt or (FParams[AIndex].HostType and htFlagSection);
-  FParams[AIndex].Extended := AValue;
-end;
-
-procedure TThoriumHostFunctionParameterSpec.SetParamType(AIndex: Integer; AValue: TThoriumHostType);
-begin
-  if (AIndex < 0) or (AIndex >= FCount) then
-    raise EListError.CreateFmt('Parameter type index out of bounds (%d must be in [0..%d])', [AIndex, FCount-1]);
-  FParams[AIndex].HostType := AValue;
-end;
-
-function TThoriumHostFunctionParameterSpec.AddType(AType: TThoriumHostType): Integer;
-begin
+  ForceUnfrozen;
+  Result := FCount;
   if FCount = FCapacity then
     Expand;
-  Result := FCount;
+  with FParams[FCount] do
+  begin
+    HostType := AType;
+    Storing := IsStoring;
+  end;
   Inc(FCount);
-  FParams[Result].HostType := AType;
-  FParams[Result].Storing := False;
 end;
 
-function TThoriumHostFunctionParameterSpec.AddExtendedType(
-  AType: TThoriumHostObjectType): Integer;
+procedure TThoriumHostFunctionParameterSpec.Clear;
 begin
-  Result := AddType(htExt);
-  FParams[Result].Extended := AType;
+  ForceUnfrozen;
+  FCount := 0;
+  if FCapacity > 16 then
+    SetCapacity(16);
 end;
 
-function TThoriumHostFunctionParameterSpec.AllTypes: PThoriumExternalFunctionVarType;
+procedure TThoriumHostFunctionParameterSpec.Delete(const AIndex: Integer);
 begin
-  Result := FParams;
+  ForceUnfrozen;
+  if AIndex = FCount - 1 then
+  begin
+    Dec(FCount);
+    Exit;
+  end;
+  GetParameterInfo(AIndex);
+  Move(FParams[AIndex+1], FParams[AIndex], SizeOf(TThoriumHostTypeSpec) * (FCount - (AIndex+1)));
 end;
 
-function TThoriumHostFunctionParameterSpec.IndexOfType(AType: TThoriumHostType; Nth: Integer = 0): Integer;
+function TThoriumHostFunctionParameterSpec.IndexOf(const AType: PTypeInfo;
+  const Nth: Integer): Integer;
 var
-  C, I: Integer;
+  I: Integer;
+  N: Integer;
 begin
-  C := -1;
+  N := -1;
   for I := 0 to FCount - 1 do
   begin
     if FParams[I].HostType = AType then
     begin
-      Inc(C);
-      if C = Nth then
-      begin
-        Result := I;
-        Exit;
-      end;
+      Inc(N);
+      if N = Nth then
+        Exit(I);
     end;
   end;
   Result := -1;
 end;
 
-procedure TThoriumHostFunctionParameterSpec.InsertType(AType: TThoriumHostType; AIndex: Integer);
+procedure TThoriumHostFunctionParameterSpec.Insert(const AIndex: Integer;
+  const AType: PTypeInfo; const IsStoring: Boolean);
+var
+  Info: PThoriumHostTypeSpec;
 begin
-  if (AIndex < 0) or (AIndex > FCount) then
-    raise EListError.CreateFmt('Parameter type index out of bounds (%d must be in [0..%d])', [AIndex, FCount]);
+  ForceUnfrozen;
   if AIndex = FCount then
   begin
-    AddType(AType);
+    Add(AType, IsStoring);
     Exit;
   end;
   if FCount = FCapacity then
     Expand;
-  Move(PThoriumExternalFunctionVarType(FParams + AIndex)^, PThoriumExternalFunctionVarType(FParams + AIndex + 1)^, (FCount - AIndex) * SizeOf(TThoriumExternalFunctionVarType));
-  FParams[AIndex].HostType := AType;
-  FParams[AIndex].Storing := False;
-end;
-
-procedure TThoriumHostFunctionParameterSpec.InsertExtendedType(
-  AType: TThoriumHostObjectType; AIndex: Integer);
-begin
-  InsertType(htExt, AIndex);
-  FParams[AIndex].Extended := AType;
-end;
-
-procedure TThoriumHostFunctionParameterSpec.DeleteType(AIndex: Integer);
-begin
-  Dec(FCount);
-  if FCount = 0 then
-    Exit;
-  Move(PThoriumExternalFunctionVarType(FParams + AIndex + 1)^, PThoriumExternalFunctionVarType(FParams + AIndex)^, (FCount - AIndex) * SizeOf(TThoriumExternalFunctionVarType));
-end;
-
-procedure TThoriumHostFunctionParameterSpec.Clear;
-begin
-  FCount := 0;
-  if FCapacity > 256 then
-    SetCapacity(256);
+  Info := GetParameterInfo(AIndex);
+  Move(FParams[AIndex], FParams[AIndex+1], SizeOf(TThoriumHostTypeSpec) * (FCount - AIndex));
+  with Info^ do
+  begin
+    HostType := AType;
+    Storing := IsStoring;
+  end;
 end;
 
 { TThoriumHostCallableBase }
@@ -7619,12 +7671,11 @@ begin
   Result := FPrototype;
 end;
 
-constructor TThoriumHostCallableBase.Create;
+constructor TThoriumHostCallableBase.Create(ALibrary: TThoriumLibrary);
 begin
   FName := '';
   FParameters := TThoriumHostFunctionParameterSpec.Create;
-  FReturnType.HostType := htNone;
-  FReturnType.Extended := nil;
+  FReturnType.HostType := nil;
 end;
 
 destructor TThoriumHostCallableBase.Destroy;
@@ -7641,7 +7692,7 @@ var
   HostType: TThoriumHostType;
   I: Integer;
 begin
-  SigLength := 8 + Length(FName);
+  (*SigLength := 8 + Length(FName);
   for I := 0 to FParameters.Count - 1 do
   begin
     if FParameters.GetParamType(I) and (htTypeSection or htSizeSection) = htExt then
@@ -7677,7 +7728,8 @@ begin
     Inc(Offset, 16);
   end;
   Move(FName[1], Signature[Offset], Length(FName));
-  FHash := TThoriumHash(MD5Buffer(Signature[1], SigLength));
+  FHash := TThoriumHash(MD5Buffer(Signature[1], SigLength));*)
+  raise EThoriumException.Create('Not reimplemented yet.');
 end;
 
 procedure TThoriumHostCallableBase.CreatePrototype;
@@ -7687,9 +7739,9 @@ end;
 
 { TThoriumExternalFunctionSimple }
 
-constructor TThoriumHostFunctionSimpleMethod.Create;
+constructor TThoriumHostFunctionSimpleMethod.Create(ALibrary: TThoriumLibrary);
 begin
-  inherited Create;
+  inherited Create(ALibrary);
   FMethod := nil;
 end;
 
@@ -7806,9 +7858,9 @@ end;
 
 { TThoriumHostFunctionNativeCall }
 
-constructor TThoriumHostFunctionNativeCall.Create;
+constructor TThoriumHostFunctionNativeCall.Create(ALibrary: TThoriumLibrary);
 begin
-  inherited Create;
+  inherited Create(ALibrary);
   FCallingConvention := ncRegister;
   FInstructions := nil;
   FCodePointer := nil;
@@ -7834,20 +7886,21 @@ end;
 
 procedure TThoriumHostFunctionNativeCall.CreatePrototype;
 begin
-  Precompile;
   inherited;
+  Precompile;
 end;
 
 procedure TThoriumHostFunctionNativeCall.Precompile;
 begin
-  GenericPrecompile(FInstructions, FVAOffset, Parameters, ReturnType, False, FCallingConvention);
+  GenericPrecompile(FInstructions, FParameters, FPrototype.FParameters, FReturnType, FPrototype.FReturnType, False, FCallingConvention);
 end;
 
 { TThoriumHostMethodAsFunctionNativeCall }
 
-constructor TThoriumHostMethodAsFunctionNativeCall.Create;
+constructor TThoriumHostMethodAsFunctionNativeCall.Create(
+  ALibrary: TThoriumLibrary);
 begin
-  inherited Create;
+  inherited Create(ALibrary);
   FDataPointer := nil;
 end;
 
@@ -7865,22 +7918,22 @@ end;
 
 procedure TThoriumHostMethodAsFunctionNativeCall.Precompile;
 begin
-  GenericPrecompile(FInstructions, FVAOffset, Parameters, ReturnType, True, FCallingConvention);
+  GenericPrecompile(FInstructions, FParameters, FPrototype.FParameters, FReturnType, FPrototype.FReturnType, True, FCallingConvention);
 end;
 
 { TThoriumHostMethodBase }
 
-constructor TThoriumHostMethodBase.Create;
+constructor TThoriumHostMethodBase.Create(ALibrary: TThoriumLibrary);
 begin
-  inherited Create;
+  inherited Create(ALibrary);
   FHostObjectType := nil;
 end;
 
 { TThoriumHostMethodSimple }
 
-constructor TThoriumHostMethodSimple.Create;
+constructor TThoriumHostMethodSimple.Create(ALibrary: TThoriumLibrary);
 begin
-  inherited Create;
+  inherited Create(ALibrary);
   FClassMethod := nil;
 end;
 
@@ -8001,9 +8054,9 @@ end;
 
 { TThoriumHostMethodNativeCall }
 
-constructor TThoriumHostMethodNativeCall.Create;
+constructor TThoriumHostMethodNativeCall.Create(ALibrary: TThoriumLibrary);
 begin
-  inherited Create;
+  inherited Create(ALibrary);
   FCallingConvention := ncRegister;
   FCodePointer := nil;
   FInstructions := nil;
@@ -8030,7 +8083,7 @@ end;
 
 procedure TThoriumHostMethodNativeCall.Precompile;
 begin
-  GenericPrecompile(FInstructions, FVAOffset, Parameters, ReturnType, True, FCallingConvention);
+  GenericPrecompile(FInstructions, FParameters, FPrototype.FParameters, FReturnType, FPrototype.FReturnType, True, FCallingConvention);
 end;
 {%ENDREGION}
 
@@ -13284,16 +13337,19 @@ begin
     TypeInfo(Cardinal),
     TypeInfo(LongInt),
     TypeInfo(QWord),
-    TypeInfo(Int64)
+    TypeInfo(Int64){,
+    TypeInfo(TThoriumInteger)}
   ]);
   RegisterType('string', TThoriumTypeString.Create, [
     TypeInfo(UTF8String),
-    TypeInfo(AnsiString)
+    TypeInfo(AnsiString){,
+    TypeInfo(TThoriumString)}
   ]);
   RegisterType('float', TThoriumTypeFloat.Create, [
     TypeInfo(Float),
     TypeInfo(Double),
-    TypeInfo(Extended)
+    TypeInfo(Extended){,
+    TypeInfo(TThoriumFloat)}
   ]);
   RegisterType('void', nil, []);
   inherited;

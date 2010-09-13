@@ -314,18 +314,20 @@ procedure TThoriumLibStreams.InitializeLibrary;
 var
   Cls: TThoriumFileStreamClass;
 begin
+  AddDependency('thorium');
   RegisterRTTIType(TStream, @GetStreamMethodList, nil, True);
   Cls := TThoriumFileStream;
   RegisterRTTIType(TThoriumFileStream, @Cls.GetMethodList, @Cls.GetStaticMethodList, False);
-  RegisterConstant('fmCreate', ThoriumCreateIntegerValue(fmCreate));
-  RegisterConstant('fmOpenRead', ThoriumCreateIntegerValue(fmOpenRead));
-  RegisterConstant('fmOpenReadWrite', ThoriumCreateIntegerValue(fmOpenReadWrite));
-  RegisterConstant('fmOpenWrite', ThoriumCreateIntegerValue(fmOpenWrite));
+  RegisterConstant('fmCreate', fmCreate);
+  RegisterConstant('fmOpenRead', fmOpenRead);
+  RegisterConstant('fmOpenReadWrite', fmOpenReadWrite);
+  RegisterConstant('fmOpenWrite', fmOpenWrite);
+  inherited;
 end;
 
 class function TThoriumLibStreams.GetName: String;
 begin
-  Result := 'core.streams';
+  Result := 'thorium.streams';
 end;
 
 end.

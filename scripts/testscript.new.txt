@@ -1,4 +1,5 @@
 loadlibrary thorium;
+loadlibrary thorium.std;
 
 private int testfunc(int param) {
   return param + 10;

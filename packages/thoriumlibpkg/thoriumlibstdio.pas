@@ -101,11 +101,12 @@ begin
     htString,
     ncRegister
   );
+  inherited;
 end;
 
 class function TThoriumLibStdIO.GetName: String;
 begin
-  Result:='core.std.io';
+  Result:='thorium.std.io';
 end;
 
 end.

@@ -190,10 +190,51 @@ type
                                                                               *)
 {%REGION 'Native call types' /fold}
   {$PACKENUM 2}
-  TThoriumNativeCallInstructionCode = (ccSkipRegister, ccIncStrRef{$ifndef CPU64}, ccVARev{$endif}, ccPtrDeref, ccDecStrRef, ccData, ccVA, ccInt, ccInt64, ccSingle, ccDouble, ccExtended, ccIntRef, ccInt64Ref, ccSingleRef, ccDoubleRef, ccExtendedRef, ccCall, ccCallRetInt, ccCallRetInt64, ccCallRetSingle, ccCallRetDouble, ccCallRetExtended, ccCallRetString, ccCallRetExt, ccDecStack, ccRevSingle, ccRevExtended, ccExit);
-                                                                      // REMEMBER TO KEEP THE OFFSET FROM PTRDEREF TO INT AND FROM INT TO INTREF!
+  TThoriumNativeCallInstructionCode = (
+    ccSkipRegister,
+    ccIncStrRef,
+    ccDecStrRef,
+    {$ifndef CPU64}ccVARev, {$endif}
+    ccData,
+    ccVA,
+    ccIntDeref,
+    ccInt64Deref,
+    ccDoubleDeref,
+    ccSingleDeref,
+    ccExtendedDeref,
+    ccStringDeref,
+    ccInt,
+    ccInt64,
+    ccDouble,
+    ccSingle,
+    ccExtended,
+    ccString,
+    ccIntRef,
+    ccInt64Ref,
+    ccDoubleRef,
+    ccSingleRef,
+    ccExtendedRef,
+    ccStringRef,
+    ccCall,
+    ccCallRetInt,
+    ccCallRetInt64,
+    ccCallRetDouble,
+    ccCallRetSingle,
+    ccCallRetExtended,
+    ccCallRetString,
+    ccDecStack,
+    ccRevSingle,
+    ccRevExtended,
+    ccExit,
+    ccNone);
 const
-  DEREF_OFFSET = 5;
+  ccPointerDeref = {$ifdef CPU32}ccIntDeref{$else}ccInt64Deref{$endif};
+  ccPointer = {$ifdef CPU32}ccInt{$else}ccInt64{$endif};
+  ccPointerRef = {$ifdef CPU32}ccIntRef{$else}ccInt64Ref{$endif};
+  ccCallRetPointer = {$ifdef CPU32}ccCallRetInt{$else}ccCallRetInt64{$endif};
+
+(*const
+  DEREF_OFFSET = 5;*)
 type
   TThoriumNativeCallingConvention = (ncRegister, ncStdCall, ncCDecl);
 
@@ -204,6 +245,22 @@ type
   end;
   TThoriumNativeCallInstructions = array of TThoriumNativeCallInstruction;
   PThoriumNativeCallInstruction = ^TThoriumNativeCallInstruction;
+
+  TThoriumNativeCallValueMode = (vmInt32, vmInt64, vmPointer, vmFloat, vmString);
+  TThoriumNativeCallRefMode = (rmRef, rmNormal, rmDeref);
+  TThoriumNativeCallFloatMode = (fmAsDouble, fmAsSingle, fmAsExtended);
+  TThoriumNativeCallDirection = (ncdPass, ncdReturn);
+
+const
+  NativeCallInstruction : array [TThoriumNativeCallValueMode, TThoriumNativeCallRefMode, TThoriumNativeCallDirection] of TThoriumNativeCallInstructionCode = (
+                {rmRef}                     {rmNormal}                      {rmDeref}
+    {vmInt32}   ((ccIntRef, ccNone),        (ccInt, ccCallRetInt),          (ccIntDeref, ccNone)),
+    {vmInt64}   ((ccInt64Ref, ccNone),      (ccInt64, ccCallRetInt64),      (ccInt64Deref, ccNone)),
+    {vmPointer} ((ccPointerRef, ccNone),    (ccPointer, ccCallRetPointer),  (ccPointerDeref, ccNone)),
+    {vmFloat}   ((ccDoubleRef, ccNone),     (ccDouble, ccCallRetDouble),    (ccDoubleDeref, ccNone)),
+    {vmString}  ((ccStringRef, ccNone),     (ccString, ccCallRetString),    (ccStringDeref, ccNone))
+  );
+
 {%ENDREGION}
 
 (*
@@ -265,7 +322,8 @@ type
   TThoriumInteger = Int64;
   PThoriumInteger = ^TThoriumInteger;
   TThoriumFloat = Double;
-  TThoriumString = String;
+  PThoriumFloat = ^TThoriumFloat;
+  TThoriumString = AnsiString;
   PThoriumString = PString;
   TThoriumHostObject = Pointer;
   TThoriumSizeInt = ptrint;

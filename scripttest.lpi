@@ -41,15 +41,16 @@
         <MinVersion Major="1" Valid="True"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="110">
+    <Units Count="108">
       <Unit0>
         <Filename Value="scripttest.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="scripttest"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="45"/>
-        <CursorPos X="108" Y="93"/>
+        <TopLine Value="40"/>
+        <CursorPos X="46" Y="71"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -119,347 +120,316 @@
         <UsageCount Value="8"/>
       </Unit10>
       <Unit11>
-        <Filename Value="lua.pas"/>
-        <UnitName Value="Lua"/>
-        <TopLine Value="295"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="0"/>
-      </Unit11>
-      <Unit12>
         <Filename Value="..\..\Programme\Lazarus\fpc\2.2.0\source\rtl\inc\variant.inc"/>
         <TopLine Value="30"/>
         <CursorPos X="3" Y="316"/>
         <UsageCount Value="3"/>
-      </Unit12>
-      <Unit13>
+      </Unit11>
+      <Unit12>
         <Filename Value="..\..\Programme\Lazarus\fpc\2.2.0\source\rtl\inc\objpash.inc"/>
         <TopLine Value="300"/>
         <CursorPos X="7" Y="319"/>
         <UsageCount Value="8"/>
-      </Unit13>
-      <Unit14>
+      </Unit12>
+      <Unit13>
         <Filename Value="..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\inc\varianth.inc"/>
         <TopLine Value="177"/>
         <CursorPos X="3" Y="208"/>
         <UsageCount Value="8"/>
-      </Unit14>
-      <Unit15>
+      </Unit13>
+      <Unit14>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\win\sysutils.pp"/>
         <UnitName Value="sysutils"/>
         <TopLine Value="501"/>
         <CursorPos X="90" Y="532"/>
         <UsageCount Value="5"/>
-      </Unit15>
-      <Unit16>
+      </Unit14>
+      <Unit15>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\win32\classes.pp"/>
         <UnitName Value="Classes"/>
         <TopLine Value="25"/>
         <CursorPos X="10" Y="27"/>
         <UsageCount Value="3"/>
-      </Unit16>
-      <Unit17>
+      </Unit15>
+      <Unit16>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\objpas\classes\classesh.inc"/>
         <TopLine Value="1799"/>
         <CursorPos X="1" Y="1857"/>
         <UsageCount Value="3"/>
-      </Unit17>
-      <Unit18>
+      </Unit16>
+      <Unit17>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\objpas\classes\classes.inc"/>
         <TopLine Value="1657"/>
         <CursorPos X="26" Y="1639"/>
         <UsageCount Value="3"/>
-      </Unit18>
-      <Unit19>
+      </Unit17>
+      <Unit18>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\objpas\sysutils\sysutils.inc"/>
         <TopLine Value="220"/>
         <CursorPos X="26" Y="250"/>
         <UsageCount Value="3"/>
-      </Unit19>
-      <Unit20>
+      </Unit18>
+      <Unit19>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\inc\objpash.inc"/>
         <TopLine Value="294"/>
         <CursorPos X="30" Y="320"/>
         <UsageCount Value="1"/>
-      </Unit20>
-      <Unit21>
+      </Unit19>
+      <Unit20>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\objpas\sysutils\sysstrh.inc"/>
         <TopLine Value="104"/>
         <CursorPos X="10" Y="123"/>
         <UsageCount Value="6"/>
-      </Unit21>
-      <Unit22>
+      </Unit20>
+      <Unit21>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\objpas\sysutils\sysstr.inc"/>
         <TopLine Value="914"/>
         <CursorPos X="10" Y="915"/>
         <UsageCount Value="6"/>
-      </Unit22>
-      <Unit23>
+      </Unit21>
+      <Unit22>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\objpas\sysutils\sysformt.inc"/>
         <TopLine Value="188"/>
         <CursorPos X="53" Y="345"/>
         <UsageCount Value="6"/>
-      </Unit23>
-      <Unit24>
+      </Unit22>
+      <Unit23>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\inc\heaptrc.pp"/>
         <UnitName Value="heaptrc"/>
         <TopLine Value="38"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="4"/>
-      </Unit24>
-      <Unit25>
+      </Unit23>
+      <Unit24>
         <Filename Value="..\..\..\usr\share\fpcsrc\rtl\objpas\sysutils\sysstrh.inc"/>
         <TopLine Value="51"/>
         <CursorPos X="11" Y="65"/>
         <UsageCount Value="5"/>
-      </Unit25>
-      <Unit26>
+      </Unit24>
+      <Unit25>
         <Filename Value="..\..\..\usr\share\fpcsrc\rtl\objpas\sysutils\sysstr.inc"/>
         <TopLine Value="26"/>
         <CursorPos X="14" Y="35"/>
         <UsageCount Value="5"/>
-      </Unit26>
-      <Unit27>
+      </Unit25>
+      <Unit26>
         <Filename Value="..\..\..\usr\lib64\lazarus\lcl\lclintf.pas"/>
         <UnitName Value="LCLIntf"/>
         <TopLine Value="64"/>
         <CursorPos X="60" Y="39"/>
         <UsageCount Value="6"/>
-      </Unit27>
-      <Unit28>
+      </Unit26>
+      <Unit27>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\win32\windows.pp"/>
         <UnitName Value="windows"/>
         <TopLine Value="12"/>
         <CursorPos X="21" Y="46"/>
         <UsageCount Value="5"/>
-      </Unit28>
-      <Unit29>
+      </Unit27>
+      <Unit28>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\win\wininc\redef.inc"/>
         <TopLine Value="998"/>
         <CursorPos X="21" Y="753"/>
         <UsageCount Value="5"/>
-      </Unit29>
-      <Unit30>
+      </Unit28>
+      <Unit29>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\objpas\classes\streams.inc"/>
         <TopLine Value="33"/>
         <CursorPos X="3" Y="35"/>
         <UsageCount Value="6"/>
-      </Unit30>
-      <Unit31>
+      </Unit29>
+      <Unit30>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\objpas\typinfo.pp"/>
         <UnitName Value="typinfo"/>
         <TopLine Value="403"/>
         <CursorPos X="17" Y="414"/>
         <UsageCount Value="3"/>
-      </Unit31>
-      <Unit32>
+      </Unit30>
+      <Unit31>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\rtl\inc\objpas.inc"/>
         <TopLine Value="585"/>
         <CursorPos X="38" Y="623"/>
         <UsageCount Value="2"/>
-      </Unit32>
-      <Unit33>
+      </Unit31>
+      <Unit32>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.2\source\packages\hash\src\md5.pp"/>
         <UnitName Value="md5"/>
         <TopLine Value="23"/>
         <CursorPos X="3" Y="42"/>
         <UsageCount Value="8"/>
-      </Unit33>
-      <Unit34>
+      </Unit32>
+      <Unit33>
         <Filename Value="thorium_cllmethu.pas"/>
         <UnitName Value="thorium_cllmethu"/>
         <TopLine Value="32"/>
         <CursorPos X="55" Y="152"/>
         <UsageCount Value="108"/>
-      </Unit34>
-      <Unit35>
+      </Unit33>
+      <Unit34>
         <Filename Value="CllMethU.pas"/>
         <UnitName Value="CllMethU"/>
         <TopLine Value="95"/>
         <CursorPos X="5" Y="95"/>
         <UsageCount Value="1"/>
-      </Unit35>
-      <Unit36>
+      </Unit34>
+      <Unit35>
         <Filename Value="thorium_nativecall.pas"/>
         <UnitName Value="Thorium_NativeCall"/>
         <TopLine Value="1"/>
         <CursorPos X="15" Y="5"/>
         <UsageCount Value="82"/>
-      </Unit36>
-      <Unit37>
+      </Unit35>
+      <Unit36>
         <Filename Value="..\..\..\Programme\Lazarus\fpc\2.2.4\source\rtl\inc\varianth.inc"/>
         <TopLine Value="32"/>
         <CursorPos X="4" Y="51"/>
         <UsageCount Value="2"/>
-      </Unit37>
-      <Unit38>
-        <Filename Value="usr\share\fpcsrc\rtl\inc\compproc.inc"/>
-        <TopLine Value="160"/>
-        <CursorPos X="30" Y="183"/>
-        <UsageCount Value="0"/>
-      </Unit38>
-      <Unit39>
-        <Filename Value="usr\share\fpcsrc\rtl\inc\astrings.inc"/>
-        <TopLine Value="1"/>
-        <CursorPos X="38" Y="9"/>
-        <UsageCount Value="0"/>
-      </Unit39>
-      <Unit40>
+      </Unit36>
+      <Unit37>
         <Filename Value="usr\share\fpcsrc\rtl\inc\systemh.inc"/>
         <TopLine Value="214"/>
         <CursorPos X="55" Y="845"/>
         <UsageCount Value="1"/>
-      </Unit40>
-      <Unit41>
-        <Filename Value="usr\share\fpcsrc\rtl\x86_64\x86_64.inc"/>
-        <TopLine Value="416"/>
-        <CursorPos X="47" Y="428"/>
-        <UsageCount Value="0"/>
-      </Unit41>
-      <Unit42>
+      </Unit37>
+      <Unit38>
         <Filename Value="usr\share\fpcsrc\rtl\linux\system.pp"/>
         <UnitName Value="System"/>
         <TopLine Value="13"/>
         <CursorPos X="12" Y="36"/>
         <UsageCount Value="1"/>
-      </Unit42>
-      <Unit43>
+      </Unit38>
+      <Unit39>
         <Filename Value="usr\share\fpcsrc\rtl\inc\system.inc"/>
         <TopLine Value="25"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="1"/>
-      </Unit43>
-      <Unit44>
-        <Filename Value="usr\share\fpcsrc\rtl\inc\thread.inc"/>
-        <TopLine Value="469"/>
-        <CursorPos X="11" Y="469"/>
-        <UsageCount Value="0"/>
-      </Unit44>
-      <Unit45>
+      </Unit39>
+      <Unit40>
         <Filename Value="usr\share\fpcsrc\rtl\inc\objpas.inc"/>
         <TopLine Value="775"/>
         <CursorPos X="10" Y="778"/>
         <UsageCount Value="5"/>
-      </Unit45>
-      <Unit46>
+      </Unit40>
+      <Unit41>
         <Filename Value="usr\share\fpcsrc\rtl\inc\varianth.inc"/>
         <TopLine Value="415"/>
         <CursorPos X="10" Y="449"/>
         <UsageCount Value="5"/>
-      </Unit46>
-      <Unit47>
+      </Unit41>
+      <Unit42>
         <Filename Value="usr\share\fpcsrc\rtl\inc\objpash.inc"/>
         <TopLine Value="193"/>
         <CursorPos X="59" Y="220"/>
         <UsageCount Value="6"/>
-      </Unit47>
-      <Unit48>
+      </Unit42>
+      <Unit43>
         <Filename Value="usr\share\fpcsrc\rtl\inc\heaph.inc"/>
         <TopLine Value="62"/>
         <CursorPos X="11" Y="77"/>
         <UsageCount Value="1"/>
-      </Unit48>
-      <Unit49>
+      </Unit43>
+      <Unit44>
         <Filename Value="usr\share\fpcsrc\rtl\inc\heap.inc"/>
         <TopLine Value="1203"/>
         <CursorPos X="33" Y="1216"/>
         <UsageCount Value="1"/>
-      </Unit49>
-      <Unit50>
+      </Unit44>
+      <Unit45>
         <Filename Value="usr\share\fpcsrc\rtl\unix\sysunixh.inc"/>
         <TopLine Value="28"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="1"/>
-      </Unit50>
-      <Unit51>
+      </Unit45>
+      <Unit46>
         <Filename Value="usr\share\fpcsrc\rtl\linux\osdefs.inc"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="1"/>
-      </Unit51>
-      <Unit52>
+      </Unit46>
+      <Unit47>
         <Filename Value="usr\share\fpcsrc\rtl\inc\dynarrh.inc"/>
         <TopLine Value="1"/>
         <CursorPos X="50" Y="32"/>
         <UsageCount Value="1"/>
-      </Unit52>
-      <Unit53>
+      </Unit47>
+      <Unit48>
         <Filename Value="usr\share\fpcsrc\rtl\inc\dynarr.inc"/>
         <TopLine Value="308"/>
         <CursorPos X="5" Y="341"/>
         <UsageCount Value="1"/>
-      </Unit53>
-      <Unit54>
+      </Unit48>
+      <Unit49>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\sysutils\datih.inc"/>
         <TopLine Value="75"/>
         <CursorPos X="4" Y="97"/>
         <UsageCount Value="2"/>
-      </Unit54>
-      <Unit55>
+      </Unit49>
+      <Unit50>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\sysutils\sysstrh.inc"/>
         <TopLine Value="89"/>
         <CursorPos X="10" Y="123"/>
         <UsageCount Value="2"/>
-      </Unit55>
-      <Unit56>
+      </Unit50>
+      <Unit51>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\sysutils\sysstr.inc"/>
         <TopLine Value="890"/>
         <CursorPos X="30" Y="914"/>
         <UsageCount Value="2"/>
-      </Unit56>
-      <Unit57>
+      </Unit51>
+      <Unit52>
         <Filename Value="thoriumlibstd.pas"/>
         <UnitName Value="ThoriumLibStd"/>
         <TopLine Value="1"/>
         <CursorPos X="49" Y="9"/>
         <UsageCount Value="42"/>
-      </Unit57>
-      <Unit58>
+      </Unit52>
+      <Unit53>
         <Filename Value="thoriumlibstdio.pas"/>
         <UnitName Value="ThoriumLibStdIO"/>
         <TopLine Value="1"/>
         <CursorPos X="49" Y="9"/>
         <UsageCount Value="41"/>
-      </Unit58>
-      <Unit59>
+      </Unit53>
+      <Unit54>
         <Filename Value="thoriumlibstring.pas"/>
         <UnitName Value="ThoriumLibString"/>
         <TopLine Value="1"/>
         <CursorPos X="49" Y="7"/>
         <UsageCount Value="40"/>
-      </Unit59>
-      <Unit60>
+      </Unit54>
+      <Unit55>
         <Filename Value="usr\share\fpcsrc\rtl\inc\variant.inc"/>
         <TopLine Value="1009"/>
         <CursorPos X="5" Y="1011"/>
         <UsageCount Value="9"/>
-      </Unit60>
-      <Unit61>
+      </Unit55>
+      <Unit56>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\classes\classesh.inc"/>
         <TopLine Value="1672"/>
         <CursorPos X="14" Y="1698"/>
         <UsageCount Value="9"/>
-      </Unit61>
-      <Unit62>
+      </Unit56>
+      <Unit57>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\classes\persist.inc"/>
         <TopLine Value="68"/>
         <CursorPos X="2" Y="73"/>
         <UsageCount Value="4"/>
-      </Unit62>
-      <Unit63>
+      </Unit57>
+      <Unit58>
         <Filename Value="..\sg\fpc-edition\Main.pas"/>
         <UnitName Value="Main"/>
         <TopLine Value="1343"/>
         <CursorPos X="1" Y="1343"/>
         <UsageCount Value="4"/>
-      </Unit63>
-      <Unit64>
+      </Unit58>
+      <Unit59>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\typinfo.pp"/>
         <UnitName Value="typinfo"/>
         <TopLine Value="51"/>
         <CursorPos X="34" Y="69"/>
         <UsageCount Value="5"/>
-      </Unit64>
-      <Unit65>
+      </Unit59>
+      <Unit60>
         <Filename Value="thoriumlibstreams.pas"/>
         <UnitName Value="ThoriumLibStreams"/>
         <TopLine Value="1"/>
@@ -468,458 +438,485 @@
         <Bookmarks Count="1">
           <Item0 X="9" Y="70" ID="8"/>
         </Bookmarks>
-      </Unit65>
-      <Unit66>
+      </Unit60>
+      <Unit61>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\classes\streams.inc"/>
         <TopLine Value="445"/>
         <CursorPos X="3" Y="448"/>
         <UsageCount Value="5"/>
-      </Unit66>
-      <Unit67>
+      </Unit61>
+      <Unit62>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\sysutils\filutilh.inc"/>
         <TopLine Value="34"/>
         <CursorPos X="3" Y="56"/>
         <UsageCount Value="5"/>
-      </Unit67>
-      <Unit68>
+      </Unit62>
+      <Unit63>
         <Filename Value="packages\thoriumcorepkg\LICENSE.txt"/>
         <TopLine Value="1"/>
         <CursorPos X="72" Y="13"/>
         <UsageCount Value="5"/>
         <DefaultSyntaxHighlighter Value="None"/>
-      </Unit68>
-      <Unit69>
+      </Unit63>
+      <Unit64>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
         <UnitName Value="Thorium"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="2385"/>
-        <CursorPos X="37" Y="2424"/>
+        <TopLine Value="8061"/>
+        <CursorPos X="29" Y="8059"/>
         <UsageCount Value="100"/>
         <Bookmarks Count="1">
-          <Item0 X="5" Y="6050" ID="1"/>
+          <Item0 X="5" Y="6104" ID="1"/>
         </Bookmarks>
         <Loaded Value="True"/>
-      </Unit69>
-      <Unit70>
+      </Unit64>
+      <Unit65>
         <Filename Value="thoriumcorepkg.lpk"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="78"/>
         <DefaultSyntaxHighlighter Value="XML"/>
-      </Unit70>
-      <Unit71>
+      </Unit65>
+      <Unit66>
         <Filename Value="packages\thoriumcorepkg\thorium_globals.pas"/>
         <UnitName Value="Thorium_Globals"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1854"/>
-        <CursorPos X="26" Y="1886"/>
+        <TopLine Value="229"/>
+        <CursorPos X="155" Y="255"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
-      </Unit71>
-      <Unit72>
+      </Unit66>
+      <Unit67>
         <Filename Value="packages\thoriumcorepkg\thorium_utils.pas"/>
         <UnitName Value="Thorium_Utils"/>
         <WindowIndex Value="0"/>
         <TopLine Value="30"/>
         <CursorPos X="10" Y="58"/>
-        <UsageCount Value="84"/>
-      </Unit72>
-      <Unit73>
+        <UsageCount Value="83"/>
+      </Unit67>
+      <Unit68>
         <Filename Value="packages\thoriumlibpkg\thoriumlibstd.pas"/>
         <UnitName Value="ThoriumLibStd"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="8"/>
-        <CursorPos X="52" Y="43"/>
-        <UsageCount Value="5"/>
-      </Unit73>
-      <Unit74>
+        <TopLine Value="45"/>
+        <CursorPos X="65" Y="66"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit68>
+      <Unit69>
         <Filename Value="packages\thoriumlibpkg\thoriumlibstdio.pas"/>
         <UnitName Value="ThoriumLibStdIO"/>
-        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="32"/>
-        <CursorPos X="43" Y="59"/>
+        <TopLine Value="56"/>
+        <CursorPos X="13" Y="104"/>
         <UsageCount Value="38"/>
-        <Loaded Value="True"/>
-      </Unit74>
-      <Unit75>
+      </Unit69>
+      <Unit70>
         <Filename Value="packages\thoriumlibpkg\thoriumlibstreams.pas"/>
         <UnitName Value="ThoriumLibStreams"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="275"/>
-        <CursorPos X="105" Y="300"/>
+        <TopLine Value="277"/>
+        <CursorPos X="13" Y="325"/>
         <UsageCount Value="15"/>
-      </Unit75>
-      <Unit76>
+      </Unit70>
+      <Unit71>
         <Filename Value="packages\thoriumlibpkg\thoriumlibstring.pas"/>
         <UnitName Value="ThoriumLibString"/>
-        <TopLine Value="29"/>
-        <CursorPos X="27" Y="5"/>
-        <UsageCount Value="6"/>
-      </Unit76>
-      <Unit77>
+        <WindowIndex Value="0"/>
+        <TopLine Value="46"/>
+        <CursorPos X="13" Y="94"/>
+        <UsageCount Value="10"/>
+      </Unit71>
+      <Unit72>
         <Filename Value="..\liblua\lua.pas"/>
         <UnitName Value="Lua"/>
         <TopLine Value="49"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="5"/>
-      </Unit77>
-      <Unit78>
+      </Unit72>
+      <Unit73>
         <Filename Value="usr\share\fpcsrc\rtl\inc\except.inc"/>
         <TopLine Value="51"/>
         <CursorPos X="3" Y="55"/>
         <UsageCount Value="6"/>
-      </Unit78>
-      <Unit79>
+      </Unit73>
+      <Unit74>
         <Filename Value="usr\lib64\lazarus\examples\helloform.pp"/>
         <UnitName Value="HelloForm"/>
         <TopLine Value="18"/>
         <CursorPos X="57" Y="39"/>
         <UsageCount Value="6"/>
-      </Unit79>
-      <Unit80>
+      </Unit74>
+      <Unit75>
         <Filename Value="packages\thoriumcorepkg\CHANGELOG.txt"/>
         <TopLine Value="1"/>
         <CursorPos X="80" Y="4"/>
         <UsageCount Value="9"/>
         <DefaultSyntaxHighlighter Value="None"/>
-      </Unit80>
-      <Unit81>
+      </Unit75>
+      <Unit76>
         <Filename Value="packages\thoriumcorepkg\thoriumcorepkg.lpk~"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="6"/>
         <DefaultSyntaxHighlighter Value="None"/>
-      </Unit81>
-      <Unit82>
+      </Unit76>
+      <Unit77>
         <Filename Value="..\..\lcl\x3toolset-old\packages\x3toolsetpkg\x3types.pas"/>
         <UnitName Value="X3Types"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="6"/>
-      </Unit82>
-      <Unit83>
+      </Unit77>
+      <Unit78>
         <Filename Value="..\..\lcl\x3toolset-old\packages\x3toolsetpkg\x3toolsetpkg.pas"/>
         <UnitName Value="x3toolsetpkg"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="6"/>
-      </Unit83>
-      <Unit84>
+      </Unit78>
+      <Unit79>
         <Filename Value="..\..\lcl\stwfilebrowser\packages\stwtabcontrol\stwtabcontrol.pas"/>
         <UnitName Value="stwTabControl"/>
         <TopLine Value="1"/>
         <CursorPos X="3" Y="7"/>
         <UsageCount Value="6"/>
-      </Unit84>
-      <Unit85>
+      </Unit79>
+      <Unit80>
         <Filename Value="..\..\lcl\stwfilebrowser\packages\stwfilebrowser\stwfilebrowsercore.pas"/>
         <UnitName Value="stwFileBrowserCore"/>
         <TopLine Value="10"/>
         <CursorPos X="49" Y="40"/>
         <UsageCount Value="6"/>
-      </Unit85>
-      <Unit86>
+      </Unit80>
+      <Unit81>
         <Filename Value="releases\thorium-1.0.4.0\packages\thoriumcorepkg\thorium_utils.pas"/>
         <UnitName Value="Thorium_Utils"/>
         <TopLine Value="1"/>
         <CursorPos X="23" Y="35"/>
         <UsageCount Value="8"/>
-      </Unit86>
-      <Unit87>
+      </Unit81>
+      <Unit82>
         <Filename Value="packages\thoriumlibpkg\CHANGELOG.txt"/>
         <TopLine Value="1"/>
         <CursorPos X="41" Y="3"/>
         <UsageCount Value="6"/>
         <DefaultSyntaxHighlighter Value="None"/>
-      </Unit87>
-      <Unit88>
+      </Unit82>
+      <Unit83>
         <Filename Value="..\packages\virtualtreeview-new\VirtualTrees.pas"/>
         <UnitName Value="VirtualTrees"/>
         <TopLine Value="10048"/>
         <CursorPos X="15" Y="10073"/>
         <UsageCount Value="6"/>
-      </Unit88>
-      <Unit89>
+      </Unit83>
+      <Unit84>
         <Filename Value="..\packages\luipack\lclextensions\delphicompat.pas"/>
         <UnitName Value="DelphiCompat"/>
         <TopLine Value="130"/>
         <CursorPos X="36" Y="155"/>
         <UsageCount Value="6"/>
-      </Unit89>
-      <Unit90>
+      </Unit84>
+      <Unit85>
         <Filename Value="packages\th234pkg\th234.pas"/>
         <UnitName Value="Th234"/>
         <TopLine Value="40"/>
         <CursorPos X="48" Y="56"/>
         <UsageCount Value="9"/>
-      </Unit90>
-      <Unit91>
+      </Unit85>
+      <Unit86>
         <Filename Value="scripts\testscript.records.txt"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="3"/>
         <DefaultSyntaxHighlighter Value="None"/>
-      </Unit91>
-      <Unit92>
+      </Unit86>
+      <Unit87>
         <Filename Value="scripts\testscript.expressions.txt"/>
         <IsPartOfProject Value="True"/>
         <TopLine Value="1"/>
         <CursorPos X="60" Y="10"/>
-        <UsageCount Value="180"/>
+        <UsageCount Value="186"/>
         <DefaultSyntaxHighlighter Value="None"/>
-      </Unit92>
-      <Unit93>
+      </Unit87>
+      <Unit88>
         <Filename Value="usr\share\fpcsrc\rtl\linux\linux.pp"/>
         <UnitName Value="Linux"/>
         <TopLine Value="15"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="1"/>
-      </Unit93>
-      <Unit94>
+      </Unit88>
+      <Unit89>
         <Filename Value="usr\share\fpcsrc\rtl\unix\bunxovlh.inc"/>
         <TopLine Value="26"/>
         <CursorPos X="48" Y="51"/>
         <UsageCount Value="1"/>
-      </Unit94>
-      <Unit95>
+      </Unit89>
+      <Unit90>
         <Filename Value="usr\share\fpcsrc\rtl\unix\bunxovl.inc"/>
         <TopLine Value="147"/>
         <CursorPos X="6" Y="153"/>
         <UsageCount Value="1"/>
-      </Unit95>
-      <Unit96>
+      </Unit90>
+      <Unit91>
         <Filename Value="usr\share\fpcsrc\rtl\linux\signal.inc"/>
         <TopLine Value="155"/>
         <CursorPos X="21" Y="186"/>
         <UsageCount Value="1"/>
-      </Unit96>
-      <Unit97>
+      </Unit91>
+      <Unit92>
         <Filename Value="examples\records\recordslib.pas"/>
         <UnitName Value="recordslib"/>
         <TopLine Value="1"/>
         <CursorPos X="17" Y="5"/>
         <UsageCount Value="8"/>
-      </Unit97>
-      <Unit98>
+      </Unit92>
+      <Unit93>
         <Filename Value="examples\records\records.pas"/>
         <UnitName Value="records"/>
         <TopLine Value="1"/>
         <CursorPos X="27" Y="5"/>
         <UsageCount Value="8"/>
-      </Unit98>
-      <Unit99>
+      </Unit93>
+      <Unit94>
         <Filename Value="thorium_defaultcompiler.pas"/>
         <UnitName Value="Thorium_DefaultCompiler"/>
         <TopLine Value="1"/>
         <CursorPos X="7" Y="13"/>
         <UsageCount Value="30"/>
-      </Unit99>
-      <Unit100>
+      </Unit94>
+      <Unit95>
         <Filename Value="usr\share\fpcsrc\rtl\objpas\classes\intf.inc"/>
         <TopLine Value="170"/>
         <CursorPos X="9" Y="188"/>
         <UsageCount Value="9"/>
-      </Unit100>
-      <Unit101>
+      </Unit95>
+      <Unit96>
         <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
         <UnitName Value="Thorium_DefaultCompiler"/>
-        <EditorIndex Value="2"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="2685"/>
-        <CursorPos X="90" Y="2722"/>
         <ExtraEditorCount Value="1"/>
+        <ExtraEditor1>
+          <WindowIndex Value="0"/>
+          <TopLine Value="106"/>
+          <CursorPos X="1" Y="1"/>
+        </ExtraEditor1>
         <UsageCount Value="78"/>
-        <Loaded Value="True"/>
-      </Unit101>
-      <Unit102>
+      </Unit96>
+      <Unit97>
         <Filename Value="releases\thorium-1.0.6.1\packages\thoriumcorepkg\thorium_globals.pas"/>
         <UnitName Value="Thorium_Globals"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2141"/>
         <CursorPos X="42" Y="2196"/>
         <UsageCount Value="11"/>
-      </Unit102>
-      <Unit103>
+      </Unit97>
+      <Unit98>
         <Filename Value="releases\thorium-1.0.6.1\packages\thoriumcorepkg\thorium.pas"/>
         <UnitName Value="Thorium"/>
         <WindowIndex Value="0"/>
         <TopLine Value="9822"/>
         <CursorPos X="67" Y="11912"/>
         <UsageCount Value="9"/>
-      </Unit103>
-      <Unit104>
+      </Unit98>
+      <Unit99>
         <Filename Value="packages\thoriumcorepkg\Thorium_InstructionConstructors.inc"/>
-        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1584"/>
         <CursorPos X="41" Y="1601"/>
         <UsageCount Value="54"/>
-        <Loaded Value="True"/>
-      </Unit104>
-      <Unit105>
+      </Unit99>
+      <Unit100>
         <Filename Value="usr\share\fpcsrc\packages\fcl-base\src\contnrs.pp"/>
         <UnitName Value="contnrs"/>
         <TopLine Value="176"/>
         <CursorPos X="34" Y="205"/>
         <UsageCount Value="9"/>
-      </Unit105>
-      <Unit106>
+      </Unit100>
+      <Unit101>
         <Filename Value="packages\thoriumcorepkg\thorium_objectinstructions.pas"/>
         <UnitName Value="Thorium_ObjectInstructions"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="11" Y="53"/>
         <UsageCount Value="4"/>
-      </Unit106>
-      <Unit107>
+      </Unit101>
+      <Unit102>
         <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\inc\objpash.inc"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="331"/>
-        <CursorPos X="82" Y="335"/>
-        <UsageCount Value="12"/>
-      </Unit107>
-      <Unit108>
+        <TopLine Value="165"/>
+        <CursorPos X="44" Y="165"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit102>
+      <Unit103>
         <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\objpas\sysutils\sysstrh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="173"/>
         <CursorPos X="10" Y="173"/>
         <UsageCount Value="12"/>
-      </Unit108>
-      <Unit109>
+      </Unit103>
+      <Unit104>
         <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\objpas\fgl.pp"/>
         <UnitName Value="fgl"/>
-        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="215"/>
         <CursorPos X="14" Y="243"/>
         <UsageCount Value="12"/>
+      </Unit104>
+      <Unit105>
+        <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\objpas\typinfo.pp"/>
+        <UnitName Value="typinfo"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="152"/>
+        <CursorPos X="77" Y="152"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
-      </Unit109>
+      </Unit105>
+      <Unit106>
+        <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\inc\variants.pp"/>
+        <UnitName Value="variants"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="2773"/>
+        <CursorPos X="14" Y="2829"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit106>
+      <Unit107>
+        <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\inc\varianth.inc"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="34" Y="40"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit107>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="3883" Column="50" TopLine="3867"/>
+        <Caret Line="6646" Column="21" TopLine="6618"/>
       </Position1>
       <Position2>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="11334" Column="60" TopLine="11312"/>
+        <Caret Line="6714" Column="55" TopLine="6686"/>
       </Position2>
       <Position3>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="4028" Column="48" TopLine="4003"/>
+        <Caret Line="6771" Column="60" TopLine="6750"/>
       </Position3>
       <Position4>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="11636" Column="58" TopLine="11609"/>
+        <Caret Line="7035" Column="24" TopLine="7009"/>
       </Position4>
       <Position5>
-        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
-        <Caret Line="1155" Column="5" TopLine="1136"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="7205" Column="64" TopLine="7173"/>
       </Position5>
       <Position6>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="10324" Column="44" TopLine="10307"/>
+        <Caret Line="7178" Column="24" TopLine="7150"/>
       </Position6>
       <Position7>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="10314" Column="16" TopLine="10292"/>
+        <Caret Line="7162" Column="31" TopLine="7150"/>
       </Position7>
       <Position8>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="10312" Column="23" TopLine="10292"/>
+        <Caret Line="7179" Column="30" TopLine="7150"/>
       </Position8>
       <Position9>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="8947" Column="22" TopLine="8946"/>
+        <Caret Line="7213" Column="24" TopLine="7165"/>
       </Position9>
       <Position10>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="10314" Column="23" TopLine="10292"/>
+        <Caret Line="7353" Column="24" TopLine="7308"/>
       </Position10>
       <Position11>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="1971" Column="33" TopLine="1943"/>
+        <Caret Line="7346" Column="58" TopLine="7318"/>
       </Position11>
       <Position12>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="8946" Column="52" TopLine="8918"/>
+        <Caret Line="7567" Column="66" TopLine="7540"/>
       </Position12>
       <Position13>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="9302" Column="40" TopLine="9274"/>
+        <Caret Line="7579" Column="14" TopLine="7568"/>
       </Position13>
       <Position14>
-        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
-        <Caret Line="1155" Column="5" TopLine="1136"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="7678" Column="34" TopLine="7651"/>
       </Position14>
       <Position15>
-        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
-        <Caret Line="2750" Column="65" TopLine="2722"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="7732" Column="60" TopLine="7685"/>
       </Position15>
       <Position16>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="10314" Column="15" TopLine="10307"/>
+        <Caret Line="7744" Column="29" TopLine="7716"/>
       </Position16>
       <Position17>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="2006" Column="40" TopLine="1981"/>
+        <Caret Line="7863" Column="29" TopLine="7835"/>
       </Position17>
       <Position18>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="1066" Column="55" TopLine="488"/>
+        <Caret Line="1376" Column="15" TopLine="1380"/>
       </Position18>
       <Position19>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="13087" Column="42" TopLine="13045"/>
+        <Caret Line="7895" Column="16" TopLine="7852"/>
       </Position19>
       <Position20>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="13084" Column="5" TopLine="13056"/>
+        <Caret Line="2843" Column="86" TopLine="2830"/>
       </Position20>
       <Position21>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="13112" Column="54" TopLine="13071"/>
+        <Caret Line="7897" Column="29" TopLine="7875"/>
       </Position21>
       <Position22>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="13723" Column="11" TopLine="13674"/>
+        <Caret Line="7921" Column="114" TopLine="7893"/>
       </Position22>
       <Position23>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="13722" Column="13" TopLine="13674"/>
+        <Caret Line="7936" Column="29" TopLine="7900"/>
       </Position23>
       <Position24>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="2414" Column="25" TopLine="2385"/>
+        <Caret Line="8059" Column="29" TopLine="8031"/>
       </Position24>
       <Position25>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="2508" Column="27" TopLine="2485"/>
+        <Filename Value="packages\thoriumlibpkg\thoriumlibstd.pas"/>
+        <Caret Line="91" Column="13" TopLine="44"/>
       </Position25>
       <Position26>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="13718" Column="18" TopLine="13667"/>
+        <Filename Value="packages\thoriumlibpkg\thoriumlibstd.pas"/>
+        <Caret Line="74" Column="20" TopLine="45"/>
       </Position26>
       <Position27>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="2413" Column="18" TopLine="2387"/>
+        <Filename Value="packages\thoriumlibpkg\thoriumlibstd.pas"/>
+        <Caret Line="75" Column="13" TopLine="45"/>
       </Position27>
       <Position28>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="2773" Column="30" TopLine="2765"/>
+        <Filename Value="packages\thoriumlibpkg\thoriumlibstd.pas"/>
+        <Caret Line="81" Column="48" TopLine="45"/>
       </Position28>
       <Position29>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="13716" Column="73" TopLine="13668"/>
+        <Filename Value="scripttest.pas"/>
+        <Caret Line="37" Column="69" TopLine="20"/>
       </Position29>
       <Position30>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="13715" Column="10" TopLine="13667"/>
+        <Filename Value="scripttest.pas"/>
+        <Caret Line="46" Column="24" TopLine="15"/>
       </Position30>
     </JumpHistory>
   </ProjectOptions>

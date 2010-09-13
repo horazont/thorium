@@ -71,15 +71,15 @@ begin
   RegisterNativeCallFunction(
     'length',
     @LibStd_length,
-    [htString],
-    htPtrInt,
+    [TypeInfo(String)],
+    TypeInfo(PtrInt),
     ncRegister
   );
   RegisterNativeCallFunction(
     'format',
     @LibStd_format,
-    [htString, htArray or htAny],
-    htString,
+    [TypeInfo(String), TypeInfo(array of const)],
+    TypeInfo(String),
     ncRegister
   );
   RegisterNativeCallFunction(
@@ -89,11 +89,12 @@ begin
     htInt64,
     ncRegister
   );
+  inherited;
 end;
 
 class function TThoriumLibStd.GetName: String;
 begin
-  Result := 'core.std';
+  Result := 'thorium.std';
 end;
 
 end.
