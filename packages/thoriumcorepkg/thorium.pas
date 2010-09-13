@@ -660,11 +660,13 @@ type
 
   TThoriumType = class (TThoriumHashableObject, IUnknown)
   public
-    constructor Create;
+    constructor Create(AThorium: TThorium);
   private
     FName: String;
 //    FLazy: Boolean;
     FReferences: LongInt;
+  protected
+    FThorium: TThorium;
   protected // IUnknown
     function _AddRef : longint;stdcall;
     function _Release : longint;stdcall;
@@ -921,7 +923,7 @@ type
 
   TThoriumTypeHostFunction = class (TThoriumType, IThoriumCallable)
   public
-    constructor Create(const AHostFunction: TThoriumHostCallableBase);
+    constructor Create(const AThorium: TThorium; const AHostFunction: TThoriumHostCallableBase);
   private
     FHostFunction: TThoriumHostCallableBase;
     FParameters: TThoriumParameters;
@@ -946,7 +948,7 @@ type
 
   TThoriumTypeHostType = class (TThoriumType)
   public
-    constructor Create(const AHostType: TThoriumHostObjectType);
+    constructor Create(const AThorium: TThorium; const AHostType: TThoriumHostObjectType);
   private
     FHostType: TThoriumHostObjectType;
   protected
@@ -963,7 +965,7 @@ type
 
   TThoriumTypeStruct = class (TThoriumType)
   public
-    constructor Create;
+    constructor Create(AThorium: TThorium);
     destructor Destroy; override;
   private
     FCount: Integer;
@@ -990,20 +992,20 @@ type
 
   TThoriumTypeArray = class (TThoriumType)
   public
-    constructor Create(const ValueType: TThoriumType = nil);
-    destructor Destroy; override;
+    constructor CreateStatic(const AThorium: TThorium; const AValueType: TThoriumType; const Min, Max: TThoriumInteger);
+    constructor CreateDynamic(const AThorium: TThorium; const AValueType: TThoriumType);
   private
+    FValueType: TThoriumType;
     FArrayDimensionKind: TThoriumArrayKind;
     FArrayDimensionMax: TThoriumInteger;
     FArrayDimensionMin: TThoriumInteger;
-    FValueType: TThoriumType;
   protected
     function GetTypeKind: TThoriumTypeKind; override;
   public
-    property ArrayDimensionKind: TThoriumArrayKind read FArrayDimensionKind write FArrayDimensionKind;
-    property ArrayDimensionMax: TThoriumInteger read FArrayDimensionMax write FArrayDimensionMax;
-    property ArrayDimensionMin: TThoriumInteger read FArrayDimensionMin write FArrayDimensionMin;
-    property ValueType: TThoriumType read FValueType write FValueType;
+    property ArrayDimensionKind: TThoriumArrayKind read FArrayDimensionKind;
+    property ArrayDimensionMax: TThoriumInteger read FArrayDimensionMax;
+    property ArrayDimensionMin: TThoriumInteger read FArrayDimensionMin;
+    property ValueType: TThoriumType read FValueType;
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType=nil; const ExName: String = ''): Boolean; override;
@@ -2038,8 +2040,6 @@ type
     procedure SaveTable;
     procedure SetupFunction(AFunction: TThoriumFunction;
       const AEntryPoint: Integer; const AName: String);
-    procedure StoreType(AType: TThoriumType);
-    function TypeSpecByName(TypeName: String; out TypeSpec: TThoriumType): Boolean;
   public
     function CompileFromStream(SourceStream: TStream; Flags: TThoriumCompilerFlags = [cfOptimize]): Boolean; virtual; abstract;
   end;
@@ -2370,6 +2370,9 @@ type
     property OnCompilerOutput: TThoriumOnCompilerOutput read FOnCompilerOutput write FOnCompilerOutput;
     property OnOpenModule: TThoriumOnOpenModule read FOnOpenModule write FOnOpenModule;
     property OnRequireModule: TThoriumOnRequireModule read FOnRequireModule write FOnRequireModule;
+    property TypeFloat: TThoriumTypeFloat read FTypeFloat;
+    property TypeInteger: TThoriumTypeInteger read FTypeInteger;
+    property TypeString: TThoriumTypeString read FTypeString;
     property VirtualMachine: TThoriumVirtualMachine read FVirtualMachine;
   end;
 
@@ -4026,7 +4029,7 @@ begin
   end;
 end;
 
-procedure ThoriumVarTypeToTypeSpec(VarType: TThoriumHostType; var TypeSpec: TThoriumType);
+(*procedure ThoriumVarTypeToTypeSpec(VarType: TThoriumHostType; var TypeSpec: TThoriumType);
 begin
   case VarType and (htSizeSection or htTypeSection) of
     htIntS8, htIntS16, htIntS32, htIntS64,
@@ -4049,7 +4052,7 @@ begin
   else
     raise EThoriumException.CreateFmt('Invalid value for VarType (%d) in ThoriumVarTypeToTypeSpec.', [VarType]);
   end;
-end;
+end;*)
 
 procedure ThoriumFreeValue(var AValue: TThoriumValue);
 begin
@@ -4491,11 +4494,12 @@ end;
 
 { TThoriumType }
 
-constructor TThoriumType.Create;
+constructor TThoriumType.Create(AThorium: TThorium);
 begin
 //  FName := AName;
   FName := 'lambda:type';
   FReferences := 0;
+  FThorium := AThorium;
 end;
 
 function TThoriumType._AddRef: longint; stdcall;
@@ -4884,7 +4888,7 @@ begin
       begin
         if TheObject is TThoriumTypeInteger then
         begin
-          Operation.ResultType := TThoriumTypeFloat.Create();
+          Operation.ResultType := FThorium.FTypeFloat;
           Operation.Casts[0].Needed := True;
           Operation.Casts[0].Instruction := TThoriumInstructionCAST(castif(0, 0));
           Operation.Casts[0].TargetType := Operation.ResultType;
@@ -5078,7 +5082,7 @@ end;
 function TThoriumTypeInteger.DoDivision(const AValue, BValue: TThoriumValue
   ): TThoriumValue;
 begin
-  Result.RTTI := TThoriumTypeFloat.Create;
+  Result.RTTI := FThorium.FTypeFloat;
   Result.Float := AValue.Int / BValue.Int;
 end;
 
@@ -5449,7 +5453,7 @@ begin
   begin
     if Name = 'length' then
     begin
-      Operation.ResultType := TThoriumTypeInteger.Create;
+      Operation.ResultType := FThorium.FTypeInteger;
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := False;
       Operation.OperationInstruction := OperationInstructionDescription(noop(0, 0, 0, 0), -1, -1, -1);
@@ -5559,13 +5563,20 @@ end;
 
 function TThoriumTypeString.DoGetField(const AValue: TThoriumValue;
   const AFieldID: QWord): TThoriumValue;
-var
-  Intf: TThoriumType;
 begin
-  Intf := TThoriumTypeInteger.Create;
+  {$ifdef DebugToConsole}
   case AFieldID of
-    0: Result := Intf.DoCreate(InitialData(Length(AValue.Str^)));
+    0:
+    begin
+      Result.RTTI := FThorium.FTypeInteger;
+      Result.Int := Length(AValue.Str^);
+    end;
   end;
+  {$else}
+  case AFieldID of
+    0: Result.Int := Length(AValue.Str^);
+  end;
+  {$endif}
 end;
 
 function TThoriumTypeString.DoGetIndexed(const AValue: TThoriumValue;
@@ -5654,12 +5665,13 @@ end;
 
 { TThoriumTypeHostFunction }
 
-constructor TThoriumTypeHostFunction.Create(const AHostFunction: TThoriumHostCallableBase);
+constructor TThoriumTypeHostFunction.Create(const AThorium: TThorium;
+  const AHostFunction: TThoriumHostCallableBase);
 var
   I: Integer;
   TypeSpec: TThoriumType;
 begin
-  inherited Create;
+  inherited Create(AThorium);
   for I := 0 to AHostFunction.FParameters.Count - 1 do
   begin
     TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(TypeInfo(AHostFunction.FParameters));
@@ -5701,9 +5713,10 @@ end;
 
 { TThoriumTypeHostType }
 
-constructor TThoriumTypeHostType.Create(const AHostType: TThoriumHostObjectType);
+constructor TThoriumTypeHostType.Create(const AThorium: TThorium;
+  const AHostType: TThoriumHostObjectType);
 begin
-  inherited Create;
+  inherited Create(AThorium);
   FHostType := AHostType;
 end;
 
@@ -5727,9 +5740,9 @@ end;
 
 { TThoriumTypeStruct }
 
-constructor TThoriumTypeStruct.Create;
+constructor TThoriumTypeStruct.Create(AThorium: TThorium);
 begin
-  inherited;
+  inherited Create(AThorium);
   FCount := 0;
 end;
 
@@ -5844,19 +5857,28 @@ end;
 
 { TThoriumTypeArray }
 
-constructor TThoriumTypeArray.Create(const ValueType: TThoriumType);
+constructor TThoriumTypeArray.CreateStatic(const AThorium: TThorium; const AValueType: TThoriumType;
+  const Min, Max: TThoriumInteger);
 begin
-  inherited Create;
-  FValueType := nil;
+  if Max < Min then
+    raise EThoriumException.CreateFmt('Invalid array boundaries (min = %d, max = %d).', [Min, Max]);
+  if ValueType = nil then
+    raise EThoriumException.Create('Array value type must not be nil.');
+  inherited Create(AThorium);
+  FValueType := ValueType;
   FArrayDimensionKind := akStatic;
-  FArrayDimensionMax := 0;
-  FArrayDimensionMin := 0;
+  FArrayDimensionMax := Max;
+  FArrayDimensionMin := Min;
 end;
 
-destructor TThoriumTypeArray.Destroy;
+constructor TThoriumTypeArray.CreateDynamic(const AThorium: TThorium; const AValueType: TThoriumType);
 begin
-  FValueType := nil;
-  inherited Destroy;
+  if ValueType = nil then
+    raise EThoriumException.Create('Array value type must not be nil.');
+  inherited Create(AThorium);
+  FArrayDimensionKind := akDynamic;
+  FArrayDimensionMin := 0;
+  FArrayDimensionMax := 0;
 end;
 
 function TThoriumTypeArray.GetTypeKind: TThoriumTypeKind;
@@ -5873,31 +5895,39 @@ begin
     case Operation.Operation of
       opAddition:
       begin
+        if FArrayDimensionKind = akStatic then
+          Exit(False);
         Operation.ResultType := Self;
         Operation.Casts[0].Needed := False;
         Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(0, 0, 0, 0)), 0, 0, 0);
+        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
+        Exit(True);
       end;
       opMultiplication:
       begin
+        if FArrayDimensionKind = akStatic then
+          Exit(False);
         Operation.ResultType := Self;
         Operation.Casts[0].Needed := False;
         Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(0, 0, 0, 0)), 0, 0, 0);
+        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
+        Exit(True);
       end;
       opCmpEqual:
       begin
-        Operation.ResultType := TThoriumTypeInteger.Create();
+        Operation.ResultType := FThorium.FTypeInteger;
         Operation.Casts[0].Needed := False;
         Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(0, 0, 0, 0)), 0, 0, 0);
+        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
+        Exit(True);
       end;
       opCmpNotEqual:
       begin
-        Operation.ResultType := TThoriumTypeInteger.Create();
+        Operation.ResultType := FThorium.FTypeInteger;
         Operation.Casts[0].Needed := False;
         Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(0, 0, 0, 0)), 0, 0, 0);
+        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
+        Exit(True);
       end;
     else
       Exit(False);
@@ -6156,7 +6186,7 @@ end;
 
 constructor TThoriumHostObjectType.Create(ALibrary: TThoriumLibrary);
 begin
-  inherited Create;
+  inherited Create(ALibrary.FThorium);
   FLibrary := ALibrary;
   FHashGenerated := False;
 end;
@@ -7734,7 +7764,7 @@ end;
 
 procedure TThoriumHostCallableBase.CreatePrototype;
 begin
-  FPrototype := TThoriumTypeHostFunction.Create(Self);
+  FPrototype := TThoriumTypeHostFunction.Create(FLibrary.FThorium, Self);
 end;
 
 { TThoriumExternalFunctionSimple }
@@ -9259,41 +9289,6 @@ procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
     ALibrary.LookupIdentifier(Ident, Entries);
   end;
 
-  procedure ScanGlobalSymbolTable;
-  var
-    Match: TThoriumTableEntryResult;
-  begin
-    // There is no [del]spoon[/del] global symbol table.
-    Match.SourceLibrary := nil;
-    Match.SourceModule := nil;
-    FillByte(Match.Entry, SizeOf(TThoriumTableEntry), 0);
-
-    if Ident = 'int' then
-    begin
-      Match.Entry._Type := ttType;
-      Match.Entry.TypeSpec := TThoriumTypeInteger.Create;
-      AppendTableEntry(Entries, Match);
-    end
-    else if Ident = 'string' then
-    begin
-      Match.Entry._Type := ttType;
-      Match.Entry.TypeSpec := TThoriumTypeString.Create;
-      AppendTableEntry(Entries, Match);
-    end
-    else if Ident = 'float' then
-    begin
-      Match.Entry._Type := ttType;
-      Match.Entry.TypeSpec := TThoriumTypeFloat.Create;
-      AppendTableEntry(Entries, Match);
-    end
-    else if Ident = 'void' then
-    begin
-      Match.Entry._Type := ttType;
-      Match.Entry.TypeSpec := nil;
-      AppendTableEntry(Entries, Match);
-    end;
-  end;
-
 // Search all accessible modules and contexts for entries matching the
 // identifier Ident.
 // Scan order:
@@ -9309,7 +9304,6 @@ begin
     ScanIncludedModule(FRequiredModules[I]);
   for I := 0 to FRequiredLibraries.Count - 1 do
     ScanIncludedLibrary(FRequiredLibraries[I]);
-  //ScanGlobalSymbolTable;
 end;
 
 procedure TThoriumCustomCompiler.ForceNewCustomOperation(
@@ -10372,60 +10366,6 @@ procedure TThoriumCustomCompiler.SetupFunction(AFunction: TThoriumFunction;
 begin
   AFunction.FEntryPoint := AEntryPoint;
   AFunction.FName := AName;
-end;
-
-procedure TThoriumCustomCompiler.StoreType(AType: TThoriumType);
-begin
-  FStoredTypes.Add(AType);
-end;
-
-function TThoriumCustomCompiler.TypeSpecByName(TypeName: String; out
-  TypeSpec: TThoriumType): Boolean;
-begin
-  TypeName := ThoriumCase(TypeName);
-  if TypeName = THORIUM_TYPE_NAME_INTEGER then
-  begin
-    TypeSpec := TThoriumTypeInteger.Create;
-    Exit(True);
-  end
-  else if TypeName = THORIUM_TYPE_NAME_STRING then
-  begin
-    TypeSpec := TThoriumTypeString.Create;
-    Exit(True);
-  end
-  else if TypeName = THORIUM_TYPE_NAME_FLOAT then
-  begin
-    TypeSpec := TThoriumTypeFloat.Create;
-    Exit(True);
-  end
-  else
-  begin
-
-  end;
-
-  (*function TypeSpecByName(Ident: String; var TypeSpec: TThoriumType; AllowExtended: Boolean): Boolean; inline;
-  // Converts a type identifier to a complete type spec structure.
-  begin
-    Ident := ThoriumCase(Ident);
-    TypeSpec.BuiltInType := BuiltInType(Ident);
-    if (TypeSpec.BuiltInType <> btUnknown) then
-    begin
-      Result := True;
-      TypeSpec.ValueType := vtBuiltIn;
-      Exit;
-    end;
-    if (AllowExtended) and (FThorium <> nil) then
-    begin
-      TypeSpec.Extended := FModule.FindHostObjectType(Ident); //FThorium.FExtendedTypeRegistry.GetTypeByName(Ident);
-      if TypeSpec.Extended <> nil then
-      begin
-        Result := True;
-        TypeSpec.ValueType := vtExtendedType;
-        Exit;
-      end;
-    end;
-    Result := False;
-  end; *)
 end;
 
 {%ENDREGION}
@@ -13329,7 +13269,7 @@ var
 procedure TThoriumLibCore.InitializeLibrary;
 begin
   Test := @FName;
-  RegisterType('int', TThoriumTypeInteger.Create, [
+  RegisterType('int', TThoriumTypeInteger.Create(FThorium), [
     TypeInfo(Byte),
     TypeInfo(SmallInt),
     TypeInfo(Word),
@@ -13340,12 +13280,12 @@ begin
     TypeInfo(Int64){,
     TypeInfo(TThoriumInteger)}
   ]);
-  RegisterType('string', TThoriumTypeString.Create, [
+  RegisterType('string', TThoriumTypeString.Create(FThorium), [
     TypeInfo(UTF8String),
     TypeInfo(AnsiString){,
     TypeInfo(TThoriumString)}
   ]);
-  RegisterType('float', TThoriumTypeFloat.Create, [
+  RegisterType('float', TThoriumTypeFloat.Create(FThorium), [
     TypeInfo(Float),
     TypeInfo(Double),
     TypeInfo(Extended){,

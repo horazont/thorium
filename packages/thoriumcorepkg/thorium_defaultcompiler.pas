@@ -913,8 +913,6 @@ begin
       // But return it statically
       AState := vsStatic;
       AStaticValue := Result.DoCreate(InitialData);
-      // Make sure the type is not freed prematurely
-      StoreType(Result);
       Proceed;
     end;
     tsFloatValue:
@@ -926,7 +924,6 @@ begin
         CompilerError('Internal compiler error: Cannot create float value.');
       AState := vsStatic;
       AStaticValue := Result.DoCreate(InitialData);
-      StoreType(Result);
       Proceed;
     end;
     tsStringValue:
@@ -943,7 +940,6 @@ begin
       // Sadly, we need some static handling here.
       AStaticValue.RTTI := Result;
       AStaticValue.Str := NewStr(FCurrentStr);
-      StoreType(Result);
       Proceed;
     end;
     tsIdentifier:
@@ -1577,7 +1573,7 @@ begin
     // Attempt to evaluate static values during compile time
     if (State1 = vsStatic) and (State2 = vsStatic) then
     begin
-      ResultValue.RTTI := TThoriumTypeInteger.Create;
+      ResultValue.RTTI := FThorium.TypeInteger;
       if TThoriumType.PerformCmpOperation(Value1, Operation, @Value2) then
         ResultValue.Int := 1
       else
@@ -1585,8 +1581,7 @@ begin
       ThoriumFreeValue(Value1);
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
-      StoreType(Value1.RTTI);
-      Result := TThoriumTypeInteger.Create;
+      Result := ResultValue.RTTI;
       Continue;
     end;
 
@@ -1612,9 +1607,8 @@ begin
     else
       CompilerError('Invalid relational operator.');
     end;
-    { TODO : ToDo: Avoid explicit type usage. }
     if not (Result is TThoriumTypeInteger) then
-      Result := TThoriumTypeInteger.Create;
+      Result := FThorium.TypeInteger;
     State1 := vsDynamic;
 
     ReleaseRegister(RegID2);
@@ -1667,7 +1661,6 @@ begin
       ThoriumFreeValue(Value1);
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
-      StoreType(Value1.RTTI);
       Continue;
     end;
 
@@ -2951,7 +2944,6 @@ begin
       ThoriumFreeValue(Value1);
       ThoriumFreeValue(Value2);
       Value1 := ResultValue;
-      StoreType(Value1.RTTI);
       Continue;
     end;
 
