@@ -51,6 +51,12 @@ type
     2: (I64: Int64);
   end;
 
+  TThoriumFPCArrayHeader = packed record
+    References: SizeInt;
+    Len: SizeInt;
+  end;
+  PThoriumFPCArrayHeader = ^TThoriumFPCArrayHeader;
+
 (* This function converts a Cardinal value to a UTF-8 encoded string. *)
 function UTF8Chr(Value: Cardinal): String;
 

@@ -1010,7 +1010,15 @@ type
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType=nil; const ExName: String = ''): Boolean; override;
     function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
+    function HasIndexedAccess: Boolean; override;
     function NeedsClear: Boolean; override;
+
+    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
+       ): TThoriumValue; override;
+    function DoGetIndexed(const AValue: TThoriumValue;
+       const AIndex: TThoriumValue): TThoriumValue; override;
+    procedure DoSetIndexed(const AValue: TThoriumValue;
+       const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
   end;
 
     (* A set of values processable by Thorium representing the complete register
@@ -5890,7 +5898,18 @@ function TThoriumTypeArray.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
   const ExName: String): Boolean;
 begin
-  if TheObject.IsEqualTo(Self) then
+  if Operation.Operation = opFieldRead then
+  begin
+    if ExName = ThoriumCase('length') then
+    begin
+      Operation.ResultType := FThorium.FTypeInteger;
+      Operation.Casts[0].Needed := False;
+      Operation.Casts[1].Needed := False;
+      Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
+      Exit(True);
+    end;
+  end
+  else if TheObject.IsEqualTo(Self) then
   begin
     case Operation.Operation of
       opAddition:
@@ -5956,9 +5975,38 @@ begin
   Result := True;
 end;
 
+function TThoriumTypeArray.HasIndexedAccess: Boolean;
+begin
+  Result := True;
+end;
+
 function TThoriumTypeArray.NeedsClear: Boolean;
 begin
   Result := True;
+end;
+
+function TThoriumTypeArray.DoGetField(const AValue: TThoriumValue;
+  const AFieldID: QWord): TThoriumValue;
+begin
+  case AFieldID of
+    0:
+    begin
+      Result.RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
+      Result.Int := PThoriumFPCArrayHeader(AValue.ThArray-SizeOf(TThoriumFPCArrayHeader))^.Len;
+    end;
+  end;
+end;
+
+function TThoriumTypeArray.DoGetIndexed(const AValue: TThoriumValue;
+  const AIndex: TThoriumValue): TThoriumValue;
+begin
+
+end;
+
+procedure TThoriumTypeArray.DoSetIndexed(const AValue: TThoriumValue;
+  const AIndex: TThoriumValue; const NewValue: TThoriumValue);
+begin
+  inherited DoSetIndexed(AValue, AIndex, NewValue);
 end;
 
 {%ENDREGION}
