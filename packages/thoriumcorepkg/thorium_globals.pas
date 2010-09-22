@@ -37,7 +37,7 @@ uses
 
 {%REGION 'Versioning'}
 const
-  THORIUM_FILE_VERSION = 18;
+  THORIUM_FILE_VERSION = 19;
 
   THORIUM_MAJOR_VERSION : Word = 1;
   THORIUM_MINOR_VERSION : Word = 0;
@@ -475,6 +475,10 @@ type
     tiVA_I8S, tiVA_I16S, tiVA_I32S, tiVA_I64S,
     tiVA_F32, tiVA_F64, tiVA_F80, tiVA_S, tiVA_X,
     tiVASTART_T, tiVAT_F, tiVAT_I, tiVAT_S, tiVAT_X, tiVAFINISH,
+    tiTOSTR_I, tiTOSTR_F,
+    tiREF, tiDEREF,
+    tiLEN_S, tiLEN_A,
+    tiUPDATE_X,
     tiJMP,
     tiJE, tiJNE, tiJGT, tiJGE, tiJLT, tiJLE,
     tiCALL,
@@ -1859,6 +1863,68 @@ type
     CodeLine: Cardinal;
   end;
 
+  TThoriumInstructionTOSTR_I = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    TRI: Word;
+    Reserved: array [0..9] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionTOSTR_F = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    TRI: Word;
+    Reserved: array [0..9] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionREF = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    TRI: Word;
+    Reserved: array [0..9] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionDEREF = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    TRI: Word;
+    Reserved: array [0..9] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionLEN_S = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    TRI: Word;
+    Reserved: array [0..9] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionLEN_A = record
+    Instruction: TThoriumInstructionCode;
+    SRI: Word;
+    TRI: Word;
+    Reserved: array [0..9] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionUPDATE_X = record
+    Instruction: TThoriumInstructionCode;
+    TRI: Word;
+    Reserved: array [0..10] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
   TThoriumInstructionJMP = record
     Instruction: TThoriumInstructionCode;
     NewAddress: TThoriumInstructionAddress;
@@ -2045,6 +2111,10 @@ const
     'vastart', 'va.i8', 'va.i16', 'va.i32', 'va.i64',
     'va.i8s', 'va.i16s', 'va.i32s', 'va.i64s', 'va.f32', 'va.f64', 'va.f80', 'va.s', 'va.x',
     'vastart.t', 'vat.f', 'vat.i', 'vat.s', 'vat.x', 'vafinish',
+    'tostr.i', 'tostr.f',
+    'ref', 'deref',
+    'len.s', 'len.a',
+    'update.x',
     'jmp',
     'je', 'jne', 'jgt', 'jge', 'jlt', 'jle',
     'call',
@@ -2083,7 +2153,8 @@ type
     opIntegerDivision, opModulus, opBitAnd, opBitOr, opBitXor, opBitShr,
     opBitShl, opBitNot, opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot,
     opNegate, opCall, opIndexedRead, opIndexedWrite, opFieldRead,
-    opFieldWrite, opEvaluate);
+    opFieldWrite, opEvaluate, opLen, opString, opDeref, opDevolatile,
+    opVolatile, opClone);
   TThoriumOperations = set of TThoriumOperation;
 
 const
@@ -2094,8 +2165,12 @@ const
   opLogical = [opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot,
     opEvaluate];
 
+  opIndexedAccess = [opIndexedWrite, opIndexedRead];
+  opFieldAccess = [opFieldRead, opFieldWrite];
+
   opReflexive = [opIncrement, opDecrement, opBitNot, opLogicalNot, opNegate,
-    opCall, opEvaluate];
+    opCall, opEvaluate, opDevolatile, opVolatile, opLen, opString, opDeref,
+    opClone];
 {%ENDREGION}
 
 (*

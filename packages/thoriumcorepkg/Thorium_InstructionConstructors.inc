@@ -976,141 +976,6 @@ begin
   end;
 end;
 
-(*function _operator(AOp1: Word; AOp2: Word; ATRI: Word; AType: TThoriumType; AKind: TThoriumOperation): TThoriumInstruction;
-begin
-  case AKind of
-    toAdd, toSubtract, toMultiply, toDivide, toDiv:
-    begin
-      if (AType.ValueType = vtBuiltIn) then
-      begin
-        if AType.BuiltInType = btInteger then
-        begin
-          case AKind of
-            toAdd: Result := addi(AOp1, AOp2, ATRI);
-            toSubtract: Result := subi(AOp1, AOp2, ATRI);
-            toMultiply: Result := muli(AOp1, AOp2, ATRI);
-            toDivide, toDiv: Result := divi(AOp1, AOp2, ATRI);
-          end;
-        end
-        else if AType.BuiltInType = btFloat then
-        begin
-          case AKind of
-            toAdd: Result := addf(AOp1, AOp2, ATRI);
-            toSubtract: Result := subf(AOp1, AOp2, ATRI);
-            toMultiply: Result := mulf(AOp1, AOp2, ATRI);
-            toDivide: Result := divf(AOp1, AOp2, ATRI);
-          end;
-        end
-        else if AType.BuiltInType = btString then
-        begin
-          if AKind = toAdd then
-            Result := adds(AOp1, AOp2, ATRI);
-        end;
-      end;
-    end;
-    toMod, toAnd, toOr, toXor:
-    begin
-      if (AType.ValueType = vtBuiltIn) and (AType.BuiltInType = btInteger) then
-      begin
-        case AKind of
-          toMod: Result := _mod(AOp1, AOp2, ATRI);
-          toAnd: Result := _and(AOp1, AOp2, ATRI);
-          toOr: Result := _or(AOp1, AOp2, ATRI);
-          toXor: Result := _xor(AOp1, AOp2, ATRI);
-          toShl: Result := _shl(AOp1, AOp2, ATRI);
-          toShr: Result := _shr(AOp1, AOp2, ATRI);
-        end;
-      end;
-    end;
-    toNegate, toNot, toBoolNot:
-    begin
-      if AOp1 <> ATRI then
-        raise EThoriumCompilerException.Create('Compiler mistake. Keywords: _operand, toNegate-toNot-toBoolNot, AOp1-ATRI');
-      if (AType.ValueType = vtBuiltIn) and (AType.BuiltInType = btInteger) then
-      begin
-        case AKind of
-          toNot: Result := _not(AOp1);
-          toNegate: Result := negi(AOp1);
-          toBoolNot: Result := bnot(AOp1);
-        end;
-      end;
-      if (AType.ValueType = vtBuiltIn) and (AType.BuiltInType = btFloat) then
-      begin
-        case AKind of
-          toNegate: Result := negf(AOp1);
-        end;
-      end;
-    end;
-  else
-    raise EThoriumCompilerException.Create('Compile mistake. Keywords: _operand, AKind');
-  end;
-end;
-
-function _cmpOperator(AOp1, AOp2: Word; ATypeA, ATypeB: TThoriumType): TThoriumInstruction;
-const
-  typeInteger = 0;
-  typeFloat = 1;
-  typeString = 2;
-  typeExtended = 3;
-var
-  TypeA, TypeB: Word;
-begin
-  if ATypeA.ValueType = vtBuiltIn then
-  begin
-    if ATypeA.BuiltInType = btInteger then
-      TypeA := typeInteger
-    else if ATypeA.BuiltInType = btFloat then
-      TypeA := typeFloat
-    else if ATypeA.BuiltInType = btString then
-      TypeA := typeString
-    else
-      Exit;
-  end
-  else if ATypeA.ValueType = vtExtendedType then
-    TypeA := typeExtended
-  else
-    Exit;
-  if ATypeB.ValueType = vtBuiltIn then
-  begin
-    if ATypeB.BuiltInType = btInteger then
-      TypeB := typeInteger
-    else if ATypeB.BuiltInType = btFloat then
-      TypeB := typeFloat
-    else if ATypeB.BuiltInType = btString then
-      TypeB := typeString
-    else
-      Exit;
-  end
-  else if ATypeB.ValueType = vtExtendedType then
-    TypeB := typeExtended
-  else
-    Exit;
-
-  case TypeA of
-    typeInteger: case TypeB of
-      typeInteger: Result := cmpi(AOp1, AOp2);
-      typeFloat: Result := cmpif(AOp1, AOp2);
-      typeExtended: Result := cmpie(AOp1, AOp2);
-    end;
-    typeFloat: case TypeB of
-      typeInteger: Result := cmpfi(AOp1, AOp2);
-      typeFloat: Result := cmpf(AOp1, AOp2);
-      typeExtended: Result := cmpfe(AOp1, AOp2);
-    end;
-    typeString: case TypeB of
-      typeString: Result := cmps(AOp1, AOp2);
-      typeExtended: Result := cmpse(AOp1, AOp2);
-    end;
-    typeExtended: case TypeB of
-      typeInteger: Result := cmpei(AOp1, AOp2);
-      typeFloat: Result := cmpef(AOp1, AOp2);
-      typeString: Result := cmpes(AOp1, AOp2);
-      typeExtended: Result := cmpe(AOp1, AOp2);
-    end;
-  end;
-
-end; *)
-
 function inci(ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
@@ -1489,6 +1354,89 @@ begin
   with TThoriumInstructionVAFINISH(Result) do
   begin
     Instruction := tiVAFINISH;
+    CodeLine := 0;
+  end;
+end;
+
+function tostr_i(ASRI, ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionTOSTR_I(Result) do
+  begin
+    Instruction := tiTOSTR_I;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function tostr_f(ASRI, ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionTOSTR_F(Result) do
+  begin
+    Instruction := tiTOSTR_F;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function ref(ASRI, ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionREF(Result) do
+  begin
+    Instruction := tiREF;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function deref(ASRI, ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDEREF(Result) do
+  begin
+    Instruction := tiDEREF;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function len_s(ASRI, ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionLEN_S(Result) do
+  begin
+    Instruction := tiLEN_S;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function len_a(ASRI, ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionLEN_A(Result) do
+  begin
+    Instruction := tiLEN_A;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function update_x(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionUPDATE_X(Result) do
+  begin
+    Instruction := tiUPDATE_X;
+    TRI := ATRI;
     CodeLine := 0;
   end;
 end;

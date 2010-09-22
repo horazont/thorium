@@ -272,11 +272,16 @@ type
    Region: Thorium values
                                                                               *)
 {%REGION 'Thorium values' /fold}
+  PThoriumValue = ^TThoriumValue;
+  PThoriumArray = ^TThoriumArray;
+  PThoriumStaticArray = ^TThoriumStaticArray;
+  PThoriumStruct = ^TThoriumStruct;
+
   TThoriumValue = record
     // Should be available all the time for all types which need special
     // handling (e.g. custom free functions etc.)
     RTTI: TThoriumType;
-    //References: LongInt;
+    References: LongInt;
   case Byte of
     0: (Int: TThoriumInteger);
     1: (Float: TThoriumFloat);
@@ -284,11 +289,17 @@ type
     3: (Func: TThoriumFunction);
     4: (HostFunc: TThoriumHostFunctionBase);
     5: (HostMethod: TThoriumHostMethodBase);
-    6: (Struct: Pointer);
+    6: (Struct: PThoriumStruct);
     7: (HostObject: Pointer);
-    8: (ThArray: Pointer);
+    8: (DynamicArray: PThoriumArray);
+   11: (StaticArray: PThoriumStaticArray);
     9: (RuntimeFunc: TThoriumRuntimeFunction);
+   10: (Ptr: PThoriumValue);
   end;
+
+  TThoriumArray = array of TThoriumValue;
+  TThoriumStaticArray = PThoriumValue;
+  TThoriumStruct = PThoriumValue;
 
 (*  TThoriumCompileTimeValue = record
     // Keep this as reference counter
@@ -296,7 +307,6 @@ type
     Value: TThoriumValue;
   end;*)
 
-  PThoriumValue = ^TThoriumValue;
 {%ENDREGION}
 
 (*
@@ -703,6 +713,7 @@ type
     function DoBitXor(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoCast(const AValue: TThoriumValue; const TargetType: TThoriumType): TThoriumValue; virtual; abstract;
     procedure DoCastlessAssign(const ASource: Pointer; var ADest: TThoriumValue); virtual; abstract;
+    function DoClone(const AValue: TThoriumValue): TThoriumValue; virtual;
     function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue; virtual; abstract;
     function DoCreateNone: TThoriumValue; virtual; abstract;
     function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
@@ -712,12 +723,15 @@ type
     function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean; virtual;
     function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean; virtual; abstract;
     procedure DoDecrement(var ASubject: TThoriumValue); virtual; abstract;
+    function DoDeref(const AValue: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    procedure DoDevolatile(const ASubject: TThoriumValue); virtual; abstract;
     procedure DoEnableHostControl(const AValue: TThoriumValue); virtual;
     function DoEvaluate(const AValue: TThoriumValue): Boolean; virtual; abstract;
     procedure DoFree(var AValue: TThoriumValue); virtual; abstract;
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue; virtual; abstract;
     function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoGetLength(const AValue: TThoriumValue): Integer; virtual; abstract;
     function DoGetStaticField(const AFieldID: QWord): TThoriumValue; virtual; abstract;
     procedure DoIncrement(var ASubject: TThoriumValue); virtual; abstract;
     function DoIntegerDivision(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
@@ -992,33 +1006,74 @@ type
 
   TThoriumTypeArray = class (TThoriumType)
   public
-    constructor CreateStatic(const AThorium: TThorium; const AValueType: TThoriumType; const Min, Max: TThoriumInteger);
-    constructor CreateDynamic(const AThorium: TThorium; const AValueType: TThoriumType);
+    constructor Create(const AThorium: TThorium; const AValueType: TThoriumType);
   private
     FValueType: TThoriumType;
-    FArrayDimensionKind: TThoriumArrayKind;
-    FArrayDimensionMax: TThoriumInteger;
-    FArrayDimensionMin: TThoriumInteger;
   protected
     function GetTypeKind: TThoriumTypeKind; override;
   public
-    property ArrayDimensionKind: TThoriumArrayKind read FArrayDimensionKind;
-    property ArrayDimensionMax: TThoriumInteger read FArrayDimensionMax;
-    property ArrayDimensionMin: TThoriumInteger read FArrayDimensionMin;
     property ValueType: TThoriumType read FValueType;
   public
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil; const ExName: String = ''): Boolean; override;
+       const TheObject: TThoriumType = nil; const ExName: String = ''
+       ): Boolean; override;
     function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
     function HasIndexedAccess: Boolean; override;
     function NeedsClear: Boolean; override;
+  end;
 
-    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
-       ): TThoriumValue; override;
+  { TThoriumTypeDynamicArray }
+
+  TThoriumTypeDynamicArray = class (TThoriumTypeArray)
+  public
     function DoGetIndexed(const AValue: TThoriumValue;
        const AIndex: TThoriumValue): TThoriumValue; override;
+    function DoGetLength(const AValue: TThoriumValue): Integer; override;
     procedure DoSetIndexed(const AValue: TThoriumValue;
        const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
+  end;
+
+  { TThoriumTypeStaticArray }
+
+  TThoriumTypeStaticArray = class (TThoriumTypeArray)
+  public
+    constructor Create(const AThorium: TThorium; const AValueType: TThoriumType;
+       Count: Integer);
+  private
+    FCount: Integer;
+  public
+    property Count: Integer read FCount;
+  public
+    function CanPerformOperation(var Operation: TThoriumOperationDescription;
+       const TheObject: TThoriumType = nil; const ExName: String = ''
+       ): Boolean; override;
+    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
+
+    function DoGetIndexed(const AValue: TThoriumValue;
+       const AIndex: TThoriumValue): TThoriumValue; override;
+    function DoGetLength(const AValue: TThoriumValue): Integer; override;
+    procedure DoSetIndexed(const AValue: TThoriumValue;
+       const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
+  end;
+
+  { TThoriumTypePointer }
+
+  TThoriumTypePointer = class (TThoriumType)
+  public
+    constructor Create(const ATargetType: TThoriumType);
+  private
+    FTargetType: TThoriumType;
+  public
+    property TargetType: TThoriumType read FTargetType;
+  public
+    function CanPerformOperation(var Operation: TThoriumOperationDescription;
+       const TheObject: TThoriumType = nil; const ExName: String = ''
+       ): Boolean; override;
+    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
+    function NeedsClear: Boolean; override;
+
+    function DoDeref(const AValue: TThoriumValue): TThoriumValue; override;
+    procedure DoFree(var AValue: TThoriumValue); override;
   end;
 
     (* A set of values processable by Thorium representing the complete register
@@ -2390,8 +2445,10 @@ function ThoriumValueToStr(const Value: TThoriumValue): String;
 function ThoriumMakeOOPEvent(ACode: Pointer; Userdata: Pointer): TMethod;
 function ThoriumRegisterToStr(ARegisterID: TThoriumRegisterID): String;
 function ThoriumInstructionToStr(AInstruction: TThoriumInstruction): String;
-procedure ThoriumFreeValue(var AValue: TThoriumValue);
+procedure ThoriumFreeValue(var AValue: TThoriumValue); inline;
+procedure ThoriumReleaseValue(var AValue: TThoriumValue); inline;
 function ThoriumDuplicateValue(const AValue: TThoriumValue): TThoriumValue; inline;
+function ThoriumIncRef(const AValue: TThoriumValue): TThoriumValue; inline;
 
 function HostRecordField(const AType: TThoriumHostTypeSpec;
   const AName: String; const AOffset: Cardinal): TThoriumHostRecordField;
@@ -4069,12 +4126,25 @@ begin
   AValue.RTTI.DoFree(AValue);
 end;
 
+procedure ThoriumReleaseValue(var AValue: TThoriumValue); inline;
+begin
+  Dec(AValue.References);
+  if AValue.References = 0 then
+    ThoriumFreeValue(AValue);
+end;
+
 function ThoriumDuplicateValue(const AValue: TThoriumValue): TThoriumValue;
 begin
   if AValue.RTTI = nil then
     Result := AValue
   else
     Result := AValue.RTTI.DuplicateValue(AValue);
+end;
+
+function ThoriumIncRef(const AValue: TThoriumValue): TThoriumValue; inline;
+begin
+  Result := AValue;
+  Inc(Result.References);
 end;
 
 function InitialData(const Int: TThoriumInteger): TThoriumInitialData;
@@ -4618,6 +4688,12 @@ begin
   Result := False;
 end;
 
+function TThoriumType.DoClone(const AValue: TThoriumValue): TThoriumValue;
+begin
+  Result := AValue;
+  Result.References := 1;
+end;
+
 function TThoriumType.DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
   ): Boolean;
 begin
@@ -4954,6 +5030,15 @@ begin
           Operation.OperationInstruction := OperationInstructionDescription(cmpif(0, 0), 0, 1, -1);
           Exit;
         end;
+      end;
+
+      opString:
+      begin
+        Operation.ResultType := FThorium.FTypeString;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        Operation.OperationInstruction := OperationInstructionDescription(tostr_i(0, 0), 0, -1, 1);
+        Exit(True);
       end;
     end;
   end;
@@ -5865,48 +5950,62 @@ end;
 
 { TThoriumTypeArray }
 
-constructor TThoriumTypeArray.CreateStatic(const AThorium: TThorium; const AValueType: TThoriumType;
-  const Min, Max: TThoriumInteger);
+constructor TThoriumTypeArray.Create(const AThorium: TThorium;
+  const AValueType: TThoriumType);
 begin
-  if Max < Min then
-    raise EThoriumException.CreateFmt('Invalid array boundaries (min = %d, max = %d).', [Min, Max]);
-  if ValueType = nil then
-    raise EThoriumException.Create('Array value type must not be nil.');
   inherited Create(AThorium);
-  FValueType := ValueType;
-  FArrayDimensionKind := akStatic;
-  FArrayDimensionMax := Max;
-  FArrayDimensionMin := Min;
-end;
-
-constructor TThoriumTypeArray.CreateDynamic(const AThorium: TThorium; const AValueType: TThoriumType);
-begin
-  if ValueType = nil then
-    raise EThoriumException.Create('Array value type must not be nil.');
-  inherited Create(AThorium);
-  FArrayDimensionKind := akDynamic;
-  FArrayDimensionMin := 0;
-  FArrayDimensionMax := 0;
+  FValueType := AValueType;
 end;
 
 function TThoriumTypeArray.GetTypeKind: TThoriumTypeKind;
 begin
-  Result:=tkArray;
+  Result := tkArray;
 end;
 
 function TThoriumTypeArray.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
   const ExName: String): Boolean;
 begin
-  if Operation.Operation = opFieldRead then
+  if Operation.Operation in opReflexive then
   begin
-    if ExName = ThoriumCase('length') then
-    begin
-      Operation.ResultType := FThorium.FTypeInteger;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
-      Exit(True);
+    case Operation.Operation of
+      opLen:
+      begin
+        Operation.ResultType := FThorium.FTypeInteger;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        Operation.OperationInstruction := OperationInstructionDescription(len_a(0, 0), 0, -1, 1);
+        Exit(True);
+      end;
+      opDevolatile:
+      begin
+        Operation.ResultType := nil;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        Operation.OperationInstruction := OperationInstructionDescription(update_x(0), -1, -1, 0);
+        Exit(True);
+      end;
+    end;
+  end
+  else if (Operation.Operation in opIndexedAccess) and (TheObject is TThoriumTypeInteger) then
+  begin
+    case Operation.Operation of
+      opIndexedRead:
+      begin
+        Operation.ResultType := FValueType;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        Operation.OperationInstruction := OperationInstructionDescription(xiget(0, 0, 0), 1, 0, 2);
+        Exit(True);
+      end;
+      opIndexedWrite:
+      begin
+        Operation.ResultType := FValueType;
+        Operation.Casts[0].Needed := False;
+        Operation.Casts[1].Needed := False;
+        Operation.OperationInstruction := OperationInstructionDescription(xiset(0, 0, 0), 1, 0, 2);
+        Exit(True);
+      end;
     end;
   end
   else if TheObject.IsEqualTo(Self) then
@@ -5914,8 +6013,6 @@ begin
     case Operation.Operation of
       opAddition:
       begin
-        if FArrayDimensionKind = akStatic then
-          Exit(False);
         Operation.ResultType := Self;
         Operation.Casts[0].Needed := False;
         Operation.Casts[1].Needed := False;
@@ -5924,8 +6021,6 @@ begin
       end;
       opMultiplication:
       begin
-        if FArrayDimensionKind = akStatic then
-          Exit(False);
         Operation.ResultType := Self;
         Operation.Casts[0].Needed := False;
         Operation.Casts[1].Needed := False;
@@ -5956,23 +6051,8 @@ begin
 end;
 
 function TThoriumTypeArray.IsEqualTo(const AnotherType: TThoriumType): Boolean;
-var
-  OtherInstance: TThoriumTypeArray;
 begin
-  if not (AnotherType is TThoriumTypeArray) then
-    Exit(False);
-  OtherInstance := TThoriumTypeArray(AnotherType);
-  if (OtherInstance.FValueType <> FValueType) or ((FValueType <> nil) and (not (OtherInstance.FValueType.IsEqualTo(FValueType)))) then
-    Exit(False);
-  if (OtherInstance.FArrayDimensionKind <> FArrayDimensionKind) then
-    Exit(False);
-  if (FArrayDimensionKind = akStatic) then
-  begin
-    if (OtherInstance.FArrayDimensionMin <> FArrayDimensionMin) or
-      (OtherInstance.FArrayDimensionMax <> FArrayDimensionMax) then
-      Exit(False);
-  end;
-  Result := True;
+  Result := (AnotherType is TThoriumTypeArray) and (TThoriumTypeArray(AnotherType).FValueType.IsEqualTo(FValueType));
 end;
 
 function TThoriumTypeArray.HasIndexedAccess: Boolean;
@@ -5985,28 +6065,115 @@ begin
   Result := True;
 end;
 
-function TThoriumTypeArray.DoGetField(const AValue: TThoriumValue;
-  const AFieldID: QWord): TThoriumValue;
-begin
-  case AFieldID of
-    0:
-    begin
-      Result.RTTI := {$ifdef DebugToConsole}FThorium.FTypeInteger{$else}nil{$endif};
-      Result.Int := PThoriumFPCArrayHeader(AValue.ThArray-SizeOf(TThoriumFPCArrayHeader))^.Len;
-    end;
-  end;
-end;
+{ TThoriumTypeDynamicArray }
 
-function TThoriumTypeArray.DoGetIndexed(const AValue: TThoriumValue;
+function TThoriumTypeDynamicArray.DoGetIndexed(const AValue: TThoriumValue;
   const AIndex: TThoriumValue): TThoriumValue;
 begin
+  if (AIndex.Int < 0) or (AIndex.Int > High(AValue.DynamicArray^)) then
+    raise EThoriumRuntimeException.CreateFmt('Dynamic array index %d out of bounds (%d..%d)', [AIndex.Int, 0, High(AValue.DynamicArray^)]);
+  Result := AValue.DynamicArray^[AIndex.Int];
+end;
+
+function TThoriumTypeDynamicArray.DoGetLength(const AValue: TThoriumValue): Integer;
+begin
+  Result := Length(AValue.DynamicArray^);
+end;
+
+procedure TThoriumTypeDynamicArray.DoSetIndexed(const AValue: TThoriumValue;
+  const AIndex: TThoriumValue; const NewValue: TThoriumValue);
+begin
+  if (AIndex.Int < 0) or (AIndex.Int > High(AValue.DynamicArray^)) then
+    raise EThoriumRuntimeException.CreateFmt('Dynamic array index %d out of bounds (%d..%d)', [AIndex.Int, 0, High(AValue.DynamicArray^)]);
+  ThoriumReleaseValue(AValue.DynamicArray^[AIndex.Int]);
+  AValue.DynamicArray^[AIndex.Int] := ThoriumIncRef(NewValue);
+end;
+
+{ TThoriumTypeStaticArray }
+
+constructor TThoriumTypeStaticArray.Create(const AThorium: TThorium;
+  const AValueType: TThoriumType; Count: Integer);
+begin
+  if Count <= 0 then
+    raise EThoriumException.CreateFmt('Cannot create a static array type with a length of %d.', [Count]);
+  inherited Create(AThorium, AValueType);
+  FCount := Count;
+end;
+
+function TThoriumTypeStaticArray.CanPerformOperation(
+  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
+  const ExName: String): Boolean;
+begin
+  Result := inherited;
+  if Operation.Operation in [opAddition, opMultiplication] then
+    Exit(False);
+end;
+
+function TThoriumTypeStaticArray.IsEqualTo(const AnotherType: TThoriumType
+  ): Boolean;
+begin
+  Result := (AnotherType is TThoriumTypeStaticArray) and
+    (TThoriumTypeStaticArray(AnotherType).FCount = FCount) and
+    (TThoriumTypeStaticArray(AnotherType).FValueType.IsEqualTo(FValueType));
+end;
+
+function TThoriumTypeStaticArray.DoGetIndexed(const AValue: TThoriumValue;
+  const AIndex: TThoriumValue): TThoriumValue;
+begin
+  if (AIndex.Int < 0) or (AIndex.Int >= FCount) then
+    raise EThoriumRuntimeException.CreateFmt('Static array index %d out of bounds (%d..%d)', [AIndex.Int, 0, FCount-1]);
+  Result := AValue.StaticArray^[AIndex.Int];
+end;
+
+function TThoriumTypeStaticArray.DoGetLength(const AValue: TThoriumValue
+  ): Integer;
+begin
+  Result := FCount;
+end;
+
+procedure TThoriumTypeStaticArray.DoSetIndexed(const AValue: TThoriumValue;
+  const AIndex: TThoriumValue; const NewValue: TThoriumValue);
+begin
+  if (AIndex.Int < 0) or (AIndex.Int >= FCount) then
+    raise EThoriumRuntimeException.CreateFmt('Static array index %d out of bounds (%d..%d)', [AIndex.Int, 0, FCount-1]);
+  ThoriumReleaseValue(AValue.StaticArray^[AIndex.Int]);
+  AValue.StaticArray^[AIndex.Int] := ThoriumIncRef(NewValue);
+end;
+
+{ TThoriumTypePointer }
+
+constructor TThoriumTypePointer.Create(const ATargetType: TThoriumType);
+begin
 
 end;
 
-procedure TThoriumTypeArray.DoSetIndexed(const AValue: TThoriumValue;
-  const AIndex: TThoriumValue; const NewValue: TThoriumValue);
+function TThoriumTypePointer.CanPerformOperation(
+  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
+  const ExName: String): Boolean;
 begin
-  inherited DoSetIndexed(AValue, AIndex, NewValue);
+  Result := inherited CanPerformOperation(Operation, TheObject, ExName);
+end;
+
+function TThoriumTypePointer.IsEqualTo(const AnotherType: TThoriumType
+  ): Boolean;
+begin
+  Result := (AnotherType is TThoriumTypePointer) and (TThoriumTypePointer(AnotherType).FTargetType.IsEqualTo(FTargetType));
+end;
+
+function TThoriumTypePointer.NeedsClear: Boolean;
+begin
+  Result := True;
+end;
+
+function TThoriumTypePointer.DoDeref(const AValue: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result := AValue.Ptr^;
+end;
+
+procedure TThoriumTypePointer.DoFree(var AValue: TThoriumValue);
+begin
+  ThoriumReleaseValue(AValue.Ptr^);
 end;
 
 {%ENDREGION}
