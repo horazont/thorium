@@ -1060,7 +1060,8 @@ type
 
   TThoriumTypePointer = class (TThoriumType)
   public
-    constructor Create(const ATargetType: TThoriumType);
+    constructor Create(const AThorium: TThorium; const ATargetType: TThoriumType
+      );
   private
     FTargetType: TThoriumType;
   public
@@ -6142,9 +6143,10 @@ end;
 
 { TThoriumTypePointer }
 
-constructor TThoriumTypePointer.Create(const ATargetType: TThoriumType);
+constructor TThoriumTypePointer.Create(const AThorium: TThorium; const ATargetType: TThoriumType);
 begin
-
+  inherited Create(AThorium);
+  FTargetType := ATargetType;
 end;
 
 function TThoriumTypePointer.CanPerformOperation(
