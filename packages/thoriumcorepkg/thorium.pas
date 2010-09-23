@@ -1056,27 +1056,6 @@ type
        const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
   end;
 
-  { TThoriumTypePointer }
-
-  TThoriumTypePointer = class (TThoriumType)
-  public
-    constructor Create(const AThorium: TThorium; const ATargetType: TThoriumType
-      );
-  private
-    FTargetType: TThoriumType;
-  public
-    property TargetType: TThoriumType read FTargetType;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType = nil; const ExName: String = ''
-       ): Boolean; override;
-    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
-    function NeedsClear: Boolean; override;
-
-    function DoDeref(const AValue: TThoriumValue): TThoriumValue; override;
-    procedure DoFree(var AValue: TThoriumValue); override;
-  end;
-
     (* A set of values processable by Thorium representing the complete register
      set of a Thorium virtual machine. *)
   TThoriumRegisters = array [0..THORIUM_REGISTER_COUNT-1] of TThoriumValue;
@@ -6139,43 +6118,6 @@ begin
     raise EThoriumRuntimeException.CreateFmt('Static array index %d out of bounds (%d..%d)', [AIndex.Int, 0, FCount-1]);
   ThoriumReleaseValue(AValue.StaticArray^[AIndex.Int]);
   AValue.StaticArray^[AIndex.Int] := ThoriumIncRef(NewValue);
-end;
-
-{ TThoriumTypePointer }
-
-constructor TThoriumTypePointer.Create(const AThorium: TThorium; const ATargetType: TThoriumType);
-begin
-  inherited Create(AThorium);
-  FTargetType := ATargetType;
-end;
-
-function TThoriumTypePointer.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String): Boolean;
-begin
-  Result := inherited CanPerformOperation(Operation, TheObject, ExName);
-end;
-
-function TThoriumTypePointer.IsEqualTo(const AnotherType: TThoriumType
-  ): Boolean;
-begin
-  Result := (AnotherType is TThoriumTypePointer) and (TThoriumTypePointer(AnotherType).FTargetType.IsEqualTo(FTargetType));
-end;
-
-function TThoriumTypePointer.NeedsClear: Boolean;
-begin
-  Result := True;
-end;
-
-function TThoriumTypePointer.DoDeref(const AValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result := AValue.Ptr^;
-end;
-
-procedure TThoriumTypePointer.DoFree(var AValue: TThoriumValue);
-begin
-  ThoriumReleaseValue(AValue.Ptr^);
 end;
 
 {%ENDREGION}
