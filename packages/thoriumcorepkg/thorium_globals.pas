@@ -2154,7 +2154,7 @@ type
     opBitShl, opBitNot, opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot,
     opNegate, opCall, opIndexedRead, opIndexedWrite, opFieldRead,
     opFieldWrite, opEvaluate, opLen, opString, opDeref, opDevolatile,
-    opVolatile, opClone);
+    opVolatile, opClone, opAppend, opStackcreate);
   TThoriumOperations = set of TThoriumOperation;
 
 const

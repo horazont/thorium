@@ -770,6 +770,8 @@ type
     function GetNoneInitialData(out InitialData: TThoriumInitialData
        ): Boolean; override;
   public
+    function CreateFromInt(const Int: TThoriumInteger): TThoriumValue;
+  public
     function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
        const AnotherType: TThoriumType=nil): Boolean; override;
     function CanCreate(const InitialData: TThoriumInitialData;
@@ -874,6 +876,8 @@ type
     function GetNoneInitialData(out InitialData: TThoriumInitialData
        ): Boolean; override;
     function GetTypeKind: TThoriumTypeKind; override;
+  public
+    function CreateFromString(const Str: String): TThoriumValue;
   public
     function CanCreate(const InitialData: TThoriumInitialData;
        const ToRegister: Boolean; out
@@ -1026,6 +1030,10 @@ type
 
   TThoriumTypeDynamicArray = class (TThoriumTypeArray)
   public
+    function CanPerformOperation(var Operation: TThoriumOperationDescription;
+       const TheObject: TThoriumType = nil; const ExName: String = ''
+       ): Boolean; override;
+
     function DoGetIndexed(const AValue: TThoriumValue;
        const AIndex: TThoriumValue): TThoriumValue; override;
     function DoGetLength(const AValue: TThoriumValue): Integer; override;
@@ -4749,6 +4757,10 @@ begin
       AValue.RTTI.DoBitNot(Result);
     end;
 
+    opLen: Result := AValue.RTTI.FThorium.FTypeInteger.CreateFromInt(AValue.RTTI.DoGetLength(A));
+    opString: Result := AValue.RTTI.FThorium.FTypeString.CreateFromString(AValue.RTTI.DoToString(A));
+    opClone: Result := AValue.RTTI.DoClone(A);
+
     opLogicalAnd: Result := AValue.RTTI.DoLogicalAnd(A, B);
     opLogicalOr: Result := AValue.RTTI.DoLogicalOr(A, B);
     opLogicalXor: Result := AValue.RTTI.DoLogicalXor(A, B);
@@ -4822,6 +4834,13 @@ function TThoriumTypeInteger.GetNoneInitialData(out
 begin
   Result := True;
   InitialData.Int := 0;
+end;
+
+function TThoriumTypeInteger.CreateFromInt(const Int: TThoriumInteger
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := Int;
 end;
 
 function TThoriumTypeInteger.CanAssignTo(
@@ -5467,6 +5486,13 @@ begin
   Result := tkString;
 end;
 
+function TThoriumTypeString.CreateFromString(const Str: String): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  New(Result.Str);
+  Result.Str^ := Str;
+end;
+
 function TThoriumTypeString.CanCreate(const InitialData: TThoriumInitialData;
   const ToRegister: Boolean; out
   Instruction: TThoriumCreateInstructionDescription): Boolean;
@@ -5521,15 +5547,24 @@ function TThoriumTypeString.CanPerformOperation(
 begin
   Result := True;
   if Operation.Operation in opReflexive then
-    Result := inherited
-  else if Operation.Operation = opFieldRead then
   begin
-    if Name = 'length' then
-    begin
-      Operation.ResultType := FThorium.FTypeInteger;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(noop(0, 0, 0, 0), -1, -1, -1);
+    case Operation.Operation of
+      opString:
+      begin
+        NewNonCastOperation(Operation);
+        Operation.ResultType := Self;
+        Operation.OperationInstruction := OperationInstructionDescription(copyr(0, 0), 0, -1, 1);
+        Exit(True);
+      end;
+      opLen:
+      begin
+        NewNonCastOperation(Operation);
+        Operation.ResultType := FThorium.FTypeInteger;
+        Operation.OperationInstruction := OperationInstructionDescription(len_s(0, 0), 0, -1, 1);
+        Exit(True);
+      end;
+    else
+      Exit(inherited);
     end;
   end
   else if TheObject = nil then
@@ -5541,7 +5576,7 @@ begin
         if StrStrOp(adds(0, 0, 0)) then
           Exit;
       opIndexedRead:
-        if StrIndexOp(noop(0, 0, 0, 0), -1, -1, -1) then
+        if StrIndexOp(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0), -1, -1, -1) then
           Exit;
 
       opCmpEqual, opCmpGreater, opCmpGreaterOrEqual, opCmpLess,
@@ -6047,6 +6082,25 @@ end;
 
 { TThoriumTypeDynamicArray }
 
+function TThoriumTypeDynamicArray.CanPerformOperation(
+  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
+  const ExName: String): Boolean;
+begin
+  case Operation.Operation of
+    opAppend:
+    begin
+      if not TheObject.IsEqual(FValueType) then
+        Exit(inherited);
+      NewNonCastOperation(Operation);
+      Operation.ResultType := nil;
+      Operation.OperationInstruction := OperationInstructionDescription(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0), -1, -1, -1);
+      Exit(True);
+    end;
+  else
+    Exit(inherited);
+  end;
+end;
+
 function TThoriumTypeDynamicArray.DoGetIndexed(const AValue: TThoriumValue;
   const AIndex: TThoriumValue): TThoriumValue;
 begin
@@ -6065,8 +6119,8 @@ procedure TThoriumTypeDynamicArray.DoSetIndexed(const AValue: TThoriumValue;
 begin
   if (AIndex.Int < 0) or (AIndex.Int > High(AValue.DynamicArray^)) then
     raise EThoriumRuntimeException.CreateFmt('Dynamic array index %d out of bounds (%d..%d)', [AIndex.Int, 0, High(AValue.DynamicArray^)]);
-  ThoriumReleaseValue(AValue.DynamicArray^[AIndex.Int]);
-  AValue.DynamicArray^[AIndex.Int] := ThoriumIncRef(NewValue);
+  ThoriumFreeValue(AValue.DynamicArray^[AIndex.Int]);
+  AValue.DynamicArray^[AIndex.Int] := ThoriumDuplicateValue(NewValue);
 end;
 
 { TThoriumTypeStaticArray }
@@ -6087,6 +6141,8 @@ begin
   Result := inherited;
   if Operation.Operation in [opAddition, opMultiplication] then
     Exit(False);
+  if Operation.Operation = opLen then
+    Operation.OperationInstruction := OperationInstructionDescription(int(FCount, 0), -1, -1, 4);
 end;
 
 function TThoriumTypeStaticArray.IsEqualTo(const AnotherType: TThoriumType
@@ -6116,8 +6172,8 @@ procedure TThoriumTypeStaticArray.DoSetIndexed(const AValue: TThoriumValue;
 begin
   if (AIndex.Int < 0) or (AIndex.Int >= FCount) then
     raise EThoriumRuntimeException.CreateFmt('Static array index %d out of bounds (%d..%d)', [AIndex.Int, 0, FCount-1]);
-  ThoriumReleaseValue(AValue.StaticArray^[AIndex.Int]);
-  AValue.StaticArray^[AIndex.Int] := ThoriumIncRef(NewValue);
+  ThoriumFreeValue(AValue.StaticArray^[AIndex.Int]);
+  AValue.StaticArray^[AIndex.Int] := ThoriumDuplicateValue(NewValue);
 end;
 
 {%ENDREGION}
