@@ -13,3 +13,4 @@ heaptrc.txt
 *.log
 *.tsb
 scripttest
+scripttest.dbg
