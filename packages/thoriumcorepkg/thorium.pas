@@ -344,6 +344,7 @@ type
     Kind: TThoriumDebugEvent; Value: LongInt) of object;
   TThoriumVMResolveModulePtr = function (const AModuleRef: Pointer): TThoriumRuntimeModule of object;
   TThoriumVMResolveFunctionPtr = function (const AFunctionRef: Pointer): TThoriumRuntimeFunction of object;
+  TThoriumHandleOffset = procedure (Sender: TObject; const Origin, Count: Integer; var Changed: Boolean) of object;
 
 
   (* Only internally used. *)
@@ -449,6 +450,7 @@ type
     procedure InvalidateHash;
   public
     function GetHash: TThoriumHash;
+    function GetHashCode: PtrInt; override;
   public
     procedure Freeze;
   end;
@@ -698,6 +700,7 @@ type
     function CanPerformOperation(var Operation: TThoriumOperationDescription; const TheObject: TThoriumType = nil; const ExName: String = ''): Boolean; virtual;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; virtual; abstract;
     function DuplicateValue(const Input: TThoriumValue): TThoriumValue; virtual;
+    function Equals(Obj: TObject): boolean; override;
     function HasFieldAccess: Boolean; virtual;
     function HasIndexedAccess: Boolean; virtual;
     (*function GetClassType: TClass;*)
@@ -749,6 +752,7 @@ type
     function DoToString(const AValue: TThoriumValue): String; virtual;
     class function PerformOperation(const AValue: TThoriumValue; const Operation: TThoriumOperationDescription; const BValue: PThoriumValue = nil): TThoriumValue;
     class function PerformCmpOperation(const AValue: TThoriumValue; const Operation: TThoriumOperationDescription; const BValue: PThoriumValue = nil): Boolean;
+    function ToString: ansistring; override;
     function UsesType(const AnotherType: TThoriumType; MayRecurse: Boolean = True): Boolean; virtual;
   end;
   TThoriumTypes = specialize TFPGList<TThoriumType>;
@@ -1949,6 +1953,40 @@ type
   end;
 
 {%ENDREGION}
+
+(*
+   Region: Optimizer
+                                                                              *)
+
+  { TThoriumCustomOptimizerPattern }
+
+  TThoriumCustomOptimizerPattern = class (TObject)
+  public
+    constructor Create; virtual;
+  public
+    function Handle(const CurrInstruction: PThoriumInstruction;
+      const Remaining: Integer; var Offset: Integer): Boolean; virtual; abstract;
+  end;
+  TThoriumOptimizerPatternClass = class of TThoriumCustomOptimizerPattern;
+  TThoriumOptimizerPatterns = specialize TFPGList<TThoriumCustomOptimizerPattern>;
+
+  { TThoriumOptimizer }
+
+  TThoriumOptimizer = class (TObject)
+  public
+    constructor Create;
+    destructor Destroy; override;
+  private
+    FInstructions: TThoriumInstructions;
+    FJumpList: TThoriumJumpList;
+    FOffsetCallback: TThoriumHandleOffset;
+    FPatterns: TThoriumOptimizerPatterns;
+  protected
+    function DoHandleOffset(const Origin, Count: Integer): Boolean;
+  public
+    function AddPattern(const AClass: TThoriumOptimizerPatternClass): TThoriumCustomOptimizerPattern;
+    function Optimize(AInstructions: TThoriumInstructions; OffsetCallback: TThoriumHandleOffset): Integer;
+  end;
 
 (*
    Region: Compiler
@@ -4328,13 +4366,13 @@ end;
 
 procedure TThoriumHashableObject.ForceFrozen;
 begin
-  if FFrozen then
+  if not FFrozen then
     raise EThoriumException.CreateFmt('%s must be frozen to perform this operation.', [ClassName]);
 end;
 
 procedure TThoriumHashableObject.ForceUnfrozen;
 begin
-  if not FFrozen then
+  if FFrozen then
     raise EThoriumException.CreateFmt('%s must be unfrozen to perform this operation.', [ClassName]);
 end;
 
@@ -4367,6 +4405,11 @@ begin
     FHashGenerated := True;
   end;
   Result := FHash;
+end;
+
+function TThoriumHashableObject.GetHashCode: PtrInt;
+begin
+  raise EThoriumException.Create('GetHashCode is not supported.');
 end;
 
 procedure TThoriumHashableObject.Freeze;
@@ -4660,6 +4703,14 @@ begin
   Result := Input;
 end;
 
+function TThoriumType.Equals(Obj: TObject): boolean;
+begin
+  if Obj is TThoriumType then
+    Result := IsEqualTo(TThoriumType(Obj))
+  else
+    Result := False;
+end;
+
 
 function TThoriumType.HasFieldAccess: Boolean;
 begin
@@ -4802,6 +4853,11 @@ begin
   else
     raise EThoriumRuntimeException.CreateFmt('Invalid comparision operation: %s.', [GetEnumName(TypeInfo(TThoriumOperation), Ord(Operation.Operation))]);
   end;
+end;
+
+function TThoriumType.ToString: ansistring;
+begin
+  Result := 'ThoriumType '''+GetName+'''';
 end;
 
 function TThoriumType.UsesType(const AnotherType: TThoriumType;
@@ -5564,7 +5620,7 @@ begin
         Exit(True);
       end;
     else
-      Exit(inherited);
+      Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
     end;
   end
   else if TheObject = nil then
@@ -6089,15 +6145,15 @@ begin
   case Operation.Operation of
     opAppend:
     begin
-      if not TheObject.IsEqual(FValueType) then
-        Exit(inherited);
+      if not TheObject.IsEqualTo(FValueType) then
+        Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
       NewNonCastOperation(Operation);
       Operation.ResultType := nil;
       Operation.OperationInstruction := OperationInstructionDescription(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0), -1, -1, -1);
       Exit(True);
     end;
   else
-    Exit(inherited);
+    Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
   end;
 end;
 
@@ -7210,6 +7266,7 @@ end;
 
 constructor TThoriumLibrary.Create(AThorium: TThorium);
 begin
+  inherited Create;
   FConstants := TThoriumLibraryConstantList.Create;
   FName := GetName;
   FHostCallables := TThoriumHostCallableList.Create;
@@ -8924,6 +8981,103 @@ begin
   FPosition := ASource.FPosition;
   FInserted := ASource.FInserted;
   FSetPosition := ASource.FSetPosition;
+end;
+
+{%ENDREGION}
+
+{%REGION 'Optimizer' /fold}
+
+{ TThoriumCustomOptimizerPattern }
+
+constructor TThoriumCustomOptimizerPattern.Create;
+begin
+
+end;
+
+{ TThoriumOptimizer }
+
+constructor TThoriumOptimizer.Create;
+begin
+  FPatterns := TThoriumOptimizerPatterns.Create;
+end;
+
+destructor TThoriumOptimizer.Destroy;
+begin
+  FPatterns.Free;
+  inherited Destroy;
+end;
+
+function TThoriumOptimizer.DoHandleOffset(const Origin, Count: Integer): Boolean;
+begin
+  Result := False;
+  if Count = 0 then
+    Exit;
+  if FOffsetCallback <> nil then
+    FOffsetCallback(Self, Origin, Count, Result);
+  if FJumpList <> nil then
+  begin
+    Result := True;
+    FJumpList.ChangeAddresses(Count, Origin+1, FInstructions);
+  end;
+end;
+
+function TThoriumOptimizer.AddPattern(
+  const AClass: TThoriumOptimizerPatternClass): TThoriumCustomOptimizerPattern;
+begin
+  Result := AClass.Create;
+  FPatterns.Add(Result);
+end;
+
+function TThoriumOptimizer.Optimize(AInstructions: TThoriumInstructions;
+  OffsetCallback: TThoriumHandleOffset): Integer;
+var
+  Jumps: TThoriumJumpList;
+  RootInstruction, Instruction: PThoriumInstruction;
+  Remaining, Count: Integer;
+  DoneSomething: Boolean;
+  I, J: Integer;
+  Offset: Integer;
+begin
+  Result := 0;
+  Jumps := TThoriumJumpList.Create;
+  try
+    RootInstruction := AInstructions.FInstructions;
+    Count := AInstructions.Count;
+    Instruction := RootInstruction;
+    for I := 0 to Count - 1 do
+    begin
+      if Instruction^.Instruction in [tiJMP, tiJE, tiJNE, tiJGE, tiJGT, tiJLE, tiJLT] then
+        Jumps.AddEntry(I);
+      Inc(Instruction);
+    end;
+
+    DoneSomething := True;
+    while DoneSomething do
+    begin
+      DoneSomething := False;
+      Instruction := RootInstruction;
+      Remaining := Count;
+      for I := 0 to Count - 1 do
+      begin
+        for J := 0 to FPatterns.Count - 1 do
+        begin
+          DoneSomething := FPatterns[J].Handle(Instruction, Remaining, Offset);
+          if DoneSomething then
+          begin
+            Result += Offset;
+            DoHandleOffset(I, Offset);
+            Break;
+          end;
+        end;
+        if DoneSomething then
+          Break;
+        Inc(Instruction);
+        Dec(Remaining);
+      end;
+    end;
+  finally
+    Jumps.Free;
+  end;
 end;
 
 {%ENDREGION}

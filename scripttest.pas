@@ -65,8 +65,8 @@ begin
 
   Engine := TThorium.Create;
   try
-    (*Engine.LoadLibrary(TThoriumLibStd);
-    Engine.LoadLibrary(TThoriumLibStdIO);
+    //Engine.LoadLibrary(TThoriumLibStd);
+    (*Engine.LoadLibrary(TThoriumLibStdIO);
     Engine.LoadLibrary(TThoriumLibString);
     Engine.LoadLibrary(TThoriumLibStreams);*)
     Module := Engine.NewModule('__main__');
