@@ -1981,7 +1981,7 @@ var
   var
     Parameters: TThoriumTypes;
     ParameterRegIDs: TThoriumIntList;
-    ParameterCastLocations: TThoriumIntList;
+    ParameterCastLocations, ParameterReadbackLocations: TThoriumIntList;
     ParamRegID, CastRegID: TThoriumRegisterID;
     State: TThoriumValueState;
     DynamicParameterList: TThoriumIntList;
@@ -2030,6 +2030,7 @@ var
           // These are to insert casts later. Will be removed by
           // Instructions.Finish if not needed
           ParameterCastLocations.AddEntry(GenCode(noop(THORIUM_NOOPMARK_PLACEHOLDER, 0, 0, 0)));
+          GenCode(noop(THORIUM_NOOPMARK_PLACEHOLDER, 0, 0, 0));
           GenCode(noop(THORIUM_NOOPMARK_PLACEHOLDER, 0, 0, 0));
           GenCode(mover_st(ParamRegID));
           if (State = vsDynamic) and (ParamType.NeedsClear) then
