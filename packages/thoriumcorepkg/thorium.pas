@@ -575,68 +575,6 @@ type
 
   TThoriumOperationArray = array of TThoriumGenericOperation;
 
-(*  { IThoriumType }
-
-  IThoriumType = interface ['{C1948C5E-4486-4600-B9FA-F50E33B49E9A}']
-    function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
-      const AnotherType: IThoriumType = nil): Boolean;
-    function CanCall: Boolean;
-    function CanCreate(const InitialData: TThoriumInitialData; const ToRegister: Boolean; out Instruction: TThoriumCreateInstructionDescription): Boolean;
-    function CanCreateNone(const ToRegister: Boolean; out Instruction: TThoriumCreateInstructionDescription): Boolean;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-      const TheObject: IThoriumType = nil; const ExName: String = ''): Boolean;
-    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue;
-    function DuplicateValue(const Input: TThoriumValue): TThoriumValue;
-    function GetClassType: TClass;
-    function GetInstance: TThoriumType;
-    function GetName: String;
-    function HasFieldAccess: Boolean;
-    function HasIndexedAccess: Boolean;
-    function IsEqualTo(const AnotherType: IThoriumType): Boolean;
-    function NeedsClear: Boolean;
-    function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean = True): Boolean;
-    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoBitAnd(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoBitNot(const AValue: TThoriumValue): TThoriumValue;
-    function DoBitOr(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoBitShl(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoBitShr(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoBitXor(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoCast(const AValue: TThoriumValue; const TargetType: IThoriumType): TThoriumValue;
-    procedure DoCastlessAssign(const ASource: Pointer; var ADest: TThoriumValue);
-    function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue;
-    function DoCreateNone: TThoriumValue;
-    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
-    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
-    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue): Boolean;
-    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean;
-    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean;
-    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
-    procedure DoDecrement(var ASubject: TThoriumValue);
-    function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoEvaluate(const AValue: TThoriumValue): Boolean;
-    procedure DoFree(var AValue: TThoriumValue);
-    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue;
-    function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue;
-    function DoGetStaticField(const AFieldID: QWord): TThoriumValue;
-    procedure DoIncrement(var ASubject: TThoriumValue);
-    function DoIntegerDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoLogicalAnd(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoLogicalOr(const AValue, BValue: TThoriumValue): TThoriumValue;
-    procedure DoLogicalNot(var ASubject: TThoriumValue);
-    function DoLogicalXor(const AValue, BValue: TThoriumValue): TThoriumValue;
-    procedure DoNegate(var AValue: TThoriumValue);
-    function DoModulus(const AValue, BValue: TThoriumValue): TThoriumValue;
-    function DoMultiplication(const AValue, BValue: TThoriumValue): TThoriumValue;
-    procedure DoSetField(const AValue: TThoriumValue; const AFieldID: QWord; const NewValue: TThoriumValue);
-    procedure DoSetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue; const NewValue: TThoriumValue);
-    procedure DoSetStaticField(const AFieldID: QWord; const NewValue: TThoriumValue);
-    function DoSubtraction(const AValue, BValue: TThoriumValue): TThoriumValue;
-
-    property Name: String read GetName;
-    property TypeKind: TThoriumTypeKind;
-  end;                                                  *)
-
   TThoriumNativeCallSpecification = record
     Offset: Integer;
     Mask: Integer;
@@ -652,6 +590,7 @@ type
   IThoriumCallable = interface ['{C9317686-61BE-4D72-AF95-9E0FF25C752E}']
     function GetParameters: TThoriumParameters;
     function GetReturnType: TThoriumType;
+    function NeedsNativeData: Boolean;
   end;
 
   TThoriumStructFieldDefinition = record
@@ -842,7 +781,6 @@ type
     procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo);
        override;
     function DoToString(const AValue: TThoriumValue): String; override;
-
   end;
 
   { TThoriumTypeFloat }
@@ -954,6 +892,7 @@ type
     function GetParameters: TThoriumParameters;
     function GetReturnType: TThoriumType;
     function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
+    function NeedsNativeData: Boolean;
   published
     property HasReturnValue: Boolean read GetHasReturnValue;
     property HasReturnValueInt: Integer read GetHasReturnValueInt;
@@ -979,6 +918,7 @@ type
     function GetParameters: TThoriumParameters;
     function GetReturnType: TThoriumType;
     function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
+    function NeedsNativeData: Boolean;
   published
     property HasReturnValue: Boolean read GetHasReturnValue;
     property Parameters: TThoriumParameters read FParameters;
@@ -1400,6 +1340,7 @@ type
     procedure CalcHash; override;
   public
     procedure CreatePrototype; virtual;
+    function NeedsNativeData: Boolean; virtual;
   public
     property Parameters: TThoriumHostFunctionParameterSpec read FParameters;
     property Prototype: TThoriumTypeHostFunction read GetPrototype;
@@ -1450,6 +1391,7 @@ type
     procedure CallFromVirtualMachine(AVirtualMachine: TThoriumVirtualMachine=nil); override;
   public
     procedure CreatePrototype; override;
+    function NeedsNativeData: Boolean; override;
     procedure Precompile; virtual;
   public
     property CallingConvention: TThoriumNativeCallingConvention read FCallingConvention write FCallingConvention;
@@ -1518,6 +1460,8 @@ type
   public
     property CallingConvention: TThoriumNativeCallingConvention read FCallingConvention write FCallingConvention;
     property CodePointer: Pointer read FCodePointer write FCodePointer;
+  public
+    function NeedsNativeData: Boolean; override;
     procedure Precompile;
   end;
 
@@ -5949,6 +5893,11 @@ begin
   raise EThoriumException.Create('TThoriumTypeFunction.IsEqualTo not implemented yet.');
 end;
 
+function TThoriumTypeFunction.NeedsNativeData: Boolean;
+begin
+  Result := False;
+end;
+
 { TThoriumTypeHostFunction }
 
 constructor TThoriumTypeHostFunction.Create(const AThorium: TThorium;
@@ -5995,6 +5944,11 @@ function TThoriumTypeHostFunction.IsEqualTo(const AnotherType: TThoriumType
   ): Boolean;
 begin
   raise EThoriumException.Create('TThoriumTypeHostFunction.IsEqualTo not implemented yet.');
+end;
+
+function TThoriumTypeHostFunction.NeedsNativeData: Boolean;
+begin
+  Exit(FHostFunction.NeedsNativeData);
 end;
 
 { TThoriumTypeHostType }
@@ -8161,6 +8115,11 @@ begin
   FPrototype := TThoriumTypeHostFunction.Create(FLibrary.FThorium, Self);
 end;
 
+function TThoriumHostCallableBase.NeedsNativeData: Boolean;
+begin
+  Result := False;
+end;
+
 { TThoriumExternalFunctionSimple }
 
 constructor TThoriumHostFunctionSimpleMethod.Create(ALibrary: TThoriumLibrary);
@@ -8312,6 +8271,11 @@ procedure TThoriumHostFunctionNativeCall.CreatePrototype;
 begin
   inherited;
   Precompile;
+end;
+
+function TThoriumHostFunctionNativeCall.NeedsNativeData: Boolean;
+begin
+  Result := True;
 end;
 
 procedure TThoriumHostFunctionNativeCall.Precompile;
@@ -8503,6 +8467,11 @@ begin
   if FVAOffset > 0 then
     Stack.Pop(2, True);
   Stack.Pop(Parameters.Count - 1, False);
+end;
+
+function TThoriumHostMethodNativeCall.NeedsNativeData: Boolean;
+begin
+  Result := True;
 end;
 
 procedure TThoriumHostMethodNativeCall.Precompile;
