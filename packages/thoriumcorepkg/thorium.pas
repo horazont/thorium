@@ -105,7 +105,7 @@ unit Thorium;
 {$warning Could not detect little endian platform for sure.}
 {$ifdef ENDIAN_BIG}
 {$error BigEndian plattform *will* cause problems with Thorium NativeCall. So fasten your seatbelts, get popcorn and watch the show.}
-{$hint You may disable the line above BUT THE USAGE OF THORIUM IS ON YOUR OWN RISK THEN. YOU ARE USING A COMPLETELY UNTESTED AND UNSUPORRTED FEATURE!}
+{$warning You may disable the line above BUT THE USAGE OF THORIUM IS ON YOUR OWN RISK THEN. YOU ARE USING A COMPLETELY UNTESTED AND UNSUPORRTED FEATURE!}
 {$hint And you damn freak, who has bigendian nowadays AND wants to compile thorium?}
 {$note The problem is that I am too lazy to implement the neccessary target location change code in the Precompile function. You will need to modifiy it to make it get the correct offsets of integer. And you need to pray that there won't be any problems with pointers and floats. There I cannot help you.}
 {$endif}
