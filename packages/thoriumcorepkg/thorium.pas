@@ -266,6 +266,12 @@ type
 
   (* A pointer to a record which represents an array of values. *)
   PThoriumSimpleVarargs = ^TThoriumSimpleVarargs;
+
+  TThoriumNativeData = record
+    ForType: PTypeInfo;
+    Data: Pointer;
+  end;
+
 {%ENDREGION}
 
 (*
@@ -282,6 +288,7 @@ type
     // handling (e.g. custom free functions etc.)
     RTTI: TThoriumType;
     References: LongInt;
+    NativeData: TThoriumNativeData;
   case Byte of
     0: (Int: TThoriumInteger);
     1: (Float: TThoriumFloat);
@@ -731,6 +738,8 @@ type
     procedure DoEnableHostControl(const AValue: TThoriumValue); virtual;
     function DoEvaluate(const AValue: TThoriumValue): Boolean; virtual; abstract;
     procedure DoFree(var AValue: TThoriumValue); virtual; abstract;
+    procedure DoFreeNative(var AValue: TThoriumValue); virtual; abstract;
+    procedure DoFromNative(var AValue: TThoriumValue); virtual; abstract;
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord): TThoriumValue; virtual; abstract;
     function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoGetLength(const AValue: TThoriumValue): Integer; virtual; abstract;
@@ -748,6 +757,7 @@ type
     procedure DoSetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue; const NewValue: TThoriumValue); virtual; abstract;
     procedure DoSetStaticField(const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
     function DoSubtraction(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo); virtual; abstract;
     function DoToString(const AValue: TThoriumValue): String; virtual;
     class function PerformOperation(const AValue: TThoriumValue; const Operation: TThoriumOperationDescription; const BValue: PThoriumValue = nil): TThoriumValue;
     class function PerformCmpOperation(const AValue: TThoriumValue; const Operation: TThoriumOperationDescription; const BValue: PThoriumValue = nil): Boolean;
@@ -817,6 +827,8 @@ type
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
          override;
     function DoEvaluate(const AValue: TThoriumValue): Boolean; override;
+    procedure DoFreeNative(var AValue: TThoriumValue); override;
+    procedure DoFromNative(var AValue: TThoriumValue); override;
     procedure DoIncrement(var ASubject: TThoriumValue); override;
     function DoIntegerDivision(const AValue, BValue: TThoriumValue
        ): TThoriumValue; override;
@@ -827,6 +839,8 @@ type
     procedure DoNegate(var AValue: TThoriumValue); override;
     function DoSubtraction(const AValue, BValue: TThoriumValue
        ): TThoriumValue; override;
+    procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo);
+       override;
     function DoToString(const AValue: TThoriumValue): String; override;
 
   end;
@@ -863,12 +877,15 @@ type
     procedure DoDecrement(var ASubject: TThoriumValue); override;
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
         override;
+    procedure DoFreeNative(var AValue: TThoriumValue); override;
+    procedure DoFromNative(var AValue: TThoriumValue); override;
     procedure DoIncrement(var ASubject: TThoriumValue); override;
     procedure DoNegate(var AValue: TThoriumValue); override;
     function DoMultiplication(const AValue, BValue: TThoriumValue
        ): TThoriumValue; override;
     function DoSubtraction(const AValue, BValue: TThoriumValue
        ): TThoriumValue; override;
+    procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo); override;
     function DoToString(const AValue: TThoriumValue): String; override;
   end;
 
@@ -906,10 +923,14 @@ type
     function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
        override;
     procedure DoFree(var AValue: TThoriumValue); override;
+    procedure DoFreeNative(var AValue: TThoriumValue); override;
+    procedure DoFromNative(var AValue: TThoriumValue); override;
     function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
        ): TThoriumValue; override;
     function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue
        ): TThoriumValue; override;
+    procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo);
+       override;
     function DoToString(const AValue: TThoriumValue): String; override;
   end;
 
@@ -5237,6 +5258,16 @@ begin
   Result := AValue.Int <> 0;
 end;
 
+procedure TThoriumTypeInteger.DoFreeNative(var AValue: TThoriumValue);
+begin
+  AValue.NativeData.Data := nil;
+end;
+
+procedure TThoriumTypeInteger.DoFromNative(var AValue: TThoriumValue);
+begin
+  AValue.NativeData.Data := nil;
+end;
+
 function TThoriumTypeInteger.DoCreate(const InitialData: TThoriumInitialData
   ): TThoriumValue;
 begin
@@ -5280,6 +5311,13 @@ function TThoriumTypeInteger.DoSubtraction(const AValue, BValue: TThoriumValue
 begin
   Result.RTTI := Self;
   Result.Int := AValue.Int - BValue.Int;
+end;
+
+procedure TThoriumTypeInteger.DoToNative(var AValue: TThoriumValue;
+  const AType: PTypeInfo);
+begin
+  AValue.NativeData.ForType := nil;
+  AValue.NativeData.Data := @AValue.Int;
 end;
 
 function TThoriumTypeInteger.DoToString(const AValue: TThoriumValue): String;
@@ -5497,6 +5535,43 @@ begin
   Result.Float := AValue.Float / BValue.Float;
 end;
 
+procedure TThoriumTypeFloat.DoFreeNative(var AValue: TThoriumValue);
+begin
+  if AValue.NativeData.ForType <> nil then
+    FreeMem(AValue.NativeData.Data);
+  AValue.NativeData.Data := nil;
+end;
+
+procedure TThoriumTypeFloat.DoFromNative(var AValue: TThoriumValue);
+begin
+  if AValue.NativeData.ForType = nil then
+  begin
+    AValue.NativeData.Data := nil;
+    Exit;
+  end;
+  case GetTypeData(AValue.NativeData.ForType)^.FloatType of
+    ftSingle:
+    begin
+      AValue.Float := PSingle(AValue.NativeData.Data)^;
+    end;
+    ftExtended:
+    begin
+      AValue.Float := PExtended(AValue.NativeData.Data)^;
+    end;
+    ftComp:
+    begin
+      AValue.Float := PComp(AValue.NativeData.Data)^;
+    end;
+    ftCurr:
+    begin
+      AValue.Float := PCurrency(AValue.NativeData.Data)^;
+    end;
+  end;
+  FreeMem(AValue.NativeData.Data);
+  AValue.NativeData.Data := nil;
+  AValue.NativeData.ForType := nil;
+end;
+
 procedure TThoriumTypeFloat.DoIncrement(var ASubject: TThoriumValue);
 begin
   ASubject.Float += 1;
@@ -5519,6 +5594,39 @@ function TThoriumTypeFloat.DoSubtraction(const AValue, BValue: TThoriumValue
 begin
   Result.RTTI := Self;
   Result.Float := AValue.Float - BValue.Float;
+end;
+
+procedure TThoriumTypeFloat.DoToNative(var AValue: TThoriumValue;
+  const AType: PTypeInfo);
+begin
+  AValue.NativeData.ForType := AType;
+  case GetTypeData(AType)^.FloatType of
+    ftSingle:
+    begin
+      AValue.NativeData.Data := GetMem(SizeOf(Single));
+      PSingle(AValue.NativeData.Data)^ := AValue.Float;
+    end;
+    ftDouble:
+    begin
+      AValue.NativeData.ForType := nil;
+      AValue.NativeData.Data := @AValue.Float;
+    end;
+    ftExtended:
+    begin
+      AValue.NativeData.Data := GetMem(SizeOf(Extended));
+      PExtended(AValue.NativeData.Data)^ := AValue.Float;
+    end;
+    ftComp:
+    begin
+      AValue.NativeData.Data := GetMem(SizeOf(Comp));
+      PComp(AValue.NativeData.Data)^ := AValue.Float;
+    end;
+    ftCurr:
+    begin
+      AValue.NativeData.Data := GetMem(SizeOf(Currency));
+      PCurrency(AValue.NativeData.Data)^ := AValue.Float;
+    end;
+  end;
 end;
 
 function TThoriumTypeFloat.DoToString(const AValue: TThoriumValue): String;
@@ -5723,6 +5831,16 @@ begin
   AValue.RTTI := nil;
 end;
 
+procedure TThoriumTypeString.DoFreeNative(var AValue: TThoriumValue);
+begin
+
+end;
+
+procedure TThoriumTypeString.DoFromNative(var AValue: TThoriumValue);
+begin
+
+end;
+
 function TThoriumTypeString.DoGetField(const AValue: TThoriumValue;
   const AFieldID: QWord): TThoriumValue;
 begin
@@ -5747,6 +5865,12 @@ begin
   Result.RTTI := Self;
   New(Result.Str);
   Result.Str^ := AValue.Str^[AIndex.Int];
+end;
+
+procedure TThoriumTypeString.DoToNative(var AValue: TThoriumValue;
+  const AType: PTypeInfo);
+begin
+  AValue.NativeData.Data := AValue.Str;
 end;
 
 function TThoriumTypeString.DoToString(const AValue: TThoriumValue): String;
