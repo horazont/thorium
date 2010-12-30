@@ -5905,12 +5905,50 @@ constructor TThoriumTypeHostFunction.Create(const AThorium: TThorium;
 var
   I: Integer;
   TypeSpec: TThoriumType;
+  Op: TThoriumOperationDescription;
 begin
   inherited Create(AThorium);
+  FHostFunction := AHostFunction;
   for I := 0 to AHostFunction.FParameters.Count - 1 do
   begin
-    TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(TypeInfo(AHostFunction.FParameters));
+    TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(AHostFunction.FParameters.GetParameter(I));
+    if TypeSpec = nil then
+      raise EThoriumException.CreateFmt('Cannot find respective thorium type for %s.', [AHostFunction.FParameters.GetParameter(I)^.Name]);
+    if AHostFunction.NeedsNativeData then
+    begin;
+      Op.Operation := opToNative;
+      if not TypeSpec.CanPerformOperation(Op) then
+        raise EThoriumException.CreateFmt('''%s'' cannot be passed to a native call function (opToNative not supported).', [TypeSpec.Name]);
+      Op.Operation := opFromNative;
+      if not TypeSpec.CanPerformOperation(Op) then
+        raise EThoriumException.CreateFmt('''%s'' cannot be passed to a native call function (opFromNative not supported).', [TypeSpec.Name]);
+      Op.Operation := opFreeNative;
+      if not TypeSpec.CanPerformOperation(Op) then
+        raise EThoriumException.CreateFmt('''%s'' cannot be passed to a native call function (opFreeNative not supported).', [TypeSpec.Name]);
+    end;
+    FParameters.Add(TypeSpec);
   end;
+  if AHostFunction.ReturnType.HostType <> nil then
+  begin
+    TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(AHostFunction.FReturnType.HostType);
+    if TypeSpec = nil then
+      raise EThoriumException.CreateFmt('Cannot find respective thorium type for %s.', [AHostFunction.FParameters.GetParameter(I)^.Name]);
+    if AHostFunction.NeedsNativeData then
+    begin;
+      Op.Operation := opToNative;
+      if not TypeSpec.CanPerformOperation(Op) then
+        raise EThoriumException.CreateFmt('''%s'' cannot be return type of a native call function (opToNative not supported).', [TypeSpec.Name]);
+      Op.Operation := opFromNative;
+      if not TypeSpec.CanPerformOperation(Op) then
+        raise EThoriumException.CreateFmt('''%s'' cannot be return type of a native call function (opFromNative not supported).', [TypeSpec.Name]);
+      Op.Operation := opFreeNative;
+      if not TypeSpec.CanPerformOperation(Op) then
+        raise EThoriumException.CreateFmt('''%s'' cannot be return type of a native call function (opFreeNative not supported).', [TypeSpec.Name]);
+    end;
+    FReturnType := TypeSpec;
+  end
+  else
+    FReturnType := nil;
 end;
 
 function TThoriumTypeHostFunction.GetHasReturnValue: Boolean;

@@ -2071,7 +2071,10 @@ var
               Scores[I] += 10;
           end
           else
-            Scores[I] := -1000;
+          begin
+            Scores[I] := -10000;
+            Break;
+          end;
         end;
       end;
 
