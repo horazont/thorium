@@ -503,7 +503,6 @@ type
 (*
    Region: Thorium types
                                                                               *)
-
 {%REGION 'Thorium types' /fold}
   TThoriumTypeKind = (tkSimple, tkFunction, tkHostFunction, tkHostMethod,
     tkHostType, tkStruct, tkArray, tkString);
@@ -1128,7 +1127,6 @@ type
 (*
    Region: Stack and identifier table entries
                                                                               *)
-
 {%REGION 'Stack and identifier table entries' /fold}
 
   (* Defines which data a stack entry contains. *)
@@ -1957,7 +1955,7 @@ type
 (*
    Region: Optimizer
                                                                               *)
-
+{%REGION 'Optimizer' /fold}
   { TThoriumCustomOptimizerPattern }
 
   TThoriumCustomOptimizerPattern = class (TObject)
@@ -1987,6 +1985,7 @@ type
     function AddPattern(const AClass: TThoriumOptimizerPatternClass): TThoriumCustomOptimizerPattern;
     function Optimize(AInstructions: TThoriumInstructions; OffsetCallback: TThoriumHandleOffset): Integer;
   end;
+{%ENDREGION}
 
 (*
    Region: Compiler
@@ -1994,7 +1993,6 @@ type
    Description: These classes are responsible to compile the script source code
                 into thorium bytecode.
                                                                               *)
-
 {%REGION 'Compiler' /fold}
 
   TThoriumModules = specialize TFPGList<TThoriumModule>;
