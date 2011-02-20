@@ -42,7 +42,7 @@ program scripttest;
 
 uses
   {$ifdef HeapTrc}Heaptrc, {$endif}Classes, SysUtils, thorium, thorium_utils, thorium_globals,
-  ThoriumLibStd, ThoriumLibStdIO, ThoriumLibString, ThoriumLibStreams, Thorium_DefaultCompiler;
+  ThoriumLibStd, ThoriumLibStdIO, ThoriumLibString, ThoriumLibStreams;
 
 {$ifdef UseTestModule}
 const

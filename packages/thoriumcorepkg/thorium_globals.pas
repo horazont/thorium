@@ -108,10 +108,6 @@ const
   THORIUM_STATE_ACCUM_LESSEQUAL = THORIUM_STATE_LESS or THORIUM_STATE_EQUAL;
   THORIUM_STATE_ACCUM_GREATER = THORIUM_STATE_GREATER;
   THORIUM_STATE_ACCUM_GREATEREQUAL = THORIUM_STATE_GREATER or THORIUM_STATE_EQUAL;
-
-  THORIUM_TYPE_NAME_INTEGER = 'int';
-  THORIUM_TYPE_NAME_STRING = 'string';
-  THORIUM_TYPE_NAME_FLOAT = 'float';
 {%ENDREGION}
 
 (*
@@ -268,7 +264,7 @@ type
 
   TThoriumBuiltInType = (btNil = 0, btUnknown = 1, btInteger = 2, btFloat = 3,
     btString = 4, btArray = 5);
-  TThoriumArrayKind = (akStatic, akDynamic);
+  TThoriumArrayKind = (akNoArray, akStatic, akDynamic);
   TThoriumRegisterID = Word;
   TThoriumRegisterKind = (trC, trEXP);
   TThoriumVisibilityLevel = (vsPrivate, vsPublic);
@@ -277,7 +273,7 @@ type
 
 
   TThoriumTableEntryType = (etStatic, etVariable, etRegisterVariable,
-    etCallable, etHostCallable, etProperty, etLibraryConstant);
+    etFunction, etExtendedType, etProperty, etLibraryConstant);
   TThoriumTableEntryTypes = set of TThoriumTableEntryType;
   TThoriumQualifiedIdentifierKind = (ikType, ikVariable, ikStatic, ikComplex,
     ikUndeclared, ikNoFar, ikPrototypedFunction, ikLibraryProperty);
@@ -359,6 +355,444 @@ type
 {%ENDREGION}
 
 (*
+   Region: Symbols
+   Description: This region contains various types and constants which define
+                the symbols the code tokenizer (aka Scanner) of Thorium is aware
+                of.
+                                                                              *)
+{%REGION 'Symbols' /fold}
+type
+  TThoriumSymbol = (
+      tsUnknown,
+      tsIntegerValue,
+      tsFloatValue,
+      tsStringValue,
+      tsIdentifier,
+      tsOpenCurlyBracket,
+      tsCloseCurlyBracket,
+      tsOpenBracket,
+      tsCloseBracket,
+      tsSemicolon,
+      tsComma,
+      tsDot,
+      tsOpenSquareBracket,
+      tsCloseSquareBracket,
+      tsBoolNot,
+      tsColon,
+      tsLesser,
+      tsGreater,
+      tsPlus,
+      tsMinus,
+      tsMultiply,
+      tsDivide,
+      tsAssign,
+      tsEqual,
+      tsGreaterEqual,
+      tsLesserEqual,
+      tsNotEqual,
+      tsAdditiveAssign,
+      tsSubtractiveAssign,
+      tsMultiplicativeAssign,
+      tsDivideAssign,
+      tsPlusPlus,
+      tsMinusMinus,
+      tsShl,
+      tsShr,
+      tsNot,
+      tsOr,
+      tsXor,
+      tsDiv,
+      tsAnd,
+      tsMod,
+      tsIf,
+      tsElseIf,
+      tsElse,
+      tsWhile,
+      tsDo,
+      tsFor,
+      tsCase,
+      tsExit,
+      tsNil,
+      tsPublic,
+      tsPrivate,
+      tsStatic,
+      tsSwitch,
+      tsTrue,
+      tsFalse,
+      tsDefault,
+      tsBreak,
+      tsReturn,
+      tsLoadLibrary,
+      tsLoadModule,
+      tsError,
+      tsNone
+    );
+  TThoriumSymbols = set of TThoriumSymbol;
+
+const
+  THORIUM_FIRST_SINGLECHAROP = tsOpenCurlyBracket;
+  THORIUM_LAST_SINGLECHAROP = tsBoolNot;
+  THORIUM_FIRST_MULTICHAROP = tsColon;
+  THORIUM_LAST_MULTICHAROP = tsShr;
+  THORIUM_FIRST_KEYWORD = tsNot;
+  THORIUM_LAST_KEYWORD = tsLoadModule;
+  THORIUM_SYMBOL_CODE : array [TThoriumSymbol] of String = (
+    '',
+    '',
+    '',
+    '',
+    '',
+    '{',
+    '}',
+    '(',
+    ')',
+    ';',
+    ',',
+    '.',
+    '[',
+    ']',
+    '!',
+    ':',
+    '<',
+    '>',
+    '+',
+    '-',
+    '*',
+    '/',
+    '=',
+    '==',
+    '>=',
+    '<=',
+    '!=',
+    '+=',
+    '-=',
+    '*=',
+    '/=',
+    '++',
+    '--',
+    '<<',
+    '>>',
+    'NOT',
+    'OR',
+    'XOR',
+    'DIV',
+    'AND',
+    'MOD',
+    'IF',
+    'ELSEIF',
+    'ELSE',
+    'WHILE',
+    'DO',
+    'FOR',
+    'CASE',
+    'EXIT',
+    'NIL',
+    'PUBLIC',
+    'PRIVATE',
+    'STATIC',
+    'SWITCH',
+    'TRUE',
+    'FALSE',
+    'DEFAULT',
+    'BREAK',
+    'RETURN',
+    'LOADLIBRARY',
+    'LOADMODULE',
+    '',
+    ''
+  );
+  THORIUM_SYMBOL_NAMES : array [TThoriumSymbol] of String = (
+    'unknown',
+    'integer value',
+    'float value',
+    'string value',
+    'identifier',
+    'opening curly bracket',
+    'closing curly bracket',
+    'opening bracket',
+    'closing bracket',
+    'semicolon',
+    'comma',
+    'dot',
+    'opening square bracket',
+    'closing square bracket',
+    'boolean not',
+    'colon',
+    'lesser than',
+    'greater than',
+    'plus',
+    'minus',
+    'multiply',
+    'divide',
+    'assign to',
+    'equal to',
+    'greater than or equal to',
+    'lesser than or equal to',
+    'not equal to',
+    'additive assign to',
+    'subtractive assign to',
+    'multiplicative assign to',
+    'dividing assign to',
+    'increase',
+    'decrease',
+    'shift left',
+    'shift right',
+    'NOT',
+    'OR',
+    'XOR',
+    'DIV',
+    'AND',
+    'MOD',
+    'IF',
+    'ELSEIF',
+    'ELSE',
+    'WHILE',
+    'DO',
+    'FOR',
+    'CASE',
+    'EXIT',
+    'NIL',
+    'PUBLIC',
+    'PRIVATE',
+    'STATIC',
+    'SWITCH',
+    'TRUE',
+    'FALSE',
+    'DEFAULT',
+    'BREAK',
+    'RETURN',
+    'LOADLIBRARY',
+    'LOADMODULE',
+    '',
+    '( none )'
+  );
+
+  THORIUM_ORDINAL_VALUE = [tsIntegerValue];
+  THORIUM_VALUE = THORIUM_ORDINAL_VALUE + [tsFloatValue, tsStringValue];
+
+  THORIUM_FACTOR_INITIATOR : TThoriumSymbols = [tsPlus, tsMinus, tsIdentifier,
+    tsOpenBracket, tsIntegerValue, tsFloatValue, tsStringValue, tsNil, tsTrue,
+    tsFalse, tsPlusPlus, tsMinusMinus, tsNot, tsBoolNot];
+{%ENDREGION}
+
+(*
+   Region: Operations & operators
+   Description: Some types and constants which define operations and operators
+                like multiplication, greater than or comparision.
+                                                                              *)
+{%REGION 'Operations & operators' /fold}
+type
+  TThoriumOperation = (toAssign, toAdd, toSubtract, toMultiply, toDivide, toDiv,
+    toMod, toAnd, toOr, toXor, toShr, toShl, toNegate, toNot, toBoolNot, toCompare, toINC_DEC);
+  TThoriumOperations = set of TThoriumOperation;
+
+  TThoriumOperator = (tpAdd, tpSubtract, tpMultiply, tpDivide, tpDiv, tpMod,
+    tpAnd, tpOr, tpXor, tpShr, tpShl, tpEqual, tpGreater, tpLess, tpGreaterEqual,
+    tpLessEqual, tpNotEqual);
+
+const
+  THORIUM_RELATIONAL_OPERATOR : TThoriumSymbols = [tsEqual, tsLesser, tsGreater,
+    tsLesserEqual, tsGreaterEqual, tsNotEqual];
+  THORIUM_MULTIPLICATIVE_OPERATOR : TThoriumSymbols = [tsMultiply, tsDivide,
+    tsDiv, tsMod, tsAnd];
+  THORIUM_ADDITIVE_OPERATOR : TThoriumSymbols = [tsPlus, tsMinus, tsOr, tsXor];
+
+  THORIUM_OPERATION_NAME : array [TThoriumOperation] of String = (
+    'assignment',
+    'addition',
+    'subtraction',
+    'multiplication',
+    'division',
+    'integer division',
+    'modulus',
+    'bitwise and',
+    'bitwise or',
+    'bitwise xor',
+    'shift right',
+    'shift left',
+    'negation',
+    'bitwise not',
+    'boolean not',
+    'comparsion',
+    'increasement/decreasement'
+  );
+
+  THORIUM_OP_MULTIPLY = $1001;
+  THORIUM_OP_DIVIDE = $1002;
+  THORIUM_OP_INTDIVIDE = $1003;
+  THORIUM_OP_AND = $1004;
+  THORIUM_OP_MOD = $1005;
+  THORIUM_OP_NOT = $1006;
+  THORIUM_OP_ADD = $2000;
+  THORIUM_OP_SUBTRACT = $2001;
+  THORIUM_OP_OR = $2002;
+  THORIUM_OP_XOR = $2003;
+  THORIUM_OP_EQUAL = $3000;
+  THORIUM_OP_NOTEQUAL = $3001;
+  THORIUM_OP_LESS = $3002;
+  THORIUM_OP_GREATER = $3003;
+  THORIUM_OP_LESSEQUAL = $3004;
+  THORIUM_OP_GREATEREQUAL = $3005;
+{%ENDREGION}
+
+(*
+   Region: Identifier relation matrix
+   Description: This region declares constants which are used by the compiler
+                to determine possible actions between identifiers.
+                                                                              *)
+{%REGION 'Identifier relation matrix' /fold}
+const
+  THORIUM_INT_INT_OPS = [toAdd, toSubtract,
+    toMultiply, toDiv, toMod, toAnd, toOr, toXor, toNegate, toNot, toAssign,
+    toCompare, toDivide, toINC_DEC, toBoolNot];
+  THORIUM_INT_FLT_OPS = [toAdd, toSubtract, toMultiply, toDivide,
+    toCompare];
+  THORIUM_INT_STR_OPS = [];
+
+  THORIUM_FLT_INT_OPS = [toAdd, toSubtract, toMultiply,
+    toDivide, toAssign, toCompare];
+  THORIUM_FLT_FLT_OPS = [toAdd, toSubtract, toMultiply,
+    toDivide, toNegate, toAssign, toCompare, toINC_DEC];
+  THORIUM_FLT_STR_OPS = [];
+
+  THORIUM_STR_INT_OPS = [];
+  THORIUM_STR_FLT_OPS = [];
+  THORIUM_STR_STR_OPS = [toAdd, toAssign, toCompare];
+  THORIUM_TYPE_OPERATORS : array [TThoriumBuiltInType, TThoriumBuiltInType] of TThoriumOperations = (
+               {btUnknown          }   {btNil              }   {btInteger          }   {btFloat            }   {btString           }   {btArray            }
+  {btUnknown}(([]                  ),  ([]                 ),  ([]                 ),  ([]                 ),  ([]                 ),  ([]                 )),
+  {btNil    }(([]                  ),  ([]                 ),  ([]                 ),  ([]                 ),  ([]                 ),  ([]                 )),
+  {btInteger}(([]                  ),  ([]                 ),  (THORIUM_INT_INT_OPS),  (THORIUM_INT_FLT_OPS),  (THORIUM_INT_STR_OPS),  ([]                 )),
+  {btFloat  }(([]                  ),  ([]                 ),  (THORIUM_FLT_INT_OPS),  (THORIUM_FLT_FLT_OPS),  (THORIUM_FLT_STR_OPS),  ([]                 )),
+  {btString }(([]                  ),  ([]                 ),  (THORIUM_FLT_INT_OPS),  (THORIUM_STR_FLT_OPS),  (THORIUM_STR_STR_OPS),  ([]                 )),
+  {btArray  }(([]                  ),  ([]                 ),  ([]                 ),  ([]                 ),  ([]                 ),  ([]                 ))
+  );
+
+  THORIUM_TYPE_OPERATOR_RESULTS : array [TThoriumBuiltInType, TThoriumBuiltInType, TThoriumOperation] of TThoriumBuiltInType = (
+    ( // btNil Operand2
+      ( // btNil btNil
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      ),
+      ( // btNil btUnknown
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      ),
+      ( // btNil btInteger
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      ),
+      ( // btNil btFloat
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      ),
+      ( // btNil btString
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      ),
+      ( // btNil btArray
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      )
+    ),
+    ( // btUnknown Operand2
+      ( // btUnknown btNil
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btUnknown btUnknown
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btUnknown btInteger
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btUnknown btFloat
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btUnknown btString
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btUnknown btArray
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      )
+    ),
+    ( // btInteger Operand2
+      ( // btInteger btNil
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      ),
+      ( // btInteger btUnknown
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btInteger btInteger
+        btInteger, btInteger, btInteger, btInteger, btFloat, btInteger, btInteger, btInteger, btInteger, btInteger, btInteger, btInteger, btInteger, btInteger, btInteger, btInteger, btInteger
+      ),
+      ( // btInteger btFloat
+        btUnknown, btFloat, btFloat, btFloat, btFloat, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btInteger, btUnknown
+      ),
+      ( // btInteger btString
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btInteger btArray
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      )
+    ),
+    ( // btFloat Operand2
+      ( // btFloat btNil
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      ),
+      ( // btFloat btUnknown
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btFloat btInteger
+        btFloat, btFloat, btFloat, btFloat, btFloat, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btInteger, btUnknown
+      ),
+      ( // btFloat btFloat
+        btFloat, btFloat, btFloat, btFloat, btFloat, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btFloat, btUnknown, btUnknown, btInteger, btFloat
+      ),
+      ( // btFloat btString
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btFloat btArray
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      )
+    ),
+    ( // btString Operand2
+      ( // btString btNil
+        btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil, btNil
+      ),
+      ( // btString btUnknown
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btString btInteger
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btString btFloat
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btString btString
+        btString, btString, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btInteger, btUnknown
+      ),
+      ( // btString btArray
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      )
+    ),
+    ( // btArray Operand2
+      ( // btArray btNil
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btArray btUnknown
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btArray btInteger
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btArray btFloat
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btArray btString
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      ),
+      ( // btArray btArray
+        btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown, btUnknown
+      )
+    )
+  );
+{%ENDREGION}
+
+(*
    Region: Instructions
    Description: This region declares the various instruction records which
                 contain the information the virtual machine needs to execute a
@@ -421,13 +855,6 @@ type
   // Thorium instructions need to be packed to word-size to make them
   // equal-sized. The smallest chunk of data in an instruction is word-sized.
   {$PACKRECORDS 2}
-
-  TThoriumInstructionREG = record
-    Instruction: TThoriumInstructionCode;
-    Reserved: array [0..11] of Word;
-    // Debug infos
-    CodeLine: Cardinal;
-  end;
   
   TThoriumInstructionINT_S = record
     Instruction: TThoriumInstructionCode;
@@ -748,15 +1175,6 @@ type
     Instruction: TThoriumInstructionCode;
     TRI: Word;
     Reserved: array [0..10] of Word;
-    // Debug infos
-    CodeLine: Cardinal;
-  end;
-
-  TThoriumInstructionCAST = record
-    Instruction: TThoriumInstructionCode;
-    SRI: Word;
-    TRI: Word;
-    Reserved: array [0..9] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -1776,32 +2194,7 @@ const
   );
 
   THORIUM_NOOPMARK_CALL = 1;
-  THORIUM_NOOPMARK_INVALID_ACCESS = 2;
 
-{%ENDREGION}
-
-(*
-   Region: Operations
-                                                                              *)
-{%REGION 'Operations' /fold}
-type
-  TThoriumOperation = (opAssignment, opIncrement, opDecrement, opCmpEqual,
-    opCmpNotEqual, opCmpGreater, opCmpGreaterOrEqual, opCmpLess,
-    opCmpLessOrEqual, opAddition, opSubtraction, opMultiplication, opDivision,
-    opIntegerDivision, opModulus, opBitAnd, opBitOr, opBitXor, opBitShr,
-    opBitShl, opBitNot, opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot,
-    opNegate, opCall);
-  TThoriumOperations = set of TThoriumOperation;
-
-const
-  opCompare = [opCmpEqual, opCmpNotEqual, opCmpGreater, opCmpGreaterOrEqual,
-    opCmpLess, opCmpLessOrEqual];
-  opIncDec = [opIncrement, opDecrement];
-  opBitwise = [opBitAnd, opBitOr, opBitXor, opBitShr, opBitShl, opBitNot];
-  opLogical = [opLogicalAnd, opLogicalOr, opLogicalXor, opLogicalNot];
-
-  opReflexive = [opIncrement, opDecrement, opBitNot, opLogicalNot, opNegate,
-    opCall];
 {%ENDREGION}
 
 (*
@@ -1813,8 +2206,15 @@ const
 {%REGION 'Miscellaneous' /fold}
 type
   TThoriumIntArray = array of Integer;
+  
+  TThoriumStatementKind = (tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
+    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak);
+  TThoriumStatementKinds = set of TThoriumStatementKind;
 
 const
+  THORIUM_ALL_STATEMENTS = [tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
+    tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak];
+
   THORIUM_LETTER = ['A'..'Z', 'a'..'z', '_'];
   THORIUM_DIGIT = ['0'..'9'];
   THORIUM_HEXDIGIT = THORIUM_DIGIT + ['A'..'F', 'a'..'f'];

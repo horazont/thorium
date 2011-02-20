@@ -2,7 +2,7 @@
 *** THORIUM SCRIPTING LANGUAGE - by Jonas Wielicki
 ********************************************************************************
 ** File Name: thorium.pas
-** Last update: 2010-03-14
+** Last update: 2010-04-23
 This file is part of the Thorium Scripting Language Project.
 
 The contents of this file are subject to the Mozilla Public License
@@ -132,8 +132,6 @@ type
 {%REGION 'Forward declarations' /fold}
   TThoriumPersistent = class;
   TThoriumParameters = class;
-  TThoriumType = class;
-  IThoriumType = interface;
   TThoriumIdentifierTable = class;
   TThoriumPublicValue = class;
   TThoriumFunction = class;
@@ -146,6 +144,7 @@ type
   TThoriumHostMethodBase = class;
   TThoriumHostObjectType = class;
   TThoriumRTTIObjectType = class;
+  TThoriumScanner = class;
   TThoriumInstructions = class;
   TThoriumModule = class;
   TThoriumLibraryConstant = class;
@@ -202,6 +201,210 @@ type
 {%ENDREGION}
 
 (*
+   Region: Thorium values and types
+   Declarations: TThoriumBuiltInValue, TThoriumHostObjectTypeValue,
+                 TThoriumValue, TThoriumValues, TThoriumRegisters, TThoriumType
+   Description: The records in here represent complete values and types of
+                Thorium.
+                                                                              *)
+{%REGION 'Thorium values and types' /fold}
+
+  (* This is the built-in part of a TThoriumValue. *)
+  TThoriumBuiltInValue = record
+  case _Type: TThoriumBuiltInType of
+    btInteger:
+    (
+      Int: TThoriumInteger
+    );
+    btFloat:
+    (
+      Float: TThoriumFloat
+    );
+    btString:
+    (
+      Str: PThoriumString
+    );
+  end;
+
+  (* This is the host object type part of a TThoriumValue. *)
+  TThoriumHostObjectTypeValue = record
+    Value: TThoriumHostObject;
+    TypeClass: TThoriumHostObjectType;
+//    Size: TThoriumSizeInt;
+  end;
+
+  (* Pointer to an host object part of a TThoriumValue. *)
+  PThoriumHostObjectTypeValue = ^TThoriumHostObjectTypeValue;
+
+  (* A TThoriumValue represents a value processable by the Thorium engine. It
+     is used on the Thorium stack and in the registers of the virtual
+     machine. *)
+  TThoriumValue = record
+  case _Type: TThoriumValueType of
+    vtBuiltIn:
+    (
+      BuiltIn: TThoriumBuiltInValue
+    );
+    vtExtendedType:
+    (
+      Extended: TThoriumHostObjectTypeValue
+    );
+    vtFunction:
+    (
+      Func: TThoriumFunction
+    );
+  end;
+
+  (* Pointer to a value processable by Thorium. *)
+  PThoriumValue = ^TThoriumValue;
+
+  (* An array of values processable by Thorium. *)
+  TThoriumValues = array of TThoriumValue;
+
+  (* A set of values processable by Thorium representing the complete register
+     set of a Thorium virtual machine. *)
+  TThoriumRegisters = array [0..THORIUM_REGISTER_COUNT-1] of TThoriumValue;
+
+  (* A definition of a type processable by Thorium. *)
+  TThoriumType = record
+  case ValueType: TThoriumValueType of
+    vtBuiltIn:
+    (
+      BuiltInType: TThoriumBuiltInType;
+    );
+    vtExtendedType:
+    (
+      Extended: TThoriumHostObjectType;
+    );
+    vtFunction:
+    (
+      Func: TThoriumFunction
+    );
+    vtHostFunction:
+    (
+      HostFunc: TThoriumHostFunctionBase;
+    );
+    vtHostMethod:
+    (
+      HostMethod: TThoriumHostMethodBase;
+    );
+  end;
+
+  (* Pointer to a definition of a type processable by Thorium. *)
+  PThoriumType = ^TThoriumType;
+
+  (* Pointer to the pointer to a definition of a type processable by Thorium. *)
+  PPThoriumType = ^PThoriumType;
+{%ENDREGION}
+
+(*
+   Region: Stack and identifier table
+   Declarations: TThoriumStackEntry, TThoriumTableEntry
+   Description: These records are used by the stack and the identifier table.
+                                                                              *)
+{%REGION 'Stack and identifier table' /fold}
+
+  (* Defines which data a stack entry contains. *)
+  TThoriumStackEntryType = (etValue, etStackFrame, etVarargs, etNull);
+
+  (* This record represents one entry on the Thorium stack. It may either
+     contain a value, a stack frame or a set of varargs for a function call. *)
+  TThoriumStackEntry = record
+  case _Type: TThoriumStackEntryType of
+    etValue:
+    (
+      Value: TThoriumValue
+    );
+    etStackFrame:
+    (
+      PreviousStackFrame: LongInt;
+      ReturnAddress: TThoriumInstructionAddress;
+      ReturnModule: LongInt;
+      Params: LongInt;
+      RetVals: Word;
+      RegisterDumpRange: Word;
+      RegisterDump: Pointer;
+      DropResult: Boolean;
+    );
+    etVarargs:
+    (
+      VAData: Pointer;
+      VADataOrigin: Pointer;
+      VABuffer: Pointer;
+      VABufferOrigin: Pointer;
+      VAToFree: PThoriumValue;
+      VAToFreeOrigin: PThoriumValue;
+    );
+  end;
+
+  (* Pointer to an entry on the Thorium stack. *)
+  PThoriumStackEntry = ^TThoriumStackEntry;
+
+  (* An entry in an identifier table used by the Thorium compiler which defines
+     of which kind an identifier is and how it might be found. *)
+  TThoriumTableEntry = record
+    Name: PString;
+    Scope: Integer;
+    _Type: TThoriumTableEntryType;
+    Offset: Integer; // This is the register of a register variable and the index of a library constant.
+    TypeSpec: TThoriumType;
+    Value: TThoriumValue;
+    Ptr: Pointer;
+  end;
+
+  (* A pointer to an entry in an identifier table.*)
+  PThoriumTableEntry = ^TThoriumTableEntry;
+{%ENDREGION}
+
+(*
+   Region: Identifier qualification & relocation
+   Declarations: TThoriumHostObjectTypeArray, TThoriumLibraryPropertyArray,
+                 TThoriumQualifiedIdentifier, TThoriumRelocation
+   Description: These types are used to represent a qualified identifier and how
+                to read / write its value. Also the relocation information
+                types are declared here.
+                                                                              *)
+{%REGION 'Identifier qualification & relocation' /fold}
+
+  (* An array of TThoriumHostObjectType mainly used to notify the compiler about
+     (possibly relocation needing) uses of an external type. *)
+  TThoriumHostObjectTypeArray = array of TThoriumHostObjectType;
+
+  (* An array of TThoriumLibraryProperty mainly used to notify the compiler
+     about (possibly relocation needing) uses of a library property. *)
+  TThoriumLibraryPropertyArray = array of TThoriumLibraryProperty;
+
+  (* A record containing information about a fully qualified identifier, which
+     means that all brackets, dots and square brackets of the identifier
+     expression are parsed. It contains also information about used host types
+     and library properties and how to read or write the value of the
+     identifier. *)
+  TThoriumQualifiedIdentifier = record
+    FullStr: String;
+    Kind: TThoriumQualifiedIdentifierKind;
+    IsStatic: Boolean;
+    FinalType: TThoriumType;
+    Value: TThoriumValue;
+
+    GetJumpMarks: TThoriumIntArray;
+    GetCode: TThoriumInstructionArray;
+    SetJumpMarks: TThoriumIntArray;
+    SetCode: TThoriumInstructionArray;
+    UsedExtendedTypes: array of TThoriumHostObjectType;
+    UsedLibraryProps: array of TThoriumLibraryProperty;
+  end;
+
+  (* This record contains information about a relocation. *)
+  TThoriumRelocation = record
+    ByteOffset: Cardinal;
+    ObjectIndex: Cardinal;
+  end;
+
+  (* A pointer to a record containing information about a relocation. *)
+  PThoriumRelocation = ^TThoriumRelocation;
+{%ENDREGION}
+
+(*
    Region: Various external type & function stuff
    Declarations: TThoriumRTTIStaticMethods, TThoriumRTTIMethods,
                  TThoriumExternalFunctionVarType, TThoriumSimpleVarargs,
@@ -254,30 +457,6 @@ type
 
   (* A pointer to a record which represents an array of values. *)
   PThoriumSimpleVarargs = ^TThoriumSimpleVarargs;
-{%ENDREGION}
-
-(*
-   Region: Thorium values
-                                                                              *)
-{%REGION 'Thorium values' /fold}
-  TThoriumValue = record
-    // Only used with non-builtin types, that are types which have a TypeKind
-    // which is not tkSimple and not tkString.
-    TypeInfo: TThoriumType;
-    References: LongInt;
-  case Byte of
-    0: (Int: TThoriumInteger);
-    1: (Float: TThoriumFloat);
-    2: (Str: PThoriumString);
-    3: (Func: TThoriumFunction);
-    4: (HostFunc: TThoriumHostFunctionBase);
-    5: (HostMethod: TThoriumHostMethodBase);
-    6: (Struct: Pointer);
-    7: (HostObject: Pointer);
-    8: (ThArray: Pointer);
-  end;
-
-  PThoriumValue = ^TThoriumValue;
 {%ENDREGION}
 
 (*
@@ -458,358 +637,6 @@ type
 {%ENDREGION}
 
 (*
-   Region: Thorium types
-                                                                              *)
-
-{%REGION 'Thorium types' /fold}
-  TThoriumTypeKind = (tkSimple, tkFunction, tkHostFunction, tkHostMethod,
-    tkHostType, tkStruct, tkArray, tkString);
-
-  TThoriumCastDescription = record
-    Needed: Boolean;
-    Instruction: TThoriumInstructionCAST;
-  end;
-
-  TThoriumOperationInstructionDescription = record
-    Value1RIOffset: Integer;
-    Value2RIOffset: Integer;
-    TargetRIOffset: Integer;
-    Instruction: TThoriumInstructionREG;
-  end;
-
-  TThoriumOperationDescription = record
-    Operation: TThoriumOperation;
-    ResultType: IThoriumType;
-    Casts: array [0..1] of TThoriumCastDescription;
-    OperationInstruction: TThoriumOperationInstructionDescription;
-  end;
-
-  TThoriumAssignmentDescription = record
-    Casting: Boolean;
-    Cast: TThoriumCastDescription;
-  end;
-
-  IThoriumType = interface ['{C1948C5E-4486-4600-B9FA-F50E33B49E9A}']
-    property Name: String;
-    property TypeKind: TThoriumTypeKind;
-
-    function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
-      const AnotherType: IThoriumType = nil): Boolean;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-      const TheObject: IThoriumType = nil): Boolean;
-    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue;
-    function GetClassType: TClass;
-    function GetInstance: TThoriumType;
-    function HasFieldAccess: Boolean;
-    function HasIndexedAccess: Boolean;
-    function IsEqualTo(const AnotherType: IThoriumType): Boolean;
-    function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean = True): Boolean;
-  end;
-
-  TThoriumStructFieldDefinition = record
-    Name: String;
-    Offset: ptruint;
-    ValueType: IThoriumType;
-  end;
-
-  TThoriumAccess = record
-    Allowed: Boolean;
-    ValueRIOffset: Integer;
-    TargetRIOffset: Integer;
-    IndexRIOffset: Integer;
-    ExtendedRIOffset: Integer;
-    Instruction: TThoriumInstructionREG;
-  end;
-
-  TThoriumAccessDefinition = record
-    ReadAccess: TThoriumAccess;
-    WriteAccess: TThoriumAccess;
-  end;
-
-  { TThoriumType }
-
-  TThoriumType = class (TThoriumHashableObject, IUnknown, IThoriumType)
-  private
-    constructor Create;
-  private
-    FReferences: LongInt;
-  protected // IUnknown
-    function QueryInterface(const iid : tguid; out obj) : longint;stdcall;
-    function _AddRef : longint;stdcall;
-    function _Release : longint;stdcall;
-  protected
-    function GetName: String; virtual;
-    function GetTypeKind: TThoriumTypeKind; virtual; abstract;
-    procedure RaiseMissingTheObject;
-  public
-    property Name: String read GetName;
-    property TypeKind: TThoriumTypeKind read GetTypeKind;
-  public
-    function CanAssignTo(var Assignment: TThoriumAssignmentDescription; const AnotherType: IThoriumType = nil): Boolean; virtual;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription; const TheObject: IThoriumType = nil): Boolean; virtual;
-    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; virtual; abstract;
-    function DuplicateValue(const Input: TThoriumValue): TThoriumValue; virtual;
-    function HasFieldAccess: Boolean; virtual;
-    function HasIndexedAccess: Boolean; virtual;
-    function GetClassType: TClass;
-    function GetInstance: TThoriumType;
-    function IsEqualTo(const AnotherType: IThoriumType): Boolean; virtual; abstract;
-    function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean = True): Boolean; virtual;
-  end;
-
-  { TThoriumTypeSimple }
-
-  TThoriumTypeSimple = class (TThoriumType)
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
-  end;
-
-  { TThoriumTypeInteger }
-
-  TThoriumTypeInteger = class (TThoriumTypeSimple)
-  public
-    function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
-       const AnotherType: IThoriumType=nil): Boolean; override;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
-  end;
-
-  { TThoriumTypeFloat }
-
-  TThoriumTypeFloat = class (TThoriumTypeSimple)
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
-  end;
-
-  { TThoriumTypeString }
-
-  TThoriumTypeString = class (TThoriumTypeSimple)
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
-  end;
-
-  { TThoriumTypeFunction }
-
-  TThoriumTypeFunction = class (TThoriumType)
-  private
-    constructor Create;
-  public
-    destructor Destroy; override;
-  private
-    FParameters: TThoriumParameters;
-    FReturnType: IThoriumType;
-    function GetHasReturnValue: Boolean;
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
-    function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
-  published
-    property HasReturnValue: Boolean read GetHasReturnValue;
-    property Parameters: TThoriumParameters read FParameters;
-    property ReturnType: IThoriumType read FReturnType;
-  end;
-
-  { TThoriumTypeHostFunction }
-
-  TThoriumTypeHostFunction = class (TThoriumType)
-  private
-    constructor Create(const AName: String;
-      const AHostFunction: TThoriumHostFunctionBase);
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  end;
-
-  { TThoriumTypeHostType }
-
-  TThoriumTypeHostType = class (TThoriumType)
-  private
-    constructor Create(const AName: String;
-      const AHostType: TThoriumHostObjectType);
-  private
-    FHostType: TThoriumHostObjectType;
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    property HostType: TThoriumHostObjectType read FHostType;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
-    function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
-  end;
-
-  { TThoriumTypeStruct }
-
-  TThoriumTypeStruct = class (TThoriumType)
-  private
-    constructor Create(const AName: String);
-  public
-    destructor Destroy; override;
-  private
-    FCount: Integer;
-    FFields: array of TThoriumStructFieldDefinition;
-
-    procedure Expand;
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    function Add(const AName: String;
-      const ValueType: IThoriumType): Integer;
-    function Add(const AReference: TThoriumStructFieldDefinition): Integer;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
-    procedure Delete(const AIndex: Integer);
-    function IndexOf(const AName: String): Integer;
-    function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
-    function UsesType(const AnotherType: IThoriumType; MayRecurse: Boolean=True
-       ): Boolean; override;
-  end;
-
-  { TThoriumTypeArray }
-
-  TThoriumTypeArray = class (TThoriumType)
-  private
-    constructor Create(const AName: String; const ValueType: IThoriumType = nil);
-  public
-    destructor Destroy; override;
-  private
-    FArrayDimensionKind: TThoriumArrayKind;
-    FArrayDimensionMax: TThoriumInteger;
-    FArrayDimensionMin: TThoriumInteger;
-    FValueType: IThoriumType;
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    property ArrayDimensionKind: TThoriumArrayKind read FArrayDimensionKind write FArrayDimensionKind;
-    property ArrayDimensionMax: TThoriumInteger read FArrayDimensionMax write FArrayDimensionMax;
-    property ArrayDimensionMin: TThoriumInteger read FArrayDimensionMin write FArrayDimensionMin;
-    property ValueType: IThoriumType read FValueType write FValueType;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
-    function IsEqualTo(const AnotherType: IThoriumType): Boolean; override;
-  end;
-
-    (* A set of values processable by Thorium representing the complete register
-     set of a Thorium virtual machine. *)
-  TThoriumRegisters = array [0..THORIUM_REGISTER_COUNT-1] of TThoriumValue;
-
-{%ENDREGION}
-
-(*
-   Region: Identifier qualification and relocation
-                                                                              *)
-{%REGION 'Identifier qualification and relocation' /fold}
-  (* An array of TThoriumHostObjectType mainly used to notify the compiler about
-     (possibly relocation needing) uses of an external type. *)
-  TThoriumHostObjectTypeArray = array of TThoriumHostObjectType;
-
-  (* An array of TThoriumLibraryProperty mainly used to notify the compiler
-     about (possibly relocation needing) uses of a library property. *)
-  TThoriumLibraryPropertyArray = array of TThoriumLibraryProperty;
-
-  (* A record containing information about a fully qualified identifier, which
-     means that all brackets, dots and square brackets of the identifier
-     expression are parsed. It contains also information about used host types
-     and library properties and how to read or write the value of the
-     identifier. *)
-  TThoriumQualifiedIdentifier = record
-    FullStr: String;
-    Kind: TThoriumQualifiedIdentifierKind;
-    IsStatic: Boolean;
-    FinalType: IThoriumType;
-    Value: TThoriumValue;
-
-    GetJumpMarks: TThoriumIntArray;
-    GetCode: TThoriumInstructionArray;
-    SetJumpMarks: TThoriumIntArray;
-    SetCode: TThoriumInstructionArray;
-    UsedExtendedTypes: array of TThoriumHostObjectType;
-    UsedLibraryProps: array of TThoriumLibraryProperty;
-  end;
-
-  (* This record contains information about a relocation. *)
-  TThoriumRelocation = record
-    ByteOffset: Cardinal;
-    ObjectIndex: Cardinal;
-  end;
-
-  (* A pointer to a record containing information about a relocation. *)
-  PThoriumRelocation = ^TThoriumRelocation;
-{%ENDREGION}
-
-(*
-   Region: Stack and identifier table entries
-                                                                              *)
-
-{%REGION 'Stack and identifier table entries' /fold}
-
-  (* Defines which data a stack entry contains. *)
-  TThoriumStackEntryType = (etValue, etStackFrame, etVarargs, etNull);
-
-  (* This record represents one entry on the Thorium stack. It may either
-     contain a value, a stack frame or a set of varargs for a function call. *)
-  TThoriumStackEntry = record
-  case _Type: TThoriumStackEntryType of
-    etValue:
-    (
-      Value: TThoriumValue
-    );
-    etStackFrame:
-    (
-      PreviousStackFrame: LongInt;
-      ReturnAddress: TThoriumInstructionAddress;
-      ReturnModule: LongInt;
-      Params: LongInt;
-      RetVals: Word;
-      RegisterDumpRange: Word;
-      RegisterDump: Pointer;
-      DropResult: Boolean;
-    );
-    etVarargs:
-    (
-      VAData: Pointer;
-      VADataOrigin: Pointer;
-      VABuffer: Pointer;
-      VABufferOrigin: Pointer;
-      VAToFree: PThoriumValue;
-      VAToFreeOrigin: PThoriumValue;
-    );
-  end;
-
-  (* Pointer to an entry on the Thorium stack. *)
-  PThoriumStackEntry = ^TThoriumStackEntry;
-
-  (* An entry in an identifier table used by the Thorium compiler which defines
-     of which kind an identifier is and how it might be found. *)
-  TThoriumTableEntry = record
-    Name: PString;
-    Scope: Integer;
-    _Type: TThoriumTableEntryType;
-    Offset: Integer; // This is the register of a register variable and the index of a library constant.
-    TypeSpec: IThoriumType;
-    Value: TThoriumValue;
-    Ptr: Pointer;
-  end;
-
-  PThoriumTableEntry = ^TThoriumTableEntry;
-
-  TThoriumTableEntryResult = record
-    Entry: TThoriumTableEntry;
-    SourceModule: TThoriumModule;
-  end;
-  TThoriumTableEntryResults = array of TThoriumTableEntryResult;
-
-{%ENDREGION}
-
-(*
    Region: Thorium functions and variables
    Declarations: TThoriumParameters, TThoriumPublicValue, TThoriumFunction,
                  TThoriumFunctionCallbackCapsule, TThoriumVariable
@@ -827,19 +654,18 @@ type
     constructor Create;
     destructor Destroy; override;
   private
-    FList: TInterfaceList;
+    FList: TFPList;
 
-    function GetCount: Integer;
+    function GetParameterCount: Integer;
   protected
-    procedure Add(AType: IThoriumType);
+    function AddParameter: PThoriumType;
     procedure Clear;
-    procedure Delete(AIndex: Integer);
-    procedure Remove(AType: IThoriumType);
+    procedure RemoveParameter(const Index: Integer);
   public
-    property Count: Integer read GetCount;
+    property Count: Integer read GetParameterCount;
   public
     function Duplicate: TThoriumParameters;
-    procedure GetParameterSpec(const Index: Integer; out ParamSpec: IThoriumType);
+    procedure GetParameterSpec(const Index: Integer; out ParamSpec: TThoriumType);
     procedure LoadFromStream(Stream: TStream);
     procedure SaveToStream(Stream: TStream);
   end;
@@ -865,24 +691,24 @@ type
   (* This class represents a function published by a module and is also used as
      a temporary object by the compiler to store information about the current
      function. *)
-  TThoriumFunction = class (TThoriumPublicValue, IThoriumType)
+  TThoriumFunction = class (TThoriumPublicValue)
     constructor Create(AModule: TThoriumModule); override;
     destructor Destroy; override;
   private
     FEntryPoint: Integer;
     FEventCapsules: TFPHashList;
     FNestingLevel: Integer;
-    FPrototypeIntf: IThoriumType;
-    FPrototype: TThoriumTypeFunction;
+    FParameters: TThoriumParameters;
     FPrototyped: Boolean;
     FPrototypedCalls: TThoriumJumpList;
+    FReturnValues: TThoriumParameters;
     FVisibilityLevel: TThoriumVisibilityLevel;
   public
     property EntryPoint: Integer read FEntryPoint;
     property NestingLevel: Integer read FNestingLevel;
-    property PrototypeIntf: IThoriumType read FPrototypeIntf implements IThoriumType;
-    property Prototype: TThoriumTypeFunction read FPrototype;
+    property Parameters: TThoriumParameters read FParameters;
     property Prototyped: Boolean read FPrototyped;
+    property ReturnValues: TThoriumParameters read FReturnValues;
     property VisibilityLevel: TThoriumVisibilityLevel read FVisibilityLevel;
 
     function Call(AParameters: array of TThoriumValue): TThoriumValue;
@@ -897,7 +723,6 @@ type
     function SafeCall(AParameters: array of TThoriumValue): TThoriumValue;
     procedure SaveToStream(Stream: TStream); override;
   end;
-  TThoriumFunctions = specialize TFPGList<TThoriumFunction>;
 
   { TThoriumFunctionCallbackCapsule }
 
@@ -932,7 +757,6 @@ type
     procedure LoadFromStream(Stream: TStream); override;
     procedure SaveToStream(Stream: TStream); override;
   end;
-  TThoriumVariables = specialize TFPGList<TThoriumVariable>;
 
 {%ENDREGION}
 
@@ -1134,34 +958,52 @@ type
   (* This is the base class for any class-alike type published by the host
      environment. You will need to override the methods to make it represent
      a type you want. *)
-  TThoriumHostObjectType = class (TThoriumType)
+  TThoriumHostObjectType = class (TThoriumHashableObject)
     constructor Create(ALibrary: TThoriumLibrary); virtual;
     destructor Destroy; override;
+  private
+    FName: String;
   protected
     FLibrary: TThoriumLibrary;
-  public
-    procedure ApplyStoring(var AValue: Pointer; MayDecreaseReference: Boolean = True); virtual; abstract;
-    procedure DisposeValue(var AValue: Pointer); virtual; abstract;
-    function DuplicateInstance(const AValue: Pointer): Pointer; virtual; abstract;
-    function FindMethod(const AMethodName: String): TThoriumHostMethodBase; virtual;
-    function GetFieldID(const FieldIdent: String; out ID: QWord): Boolean; virtual;
-    function GetFieldStoring(const AFieldID: QWord): Boolean; virtual; abstract;
-    procedure GetFieldType(const AFieldID: QWord; out TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition); virtual; abstract;
-    function GetIndexType(const IndexType: IThoriumType; out TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition): Boolean; virtual;
+  protected
     function GetNewInstance: Pointer; virtual; abstract;
-    function GetStaticFieldID(const FieldIdent: String; out ID: QWord): Boolean; virtual;
-    function GetStaticFieldStoring(const AFieldID: QWord): Boolean; virtual; abstract;
-    procedure GetStaticFieldType(const AFieldID: QWord; out TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition); virtual; abstract;
-    procedure OpAssign(const ASource: Pointer; var ADest: TThoriumValue); virtual;
-    function OpEvaluate(const AValue: Pointer): Integer; virtual; abstract;
-    function OpGetField(const AInstance: Pointer; const AFieldID: QWord): TThoriumValue; virtual; abstract;
-    function OpGetIndexed(const AInstance: Pointer; const AIndex: TThoriumValue): TThoriumValue; virtual; abstract;
-    function OpGetStaticField(const AFieldID: QWord): TThoriumValue; virtual; abstract;
-    procedure OpNegate(const AValue: Pointer); virtual; abstract;
-    procedure OpNot(const AValue: Pointer); virtual; abstract;
-    procedure OpSetField(const AInstance: Pointer; const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
-    procedure OpSetIndexed(const AInstance: Pointer; const AIndex: TThoriumValue; const NewValue: TThoriumValue); virtual; abstract;
-    procedure OpSetStaticField(const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
+    function DuplicateValue(const AValue: TThoriumHostObjectTypeValue): TThoriumValue; virtual; abstract;
+    function PerformOperation(const AValue1, AValue2: TThoriumValue; const Op: TThoriumOperator): TThoriumValue; virtual; abstract;
+    function PerformEvaluation(const AValue: TThoriumHostObjectTypeValue): Integer; virtual; abstract;
+    function PerformNegation(const AValue: TThoriumHostObjectTypeValue): TThoriumValue; virtual; abstract;
+    function PerformNot(const AValue: TThoriumHostObjectTypeValue): TThoriumValue; virtual; abstract;
+    procedure DisposeValue(var AValue: TThoriumHostObjectTypeValue); virtual; abstract;
+
+    function IsTypeCompatible(const Value1, Value2: TThoriumType; const Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean; virtual; abstract;
+    function IsTypeOperationAvailable(const Value: TThoriumType; const Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean; virtual; abstract;
+
+    function HasFields: Boolean; virtual; abstract;
+    function HasStaticFields: Boolean; virtual; abstract;
+    function HasIndicies: Boolean; virtual; abstract;
+
+    function FindMethod(const AMethodName: String): TThoriumHostMethodBase; virtual;
+  public
+    property Name: String read FName;
+    property Owner: TThoriumLibrary read FLibrary;
+
+    procedure AssignValue(const ASource: TThoriumValue; var ADest: TThoriumValue); virtual;
+    procedure ApplyStoring(var AValue: TThoriumHostObjectTypeValue; MayDecreaseReference: Boolean = True); virtual; abstract;
+
+    function FieldID(const FieldIdent: String; out ID: QWord): Boolean; virtual; abstract;
+    function StaticFieldID(const FieldIdent: String; out ID: QWord): Boolean; virtual; abstract;
+    function IndexType(const InputType: TThoriumType; out ResultType: TThoriumTableEntry): Boolean; virtual; abstract;
+    function StaticFieldType(const AFieldID: QWord; out ResultType: TThoriumTableEntry): Boolean; virtual; abstract;
+    function FieldType(const AFieldID: QWord; out ResultType: TThoriumTableEntry): Boolean; virtual; abstract;
+
+    function GetIndex(const AInstance: TThoriumValue; const AIndex: TThoriumValue): TThoriumValue; virtual; abstract;
+    procedure SetIndex(const AInstance: TThoriumValue; const AIndex: TThoriumValue; const NewValue: TThoriumValue); virtual; abstract;
+
+    function GetField(const AInstance: TThoriumValue; const AFieldID: QWord): TThoriumValue; virtual; abstract;
+    function GetStaticField(const AInstance: TThoriumValue; const AFieldID: QWord): TThoriumValue; virtual; abstract;
+    procedure SetField(const AInstance: TThoriumValue; const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
+    procedure SetStaticField(const AInstance: TThoriumValue; const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
+
+    function GetPropertyStoring(const AFieldID: QWord): Boolean; virtual; abstract;
   end;
   TThoriumHostObjectTypeClass = class of TThoriumHostObjectType;
 
@@ -1189,35 +1031,38 @@ type
     FMethods: array of TThoriumHostMethodBase;
     FStoringProperties: TStringList;
   protected
+    function GetNewInstance: Pointer; override;
+    function DuplicateValue(const AValue: TThoriumHostObjectTypeValue): TThoriumValue; override;
+    procedure DisposeValue(var AValue: TThoriumHostObjectTypeValue); override;
+
+    function IsTypeCompatible(const Value1, Value2: TThoriumType; const Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean; override;
+    function IsTypeOperationAvailable(const Value: TThoriumType; const Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean; override;
+
+    function HasFields: Boolean; override;
+    function HasStaticFields: Boolean; override;
+    function HasIndicies: Boolean; override;
+
+    function FindMethod(const AMethodName: String): TThoriumHostMethodBase; override;
+
     procedure CalcHash; override;
   public
-    procedure ApplyStoring(var AValue: Pointer; MayDecreaseReference: Boolean=
-       True); override;
-    procedure DisposeValue(var AValue: Pointer); override;
-    function DuplicateInstance(const AValue: Pointer): Pointer; override;
-    function FindMethod(const AMethodName: String): TThoriumHostMethodBase;
-       override;
-    function GetFieldID(const FieldIdent: String; out ID: QWord): Boolean;
-       override;
-    function GetFieldStoring(const AFieldID: QWord): Boolean; override;
-    procedure GetFieldType(const AFieldID: QWord; out TypeSpec: IThoriumType;
-       out Access: TThoriumAccessDefinition); override;
-    function GetNewInstance: Pointer; override;
-    function GetPropertyStoring(const PropInfo: PPropInfo): Boolean;
-    function GetPropertyStoring(const PropertyName: String): Boolean;
-    function GetStaticFieldID(const FieldIdent: String; out ID: QWord
-       ): Boolean; override;
-    procedure GetStaticFieldType(const AFieldID: QWord; out
-       TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition); override;
-    function OpEvaluate(const AValue: Pointer): Integer; override;
-    function OpGetField(const AInstance: Pointer; const AFieldID: QWord
-       ): TThoriumValue; override;
-    procedure OpSetField(const AInstance: Pointer;
-              const AFieldID: QWord; const NewValue: TThoriumValue); override;
-    procedure SetPropertyStoring(const PropInfo: PPropInfo; const Storing: Boolean);
-    procedure SetPropertyStoring(const PropertyName: String; const Storing: Boolean);
-  public
     property BaseClass: TClass read FBaseClass;
+
+    procedure ApplyStoring(var AValue: TThoriumHostObjectTypeValue; MayDecreaseReference: Boolean = True); override;
+
+    function FieldID(const FieldIdent: String; out ID: QWord): Boolean; override;
+    function StaticFieldID(const FieldIdent: String; out ID: QWord): Boolean; override;
+    function FieldType(const AFieldID: QWord; out ResultType: TThoriumTableEntry): Boolean; override;
+    function StaticFieldType(const AFieldID: QWord; out ResultType: TThoriumTableEntry): Boolean; override;
+
+    function GetField(const AInstance: TThoriumValue; const AFieldID: QWord): TThoriumValue; override;
+    procedure SetField(const AInstance: TThoriumValue; const AFieldID: QWord; const NewValue: TThoriumValue); override;
+
+    function GetPropertyStoring(const PropertyName: String): Boolean;
+    function GetPropertyStoring(const PropInfo: PPropInfo): Boolean;
+    function GetPropertyStoring(const AFieldID: QWord): Boolean; override;
+    procedure SetPropertyStoring(const PropertyName: String; IsStoring: Boolean = True);
+    procedure SetPropertyStoring(const PropInfo: PPropInfo; IsStoring: Boolean = True);
 
     class function NewNativeCallMethod(const AName: String;
       const ACodePointer: Pointer;
@@ -1250,25 +1095,27 @@ type
     function IndexOfFieldDefinition(const AFieldName: String): Integer;
   protected
     procedure CalcHash; override;
-  public
-    function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
-       const AnotherType: IThoriumType=nil): Boolean; override;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: IThoriumType=nil): Boolean; override;
-    procedure DisposeValue(var AValue: Pointer); override;
-    function DuplicateInstance(const AValue: Pointer): Pointer; override;
-    function GetFieldID(const FieldIdent: String; out ID: QWord): Boolean;
-       override;
-    function GetFieldStoring(const AFieldID: QWord): Boolean; override;
-    procedure GetFieldType(const AFieldID: QWord; out
-      TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition);
-      override;
     function GetNewInstance: Pointer; override;
-    function OpGetField(const AInstance: Pointer; const AFieldID: QWord
-       ): TThoriumValue; override;
-    procedure OpSetField(const AInstance: Pointer; const AFieldID: QWord;
-       const NewValue: TThoriumValue); override;
+    function DuplicateValue(const AValue: TThoriumHostObjectTypeValue): TThoriumValue; override;
+    procedure DisposeValue(var AValue: TThoriumHostObjectTypeValue); override;
+
+    function IsTypeCompatible(const Value1, Value2: TThoriumType; const Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean; override;
+    function IsTypeOperationAvailable(const Value: TThoriumType; const Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean; override;
+
+    function HasFields: Boolean; override;
+    function HasStaticFields: Boolean; override;
+    function HasIndicies: Boolean; override;
   public
+    function FieldID(const FieldIdent: String; out ID: QWord): Boolean;
+       override;
+    function FieldType(const AFieldID: QWord; out
+       ResultType: TThoriumTableEntry): Boolean; override;
+
+    function GetField(const AInstance: TThoriumValue; const AFieldID: QWord
+       ): TThoriumValue; override;
+    function GetPropertyStoring(const AFieldID: QWord): Boolean; override;
+    procedure SetField(const AInstance: TThoriumValue; const AFieldID: QWord;
+       const NewValue: TThoriumValue); override;
   end;
   TThoriumHostRecordClass = class of TThoriumHostRecordType;
 
@@ -1291,9 +1138,6 @@ type
   private
     FName: String;
     FValue: TThoriumValue;
-  public
-    property Name: String read FName;
-    property Value: TThoriumValue read FValue;
   end;
 
   { TThoriumLibraryProperty }
@@ -1520,6 +1364,39 @@ type
     function FindIdentifier(Name: String; out Ident: TThoriumTableEntry): Boolean;
   end;
 
+  { TThoriumScanner }
+
+  (* This class tokenizes the source code given and is used internally by the
+     compiler. *)
+  TThoriumScanner = class (TObject)
+    constructor Create(AInputString: String);
+    constructor Create(AInputStream: TStream);
+    destructor Destroy; override;
+  private
+    FInputPosition: LongInt;
+    FInputSize: LongInt;
+    FInputString: String;
+    FInputHash: TThoriumHash;
+    FCurrentSym: TThoriumSymbol;
+    FCurrentStr: String;
+    FCurrentChar: Char;
+    FCurrentLine: Integer;
+    FCurrentX: Integer;
+    FIsLineBreak: Boolean;
+    FNextSym: TThoriumSymbol;
+    FEndOfStream: Boolean;
+
+    procedure Read(var C: Char); inline;
+  protected
+    procedure ScanForSymbol(var Sym: TThoriumSymbol; var Str: String);
+  public
+    property CurrentSym: TThoriumSymbol read FCurrentSym;
+    property CurrentStr: String read FCurrentStr;
+    property CurrentLine: Integer read FCurrentLine;
+    // Before enabling this, adapt the Proceed method to fill the FNextSym field
+    // property NextSym: TThoriumSymbol read FNextSym;
+  end;
+
   { TThoriumInstructions }
 
   (* This class holds a list of instructions which may be executed by the
@@ -1584,9 +1461,6 @@ type
     constructor Create(ATarget: TThoriumModule); virtual;
     destructor Destroy; override;
   protected
-    FCodeHook: Boolean;
-    FCodeHook1: PThoriumInstructionArray;
-    FCodeHook2: PThoriumInstructionArray;
     FError: Boolean;
     FHostFuncUsage: TFPList;
     FHostFuncRelocations: TFPList;
@@ -1600,63 +1474,42 @@ type
     FOptimizedInstructions: LongInt;
     FPublicFunctions: TFPList;
     FPublicVariables: TFPList;
-    FRegisterUsage: TThoriumRegisterMask;
-    FRequiredModules: TFPList;
-    FRequiredLibraries: TFPList;
+    FRequiredModules: TThoriumIntList;
+    FRequiredLibraries: TThoriumIntList;
     FSourceHash: TThoriumHash;
     FSourceLength: Cardinal;
     FStringLibrary: TStringList;
-    FTable: TThoriumIdentifierTable;
-    FTableSizes: TThoriumIntStack;
     FThorium: TThorium;
-    FTypeTable: TFPObjectHashTable;
   protected
     function AddLibraryPropertyUsage(const AProp: TThoriumLibraryProperty): Integer;
-    function AddLibraryPropertyUsageEx(var TargetArray: TThoriumLibraryPropertyArray;
-        AItem: TThoriumLibraryProperty): Integer;
-    procedure AddLibraryPropertyUsages(const AProp: TThoriumLibraryPropertyArray);
     function AddLibraryPropertyUsageToRelocate(const AProp: TThoriumLibraryProperty; const AOffset: ptruint): Integer;
     function AddLibraryString(const AStr: String): Integer;
     function AddHostTypeUsage(const AType: TThoriumHostObjectType): Integer;
-    function AddHostTypeUsageEx(var TargetArray: TThoriumHostObjectTypeArray;
-        AItem: TThoriumHostObjectType): Integer;
-    procedure AddHostTypeUsages(const AUsageArray: TThoriumHostObjectTypeArray);
     function AddHostTypeUsageToRelocate(const AType: TThoriumHostObjectType; const AOffset: ptruint): Integer;
     function AddHostFunctionUsage(const AFunc: TThoriumHostCallableBase): Integer;
     function AddHostFunctionUsageToRelocate(const AFunc: TThoriumHostCallableBase; const AOffset: ptruint): Integer;
     function AddPublicVariable: TThoriumVariable;
-    function AppendCode(ACodeArray: TThoriumInstructionArray): Integer;
-    procedure CompilerError(const Msg: String); virtual;
     procedure CompilerError(const Msg: String; X, Y: Integer);
     procedure DumpState; virtual;
-    function FindTableEntry(const Ident: String; out Entry: TThoriumTableEntry;
-      out Module: TThoriumModule; RaiseError: Boolean = True; AllowFar: Boolean = True): Boolean; inline;
-    function FindTableEntries(const Ident: String;
-      out Entries: TThoriumTableEntryResults): Boolean;
-    function GenCode(AInstruction: TThoriumInstruction): Integer; virtual; abstract;
-    function GenCode(AInstruction: TThoriumInstruction; ACodeLine: Cardinal): Integer;
-    function GenCodeEx(var TargetArray: TThoriumInstructionArray;
-        AInstruction: TThoriumInstruction): Integer;
-    function GetCurrentTableStackPos: Integer;
-    function GetFreeRegister(Kind: TThoriumRegisterKind; out RegisterID: TThoriumRegisterID; ThrowError: Boolean = True): Boolean;
-    function GetHighestRegisterInUse: TThoriumRegisterID;
-    function GetHookedInstructionPointerA(AIndex: Integer): PThoriumInstruction;
-    function GetHookedInstructionPointerB(AIndex: Integer): PThoriumInstruction;
-    function GetTableEntriesTo(StackPos: Integer): Integer;
     procedure FindRelocationTargets;
     function HasError: Boolean;
     function IsTypeCompatible(Value1, Value2: TThoriumType; Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean;
     function IsTypeOperationAvailable(Value: TThoriumType; Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean;
-    procedure LoadLibrary(const LibName: String);
-    procedure LoadModule(const ModName: String);
     procedure OptimizeCode;
-    procedure ReleaseRegister(ID: TThoriumRegisterID);
-    procedure ResetState;
-    procedure RestoreTable(var Offset: Integer; GenerateCode: Boolean = True);
-    procedure SaveTable;
-    function TypeSpecByName(TypeName: String; out TypeSpec: IThoriumType): Boolean;
   public
     function CompileFromStream(SourceStream: TStream; Flags: TThoriumCompilerFlags = [cfOptimize]): Boolean; virtual; abstract;
+  end;
+
+  { TThoriumDefaultCompiler }
+
+  TThoriumDefaultCompiler = class (TThoriumCustomCompiler)
+  private
+    Scanner: TThoriumScanner;
+  protected
+    procedure DumpState; override;
+  public
+    function CompileFromStream(SourceStream: TStream;
+       Flags: TThoriumCompilerFlags=[cfOptimize]): Boolean; override;
   end;
 
 {%ENDREGION}
@@ -1691,10 +1544,10 @@ type
     FLibPropRelocations: TFPList;
     FName: String;
     FOptimizedInstructions: LongInt;
-    FPublicFunctions: TThoriumFunctions;
-    FPublicVariables: TThoriumVariables;
-    FRequiredModules: TFPList;
-    FRequiredLibraries: TFPList;
+    FPublicFunctions: TFPList;
+    FPublicVariables: TFPList;
+    FRequiredModules: TThoriumIntList;
+    FRequiredLibraries: TThoriumIntList;
     FSourceFile: String;
     FSourceHash: TThoriumHash;
     FSourceLength: Cardinal;
@@ -1917,7 +1770,7 @@ function ThoriumValueToStr(const Value: TThoriumValue): String;
 function ThoriumMakeOOPEvent(ACode: Pointer; Userdata: Pointer): TMethod;
 function ThoriumRegisterToStr(ARegisterID: TThoriumRegisterID): String;
 function ThoriumInstructionToStr(AInstruction: TThoriumInstruction): String;
-procedure ThoriumVarTypeToTypeSpec(VarType: TThoriumHostType; var TypeSpec: IThoriumType);
+procedure ThoriumVarTypeToTypeSpec(VarType: TThoriumHostType; var TypeSpec: TThoriumType);
 procedure ThoriumExternalVarTypeToTypeSpec(VarType: PThoriumExternalFunctionVarType; out TypeSpec: TThoriumType);
 function ThoriumCreateIntegerValue(const Value: TThoriumInteger): TThoriumValue;
 function ThoriumCreateStringValue(const Value: TThoriumString): TThoriumValue;
@@ -1925,6 +1778,7 @@ function ThoriumCreateFloatValue(const Value: TThoriumFloat): TThoriumValue;
 function ThoriumCreateExtendedTypeValue(const TypeClass: TThoriumHostObjectType): TThoriumValue;
 function ThoriumCreateValue(const ATypeSpec: TThoriumType): TThoriumValue;
 function ThoriumCompareType(const Type1, Type2: TThoriumType): Boolean;
+function ThoriumDuplicateValue(const Value: TThoriumValue): TThoriumValue;
 
 function HostRecordField(const AType: TThoriumExternalFunctionVarType;
   const AName: String; const AOffset: Cardinal): TThoriumHostRecordField;
@@ -1932,9 +1786,6 @@ function HostVarType(const AHostType: TThoriumHostType;
   const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumExternalFunctionVarType;
 
 implementation
-
-uses
-  Thorium_DefaultCompiler;
 
 {$ifdef HookSIGUSR1}
 var
@@ -1956,7 +1807,1687 @@ end;
 
 {$endif}
 
-{$I Thorium_InstructionConstructors.inc}
+{%REGION 'Instruction functions' /fold}
+(* These functions are helpers to fill the instruction record for the
+   instruction given.*)
+
+function int_s(AValue: Int64): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINT_S(Result) do
+  begin
+    Instruction := tiINT_S;
+    Value := AValue;
+    CodeLine := 0;
+  end;
+end;
+
+function int(AValue: Int64; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINT(Result) do
+  begin
+    Instruction := tiINT;
+    Value := AValue;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function intb(ATRI: Word; AKind: Cardinal): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINTB(Result) do
+  begin
+    Instruction := tiINTB;
+    TRI := ATRI;
+    Kind := AKind;
+    CodeLine := 0;
+  end;
+end;
+
+function flt_s(AValue: Double): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionFLT_S(Result) do
+  begin
+    Instruction := tiFLT_S;
+    Value := AValue;
+    CodeLine := 0;
+  end;
+end;
+
+function flt(AValue: Double; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionFLT(Result) do
+  begin
+    Instruction := tiFLT;
+    Value := AValue;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function str_s(): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSTR_S(Result) do
+  begin
+    Instruction := tiSTR_S;
+    CodeLine := 0;
+  end;
+end;
+
+function strl_s(AIndex: Cardinal): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSTRL_S(Result) do
+  begin
+    Instruction := tiSTRL_S;
+    Index := AIndex;
+    CodeLine := 0;
+  end;
+end;
+
+function str(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSTR(Result) do
+  begin
+    Instruction := tiSTR;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function strl(AIndex: Cardinal; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSTRL(Result) do
+  begin
+    Instruction := tiSTRL;
+    Index := AIndex;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function ext_s(AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionEXT_S(Result) do
+  begin
+    Instruction := tiEXT_S;
+    ExtendedType := AExtendedType;
+    CodeLine := 0;
+  end;
+end;
+
+function ext(AExtendedType: TThoriumHostObjectType; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionEXT(Result) do
+  begin
+    Instruction := tiEXT;
+    ExtendedType := AExtendedType;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function fnc(AFunctionRef: TThoriumFunction; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionFNC(Result) do
+  begin
+    Instruction := tiFNC;
+    FunctionRef := AFunctionRef;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function fnce(AFunctionRef: TThoriumHostFunctionBase; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionFNCE(Result) do
+  begin
+    Instruction := tiFNCE;
+    FunctionRef := AFunctionRef;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function copyr_s(ASRI: Word; AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYR_S(Result) do
+  begin
+    Instruction := tiCOPYR_S;
+    SRI := ASRI;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function copyr_st(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYR_ST(Result) do
+  begin
+    Instruction := tiCOPYR_ST;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function copyr_fs(ASRI: Word; AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYR_FS(Result) do
+  begin
+    Instruction := tiCOPYR_FS;
+    SRI := ASRI;
+    ModuleIndex := AModuleIndex;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function copys_st(AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYS_ST(Result) do
+  begin
+    Instruction := tiCOPYS_ST;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function copyfs(AModuleIndex: LongInt; AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYFS(Result) do
+  begin
+    Instruction := tiCOPYFS;
+    ModuleIndex := AModuleIndex;
+    Offset := AOffset;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function copyr(ASRI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYR(Result) do
+  begin
+    Instruction := tiCOPYR;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function copys(AScope: Word; AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYS(Result) do
+  begin
+    Instruction := tiCOPYS;
+    Scope := AScope;
+    Offset := AOffset;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function moves_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVES_S(Result) do
+  begin
+    Instruction := tiMOVES_S;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function mover_s(ASRI: Word; AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVER_S(Result) do
+  begin
+    Instruction := tiMOVER_S;
+    SRI := ASRI;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function mover_st(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVER_ST(Result) do
+  begin
+    Instruction := tiMOVER_ST;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function mover(ASRI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVER(Result) do
+  begin
+    Instruction := tiMOVER;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function moves(AScope: Word; AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVES(Result) do
+  begin
+    Instruction := tiMOVES;
+    Scope := AScope;
+    Offset := AOffset;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function movest(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVEST(Result) do
+  begin
+    Instruction := tiMOVEST;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function mover_fs(ASRI: Word; AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVER_FS(Result) do
+  begin
+    Instruction := tiMOVER_FS;
+    SRI := ASRI;
+    ModuleIndex := AModuleIndex;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function movefs(AModuleIndex: LongInt; AOffset: LongInt; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVEFS(Result) do
+  begin
+    Instruction := tiMOVEFS;
+    ModuleIndex := AModuleIndex;
+    Offset := AOffset;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function moves_st(AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOVES_ST(Result) do
+  begin
+    Instruction := tiMOVES_ST;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function pop_s(AAmount: Cardinal): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionPOP_S(Result) do
+  begin
+    Instruction := tiPOP_S;
+    Amount := AAmount;
+    CodeLine := 0;
+  end;
+end;
+
+function clr(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCLR(Result) do
+  begin
+    Instruction := tiCLR;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function castif(ASRI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCASTIF(Result) do
+  begin
+    Instruction := tiCASTIF;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function castie(ASRI: Word; ATRI: Word; AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCASTIE(Result) do
+  begin
+    Instruction := tiCASTIE;
+    SRI := ASRI;
+    TRI := ATRI;
+    ExtendedType := AExtendedType;
+    CodeLine := 0;
+  end;
+end;
+
+function castfe(ASRI: Word; ATRI: Word; AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCASTFE(Result) do
+  begin
+    Instruction := tiCASTFE;
+    SRI := ASRI;
+    TRI := ATRI;
+    ExtendedType := AExtendedType;
+    CodeLine := 0;
+  end;
+end;
+
+function castse(ASRI: Word; ATRI: Word; AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCASTSE(Result) do
+  begin
+    Instruction := tiCASTSE;
+    SRI := ASRI;
+    TRI := ATRI;
+    ExtendedType := AExtendedType;
+    CodeLine := 0;
+  end;
+end;
+
+function castei(ASRI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCASTEI(Result) do
+  begin
+    Instruction := tiCASTEI;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function castef(ASRI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCASTEF(Result) do
+  begin
+    Instruction := tiCASTEF;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function castes(ASRI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCASTES(Result) do
+  begin
+    Instruction := tiCASTES;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function caste(ASRI: Word; ATRI: Word; AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCASTE(Result) do
+  begin
+    Instruction := tiCASTE;
+    SRI := ASRI;
+    TRI := ATRI;
+    ExtendedType := AExtendedType;
+    CodeLine := 0;
+  end;
+end;
+
+function _cast(ASRI: Word; ATRI: Word; ATypeA, ATypeB: TThoriumType): TThoriumInstruction;
+const
+  typeInteger = 0;
+  typeFloat = 1;
+  typeString = 2;
+  typeExtended = 3;
+var
+  TypeA, TypeB: Word;
+begin
+  if ATypeA.ValueType = vtBuiltIn then
+  begin
+    if ATypeA.BuiltInType = btInteger then
+      TypeA := typeInteger
+    else if ATypeA.BuiltInType = btFloat then
+      TypeA := typeFloat
+    else if ATypeA.BuiltInType = btString then
+      TypeA := typeString
+    else
+      Exit;
+  end
+  else if ATypeA.ValueType = vtExtendedType then
+    TypeA := typeExtended
+  else
+    Exit;
+  if ATypeB.ValueType = vtBuiltIn then
+  begin
+    if ATypeB.BuiltInType = btInteger then
+      TypeB := typeInteger
+    else if ATypeB.BuiltInType = btFloat then
+      TypeB := typeFloat
+    else if ATypeB.BuiltInType = btString then
+      TypeB := typeString
+    else
+      Exit;
+  end
+  else if ATypeB.ValueType = vtExtendedType then
+    TypeB := typeExtended
+  else
+    Exit;
+    
+  case TypeA of
+    typeInteger: case TypeB of
+      typeFloat: Result := castif(ASRI, ATRI);
+      typeExtended: Result := castie(ASRI, ATRI, ATypeB.Extended);
+    end;
+    typeFloat: case TypeB of
+      typeExtended: Result := castfe(ASRI, ATRI, ATypeB.Extended);
+    end;
+    typeString: case TypeB of
+      typeExtended: Result := castse(ASRI, ATRI, ATypeB.Extended);
+    end;
+    typeExtended: case TypeB of
+      typeInteger: Result := castei(ASRI, ATRI);
+      typeFloat: Result := castef(ASRI, ATRI);
+      typeString: Result := castes(ASRI, ATRI);
+      typeExtended: Result := caste(ASRI, ATRI, ATypeB.Extended);
+    end;
+  end;
+end;
+
+function cmpi(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPI(Result) do
+  begin
+    Instruction := tiCMPI;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpif(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPIF(Result) do
+  begin
+    Instruction := tiCMPIF;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpie(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPIE(Result) do
+  begin
+    Instruction := tiCMPIE;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpf(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPF(Result) do
+  begin
+    Instruction := tiCMPF;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpfi(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPFI(Result) do
+  begin
+    Instruction := tiCMPFI;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpfe(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPFE(Result) do
+  begin
+    Instruction := tiCMPFE;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmps(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPS(Result) do
+  begin
+    Instruction := tiCMPS;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpse(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPSE(Result) do
+  begin
+    Instruction := tiCMPSE;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpe(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPE(Result) do
+  begin
+    Instruction := tiCMPE;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpei(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPEI(Result) do
+  begin
+    Instruction := tiCMPEI;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpef(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPEF(Result) do
+  begin
+    Instruction := tiCMPEF;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function cmpes(AOp1: Word; AOp2: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCMPES(Result) do
+  begin
+    Instruction := tiCMPES;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    CodeLine := 0;
+  end;
+end;
+
+function addi(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionADDI(Result) do
+  begin
+    Instruction := tiADDI;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function addf(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionADDF(Result) do
+  begin
+    Instruction := tiADDF;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function adds(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionADDS(Result) do
+  begin
+    Instruction := tiADDS;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function subi(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSUBI(Result) do
+  begin
+    Instruction := tiSUBI;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function subf(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSUBF(Result) do
+  begin
+    Instruction := tiSUBF;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function muli(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMULI(Result) do
+  begin
+    Instruction := tiMULI;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function mulf(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMULF(Result) do
+  begin
+    Instruction := tiMULF;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function divi(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDIVI(Result) do
+  begin
+    Instruction := tiDIVI;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function divf(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDIVF(Result) do
+  begin
+    Instruction := tiDIVF;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function negi(AOp1: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionNEGI(Result) do
+  begin
+    Instruction := tiNEGI;
+    Op1 := AOp1;
+    CodeLine := 0;
+  end;
+end;
+
+function negf(AOp1: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionNEGF(Result) do
+  begin
+    Instruction := tiNEGF;
+    Op1 := AOp1;
+    CodeLine := 0;
+  end;
+end;
+
+function _not(AOp1: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionNOT(Result) do
+  begin
+    Instruction := tiNOT;
+    Op1 := AOp1;
+    CodeLine := 0;
+  end;
+end;
+
+function bnot(AOp1: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionBNOT(Result) do
+  begin
+    Instruction := tiBNOT;
+    Op1 := AOp1;
+    CodeLine := 0;
+  end;
+end;
+
+function _mod(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionMOD(Result) do
+  begin
+    Instruction := tiMOD;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function _and(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionAND(Result) do
+  begin
+    Instruction := tiAND;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function _or(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionOR(Result) do
+  begin
+    Instruction := tiOR;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function _xor(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXOR(Result) do
+  begin
+    Instruction := tiXOR;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function _shl(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSHL(Result) do
+  begin
+    Instruction := tiSHL;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function _shr(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSHR(Result) do
+  begin
+    Instruction := tiSHR;
+    Op1 := AOp1;
+    Op2 := AOp2;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function _operator(AOp1: Word; AOp2: Word; ATRI: Word; AType: TThoriumType; AKind: TThoriumOperation): TThoriumInstruction;
+begin
+  case AKind of
+    toAdd, toSubtract, toMultiply, toDivide, toDiv:
+    begin
+      if (AType.ValueType = vtBuiltIn) then
+      begin
+        if AType.BuiltInType = btInteger then
+        begin
+          case AKind of
+            toAdd: Result := addi(AOp1, AOp2, ATRI);
+            toSubtract: Result := subi(AOp1, AOp2, ATRI);
+            toMultiply: Result := muli(AOp1, AOp2, ATRI);
+            toDivide, toDiv: Result := divi(AOp1, AOp2, ATRI);
+          end;
+        end
+        else if AType.BuiltInType = btFloat then
+        begin
+          case AKind of
+            toAdd: Result := addf(AOp1, AOp2, ATRI);
+            toSubtract: Result := subf(AOp1, AOp2, ATRI);
+            toMultiply: Result := mulf(AOp1, AOp2, ATRI);
+            toDivide: Result := divf(AOp1, AOp2, ATRI);
+          end;
+        end
+        else if AType.BuiltInType = btString then
+        begin
+          if AKind = toAdd then
+            Result := adds(AOp1, AOp2, ATRI);
+        end;
+      end;
+    end;
+    toMod, toAnd, toOr, toXor:
+    begin
+      if (AType.ValueType = vtBuiltIn) and (AType.BuiltInType = btInteger) then
+      begin
+        case AKind of
+          toMod: Result := _mod(AOp1, AOp2, ATRI);
+          toAnd: Result := _and(AOp1, AOp2, ATRI);
+          toOr: Result := _or(AOp1, AOp2, ATRI);
+          toXor: Result := _xor(AOp1, AOp2, ATRI);
+          toShl: Result := _shl(AOp1, AOp2, ATRI);
+          toShr: Result := _shr(AOp1, AOp2, ATRI);
+        end;
+      end;
+    end;
+    toNegate, toNot, toBoolNot:
+    begin
+      if AOp1 <> ATRI then
+        raise EThoriumCompilerException.Create('Compiler mistake. Keywords: _operand, toNegate-toNot-toBoolNot, AOp1-ATRI');
+      if (AType.ValueType = vtBuiltIn) and (AType.BuiltInType = btInteger) then
+      begin
+        case AKind of
+          toNot: Result := _not(AOp1);
+          toNegate: Result := negi(AOp1);
+          toBoolNot: Result := bnot(AOp1);
+        end;
+      end;
+      if (AType.ValueType = vtBuiltIn) and (AType.BuiltInType = btFloat) then
+      begin
+        case AKind of
+          toNegate: Result := negf(AOp1);
+        end;
+      end;
+    end;
+  else
+    raise EThoriumCompilerException.Create('Compile mistake. Keywords: _operand, AKind');
+  end;
+end;
+
+function _cmpOperator(AOp1, AOp2: Word; ATypeA, ATypeB: TThoriumType): TThoriumInstruction;
+const
+  typeInteger = 0;
+  typeFloat = 1;
+  typeString = 2;
+  typeExtended = 3;
+var
+  TypeA, TypeB: Word;
+begin
+  if ATypeA.ValueType = vtBuiltIn then
+  begin
+    if ATypeA.BuiltInType = btInteger then
+      TypeA := typeInteger
+    else if ATypeA.BuiltInType = btFloat then
+      TypeA := typeFloat
+    else if ATypeA.BuiltInType = btString then
+      TypeA := typeString
+    else
+      Exit;
+  end
+  else if ATypeA.ValueType = vtExtendedType then
+    TypeA := typeExtended
+  else
+    Exit;
+  if ATypeB.ValueType = vtBuiltIn then
+  begin
+    if ATypeB.BuiltInType = btInteger then
+      TypeB := typeInteger
+    else if ATypeB.BuiltInType = btFloat then
+      TypeB := typeFloat
+    else if ATypeB.BuiltInType = btString then
+      TypeB := typeString
+    else
+      Exit;
+  end
+  else if ATypeB.ValueType = vtExtendedType then
+    TypeB := typeExtended
+  else
+    Exit;
+
+  case TypeA of
+    typeInteger: case TypeB of
+      typeInteger: Result := cmpi(AOp1, AOp2);
+      typeFloat: Result := cmpif(AOp1, AOp2);
+      typeExtended: Result := cmpie(AOp1, AOp2);
+    end;
+    typeFloat: case TypeB of
+      typeInteger: Result := cmpfi(AOp1, AOp2);
+      typeFloat: Result := cmpf(AOp1, AOp2);
+      typeExtended: Result := cmpfe(AOp1, AOp2);
+    end;
+    typeString: case TypeB of
+      typeString: Result := cmps(AOp1, AOp2);
+      typeExtended: Result := cmpse(AOp1, AOp2);
+    end;
+    typeExtended: case TypeB of
+      typeInteger: Result := cmpei(AOp1, AOp2);
+      typeFloat: Result := cmpef(AOp1, AOp2);
+      typeString: Result := cmpes(AOp1, AOp2);
+      typeExtended: Result := cmpe(AOp1, AOp2);
+    end;
+  end;
+
+end;
+
+function inci_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINCI_S(Result) do
+  begin
+    Instruction := tiINCI_S;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function incf_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINCF_S(Result) do
+  begin
+    Instruction := tiINCF_S;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function inci_fs(AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINCF_FS(Result) do
+  begin
+    Instruction := tiINCF_FS;
+    ModuleIndex := AModuleIndex;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function incf_fs(AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINCF_FS(Result) do
+  begin
+    Instruction := tiINCF_FS;
+    ModuleIndex := AModuleIndex;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function inci(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINCI(Result) do
+  begin
+    Instruction := tiINCI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function incf(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionINCF(Result) do
+  begin
+    Instruction := tiINCF;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function deci_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDECI_S(Result) do
+  begin
+    Instruction := tiDECI_S;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function decf_s(AScope: Word; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDECF_S(Result) do
+  begin
+    Instruction := tiDECF_S;
+    Scope := AScope;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function deci_fs(AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDECF_FS(Result) do
+  begin
+    Instruction := tiDECF_FS;
+    ModuleIndex := AModuleIndex;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function decf_fs(AModuleIndex: LongInt; AOffset: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDECF_FS(Result) do
+  begin
+    Instruction := tiDECF_FS;
+    ModuleIndex := AModuleIndex;
+    Offset := AOffset;
+    CodeLine := 0;
+  end;
+end;
+
+function deci(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDECI(Result) do
+  begin
+    Instruction := tiDECI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function decf(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionDECF(Result) do
+  begin
+    Instruction := tiDECF;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function xpget(AProp: TThoriumLibraryProperty; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXPGET(Result) do
+  begin
+    Instruction := tiXPGET;
+    Prop := AProp;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function xpset(AProp: TThoriumLibraryProperty; ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXPSET(Result) do
+  begin
+    Instruction := tiXPSET;
+    Prop := AProp;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function xfget(AID: Int64; AERI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXFGET(Result) do
+  begin
+    Instruction := tiXFGET;
+    ID := AID;
+    ERI := AERI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function xfset(AID: Int64; AERI: Word; AVRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXFSET(Result) do
+  begin
+    Instruction := tiXFSET;
+    ID := AID;
+    ERI := AERI;
+    VRI := AVRI;
+    CodeLine := 0;
+  end;
+end;
+
+function xsfget(AID: Int64; AExtendedType: TThoriumHostObjectType; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXSFGET(Result) do
+  begin
+    Instruction := tiXSFGET;
+    ID := AID;
+    ExtendedType := AExtendedType;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function xsfset(AID: Int64; AExtendedType: TThoriumHostObjectType; AVRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXSFSET(Result) do
+  begin
+    Instruction := tiXSFSET;
+    ID := AID;
+    ExtendedType := AExtendedType;
+    VRI := AVRI;
+    CodeLine := 0;
+  end;
+end;
+
+function xiget(AIRI: Word; AERI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXIGET(Result) do
+  begin
+    Instruction := tiXIGET;
+    IRI := AIRI;
+    ERI := AERI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function xiset(AIRI: Word; AVRI: Word; AERI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXISET(Result) do
+  begin
+    Instruction := tiXISET;
+    IRI := AIRI;
+    VRI := AVRI;
+    ERI := AERI;
+    CodeLine := 0;
+  end;
+end;
+
+function xct(AERI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXCT(Result) do
+  begin
+    Instruction := tiXCT;
+    ERI := AERI;
+    CodeLine := 0;
+  end;
+end;
+
+function vastart(ALength: Cardinal; AIsPointerBased: Boolean): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVASTART(Result) do
+  begin
+    Instruction := tiVASTART;
+    Length := ALength;
+    if AIsPointerBased then
+      Pointers := 1
+    else
+      Pointers := 0;
+    CodeLine := 0;
+  end;
+end;
+
+function va_i8(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_I8(Result) do
+  begin
+    Instruction := tiVA_I8;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_i16(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_I16(Result) do
+  begin
+    Instruction := tiVA_I16;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_i32(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_I32(Result) do
+  begin
+    Instruction := tiVA_I32;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_i64(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_I64(Result) do
+  begin
+    Instruction := tiVA_I64;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_i8s(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_I8S(Result) do
+  begin
+    Instruction := tiVA_I8S;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_i16s(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_I16S(Result) do
+  begin
+    Instruction := tiVA_I16S;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_i32s(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_I32S(Result) do
+  begin
+    Instruction := tiVA_I32S;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_i64s(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_I64S(Result) do
+  begin
+    Instruction := tiVA_I64S;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_f32(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_F32(Result) do
+  begin
+    Instruction := tiVA_F32;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_f64(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_F64(Result) do
+  begin
+    Instruction := tiVA_F64;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_f80(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_F80(Result) do
+  begin
+    Instruction := tiVA_F80;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_s(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_S(Result) do
+  begin
+    Instruction := tiVA_S;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function va_x(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVA_X(Result) do
+  begin
+    Instruction := tiVA_X;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function vastart_t(ALength: Cardinal; AFloatCount: Cardinal; AToClear: Cardinal): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVASTART_T(Result) do
+  begin
+    Instruction := tiVASTART_T;
+    Length := ALength;
+    Floats := AFloatCount;
+    ToClear := AToClear;
+    CodeLine := 0;
+  end;
+end;
+
+function vat_f(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVAT_F(Result) do
+  begin
+    Instruction := tiVAT_F;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function vat_i(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVAT_I(Result) do
+  begin
+    Instruction := tiVAT_I;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function vat_s(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVAT_S(Result) do
+  begin
+    Instruction := tiVAT_S;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function vat_x(ASRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVAT_X(Result) do
+  begin
+    Instruction := tiVAT_X;
+    SRI := ASRI;
+    CodeLine := 0;
+  end;
+end;
+
+function vafinish(): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionVAFINISH(Result) do
+  begin
+    Instruction := tiVAFINISH;
+    CodeLine := 0;
+  end;
+end;
+
+function jmp(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJMP(Result) do
+  begin
+    Instruction := tiJMP;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+function je(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJE(Result) do
+  begin
+    Instruction := tiJE;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+function jne(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJNE(Result) do
+  begin
+    Instruction := tiJNE;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+function jgt(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJGT(Result) do
+  begin
+    Instruction := tiJGT;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+function jge(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJGE(Result) do
+  begin
+    Instruction := tiJGE;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+function jlt(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJLT(Result) do
+  begin
+    Instruction := tiJLT;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+function jle(ANewAddress: TThoriumInstructionAddress): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionJLE(Result) do
+  begin
+    Instruction := tiJLE;
+    NewAddress := ANewAddress;
+    CodeLine := 0;
+  end;
+end;
+
+function call(AEntryPoint: TThoriumInstructionAddress; AHRI: Word; ARetVal: Word; AParameters: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCALL(Result) do
+  begin
+    Instruction := tiCALL;
+    EntryPoint := AEntryPoint;
+    HRI := AHRI;
+    RetVal := ARetVal;
+    Parameters := AParameters;
+    CodeLine := 0;
+  end;
+end;
+
+function fcall(AEntryPoint: TThoriumInstructionAddress; AModuleIndex: LongInt; AHRI: Word; ARetVal: Word; AParameters: Cardinal): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionFCALL(Result) do
+  begin
+    Instruction := tiFCALL;
+    ModuleIndex := AModuleIndex;
+    EntryPoint := AEntryPoint;
+    HRI := AHRI;
+    RetVal := ARetVal;
+    Parameters := AParameters;
+    CodeLine := 0;
+  end;
+end;
+
+function xcall(AFunctionRef: TThoriumHostFunctionBase): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXCALL(Result) do
+  begin
+    Instruction := tiXCALL;
+    FunctionRef := AFunctionRef;
+    CodeLine := 0;
+  end;
+end;
+
+function xcall_m(AMethodRef: TThoriumHostMethodBase; ARTTIValueRegister: TThoriumRegisterID): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionXCALL_M(Result) do
+  begin
+    Instruction := tiXCALL_M;
+    MethodRef := AMethodRef;
+    RTTIValueRegister := ARTTIValueRegister;
+    CodeLine := 0;
+  end;
+end;
+
+function ret(): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionRET(Result) do
+  begin
+    Instruction := tiRET;
+    CodeLine := 0;
+  end;
+end;
+
+function noop(AKind: Word; AParameter1, AParameter2: Int64; AParameter3: LongInt): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionNOOP(Result) do
+  begin
+    Instruction := tiNOOP;
+    Kind := AKind;
+    Parameter1 := AParameter1;
+    Parameter2 := AParameter2;
+    Parameter3 := AParameter3;
+    CodeLine := 0;
+  end;
+end;
+{%ENDREGION}
 
 {%REGION 'Native call helpers' /fold}
 var
@@ -2378,6 +3909,9 @@ begin
 end;
 
 {$ifdef CPU32}
+
+procedure ExecuteSubscript(Instructions: Pointer; StackTop: Pointer; Method: Pointer; Data: Pointer = nil); stdcall;
+// up to 3 ints in eax ecx edx
 label
   irEAX, irECX, irEDX, irPush,
   ivEAX, ivECX, ivEDX, ivPush,
@@ -2407,9 +3941,6 @@ var
   IntRegPtr: Pointer = @IntReg;
   IntVARegPtr: Pointer = @IntVAReg;
   IntVARevRegPtr: Pointer = @IntVARevReg;
-
-procedure ExecuteSubscript(Instructions: Pointer; StackTop: Pointer; Method: Pointer; Data: Pointer = nil); stdcall;
-// up to 3 ints in eax ecx edx
 var
   EAX, ECX, EDX, SEBX, SECX, SEDX, SESI, SESP, SEDI, SEAX1, SEBX1, SECX1, SEDX1, SESI1, SEDI1: DWord;
 begin
@@ -2800,6 +4331,11 @@ begin
   end;
 end;
 {$else}
+
+procedure ExecuteSubscript(Instructions: Pointer; StackTop: Pointer; Method: Pointer; Data: Pointer = nil);
+// * up to 6 ints (or similar) in registers: rdi, rsi, rdx, rcx, r8, r9
+// * up to 8 doubles (or singles) in registers: xmm0 through xmm7
+// * extendeds are segmented and pushed onto the stack
 label
   irRDI, irRSI, irRDX, irRCX, irR8, irR9, irPush,
   frXMM0, frXMM1, frXMM2, frXMM3, frXMM4, frXMM5, frXMM6, frXMM7, frPushSingle,
@@ -2829,11 +4365,6 @@ var
   IntRegPtr: Pointer = @IntReg;
   SingleRegPtr: Pointer = @SingleReg;
   DoubleRegPtr: Pointer = @DoubleReg;
-
-procedure ExecuteSubscript(Instructions: Pointer; StackTop: Pointer; Method: Pointer; Data: Pointer = nil);
-// * up to 6 ints (or similar) in registers: rdi, rsi, rdx, rcx, r8, r9
-// * up to 8 doubles (or singles) in registers: xmm0 through xmm7
-// * extendeds are segmented and pushed onto the stack
 var
   RDI, RAX, RBX, R10, R11, R12, R13, R14, R15: QWord;
 begin
@@ -3276,15 +4807,417 @@ end;
 
 {%REGION 'Thorium helper funtions' /fold}
 
+function ThoriumDerefStr(S: PString): String; inline;
+begin
+  if S = nil then
+    Result := ''
+  else
+    Result := S^;
+end;
+
+function ThoriumConcatStr(S1, S2: PString): String; inline;
+begin
+  Result := ThoriumDerefStr(S1) + ThoriumDerefStr(S2);
+end;
+
+function ThoriumCreateBuiltInValue(const BuiltInType: TThoriumBuiltInType): TThoriumValue;
+// Creates a thorium variable with a built-in-type.
+begin
+  Result._Type := vtBuiltIn;
+  Result.BuiltIn._Type := BuiltInType;
+  with Result.BuiltIn do
+  begin
+    case _Type of
+      btInteger: Int := 0;
+      btFloat: Float := 0.0;
+      btString: New(Str);
+    end;
+  end;
+end;
+
 procedure ThoriumExternalVarTypeToTypeSpec(
-  VarType: PThoriumExternalFunctionVarType; out TypeSpec: IThoriumType);
+  VarType: PThoriumExternalFunctionVarType; out TypeSpec: TThoriumType);
 begin
   if VarType^.HostType and (htSizeSection or htTypeSection) = htExt then
   begin
-    TypeSpec := VarType^.Extended;
+    TypeSpec.ValueType := vtExtendedType;
+    TypeSpec.Extended := VarType^.Extended;
   end
   else
     ThoriumVarTypeToTypeSpec(VarType^.HostType, TypeSpec);
+end;
+
+function ThoriumCreateIntegerValue(const Value: TThoriumInteger): TThoriumValue;
+// Creates an integer value
+begin
+  Result._Type := vtBuiltIn;
+  Result.BuiltIn._Type := btInteger;
+  Result.BuiltIn.Int := Value;
+end;
+
+function ThoriumCreateFloatValue(const Value: TThoriumFloat): TThoriumValue;
+// Creates a float value
+begin
+  Result._Type := vtBuiltIn;
+  Result.BuiltIn._Type := btFloat;
+  Result.BuiltIn.Float := Value;
+end;
+
+function ThoriumCreateStringValue(const Value: TThoriumString): TThoriumValue;
+// Creates a string value
+begin
+  Result._Type := vtBuiltIn;
+  Result.BuiltIn._Type := btString;
+  New(Result.BuiltIn.Str);
+  Result.BuiltIn.Str^ := Value;
+end;
+
+function ThoriumCreateExtendedTypeValue(const TypeClass: TThoriumHostObjectType): TThoriumValue;
+// Creates a thorium variable with a extended type.
+begin
+  Result._Type := vtExtendedType;
+  Result.Extended.TypeClass := TypeClass;
+  Result.Extended.Value := TypeClass.GetNewInstance;
+end;
+
+function ThoriumCreateValue(const ATypeSpec: TThoriumType): TThoriumValue;
+begin
+  Result._Type := ATypeSpec.ValueType;
+  case Result._Type of
+    vtBuiltIn:
+    begin
+      Result.BuiltIn._Type := ATypeSpec.BuiltInType;
+      case Result.BuiltIn._Type of
+        btInteger: Result.BuiltIn.Int := 0;
+        btFloat: Result.BuiltIn.Float := 0.0;
+        btString: New(Result.BuiltIn.Str);
+      end;
+    end;
+    vtExtendedType:
+    begin
+      Result.Extended.TypeClass := ATypeSpec.Extended;
+      //Result.Extended.Size := Result.Extended.TypeClass.GetNeededMemoryAmount;
+      Result.Extended.Value := Result.Extended.TypeClass.GetNewInstance;
+    end;
+  end;
+end;
+
+function ThoriumDuplicateValue(const Value: TThoriumValue): TThoriumValue;
+// Takes the value given and duplicates it's contents.
+begin
+  Result._Type := Value._Type;
+  case Value._Type of
+    vtBuiltIn:
+    begin
+      Result.BuiltIn._Type := Value.BuiltIn._Type;
+      case Value.BuiltIn._Type of
+        btInteger: Result.BuiltIn.Int := Value.BuiltIn.Int;
+        btFloat: Result.BuiltIn.Float := Value.BuiltIn.Float;
+        btString:
+        begin
+          New(Result.BuiltIn.Str);
+          Result.BuiltIn.Str^ := Value.BuiltIn.Str^;
+          (*if Value.BuiltIn.Str = nil then
+            Result.BuiltIn.Str := nil
+          else
+            New(Result.BuiltIn.Str);*)
+        end;
+      end;
+    end;
+    vtExtendedType:
+    begin
+      Result := Value.Extended.TypeClass.DuplicateValue(Value.Extended);
+    end;
+    vtFunction:
+      Result.Func := Value.Func;
+  end;
+end;
+
+function ThoriumExtractTypeSpec(const Value: TThoriumValue): TThoriumType;
+// Creates a TThoriumType-structure based on the type definition in the
+// TThoriumValue record.
+begin
+  Result.ValueType := Value._Type;
+  case Value._type of
+    vtBuiltIn: Result.BuiltInType := Value.BuiltIn._Type;
+    vtExtendedType: Result.Extended := Value.Extended.TypeClass;
+  end;
+end;
+
+function ThoriumBuiltInTypeSpec(const Value: TThoriumBuiltInType): TThoriumType;
+// Returns a TThoriumType which contains a BuiltIn type with the given type.
+begin
+  Result.ValueType := vtBuiltIn;
+  Result.BuiltInType := Value;
+end;
+
+function ThoriumHostObjectTypeSpec(const Value: TThoriumHostObjectType): TThoriumType;
+// Returns a TThoriumType which contains an extended type with the given type.
+begin
+  Result.ValueType := vtExtendedType;
+  Result.Extended := Value;
+end;
+
+function ThoriumNilTypeSpec: TThoriumType;
+// Returns a nil type spec (e.g. for void returns)
+begin
+  Result.ValueType := vtBuiltIn;
+  Result.BuiltInType := btNil;
+end;
+
+function ThoriumCompareType(const Type1, Type2: TThoriumType): Boolean;
+begin
+  //Result := CompareMem(@Type1, @Type2, SizeOf(TThoriumType));
+  if Type1.ValueType <> Type2.ValueType then
+  begin
+    Result := False;
+    Exit;
+  end;
+  case Type1.ValueType of
+    vtBuiltIn: Result := Type1.BuiltInType = Type2.BuiltInType;
+    vtExtendedType: Result := Type1.Extended = Type2.Extended;
+    vtFunction: Result := Type1.Func = Type2.Func;
+    vtHostFunction: Result := Type1.HostFunc = Type2.HostFunc;
+  end;
+end;
+
+function ThoriumCompareTypeEx(const AssignType1, ToType2: TThoriumType): Boolean;
+begin
+  if AssignType1.ValueType <> ToType2.ValueType then
+  begin
+    Result := False;
+    Exit;
+  end;
+  case AssignType1.ValueType of
+    vtBuiltIn: Result := AssignType1.BuiltInType = ToType2.BuiltInType;
+    vtExtendedType:
+    begin
+      if (not (AssignType1.Extended is TThoriumRTTIObjectType)) or (not (ToType2.Extended is TThoriumRTTIObjectType)) then
+        Result := AssignType1.Extended = ToType2.Extended
+      else
+      begin
+        Result := (TThoriumRTTIObjectType(AssignType1.Extended).BaseClass = TThoriumRTTIObjectType(ToType2.Extended).BaseClass)
+          or (TThoriumRTTIObjectType(AssignType1.Extended).BaseClass.InheritsFrom(TThoriumRTTIObjectType(ToType2.Extended).BaseClass));
+      end;
+    end;
+    vtFunction: Result := AssignType1.Func = ToType2.Func;
+    vtHostFunction: Result := AssignType1.HostFunc = ToType2.HostFunc;
+  end;
+end;
+
+function ThoriumTypeName(const TypeSpec: TThoriumType): String; overload;
+// Returns the type name of the given TThoriumType record.
+begin
+  case TypeSpec.ValueType of
+    vtBuiltIn:
+    begin
+      case TypeSpec.BuiltInType of
+        btUnknown: Result := 'Unknown';
+        btNil: Result := 'nil';
+        btInteger: Result := 'int';
+        btFloat: Result := 'float';
+        btString: Result := 'string';
+      else
+        Result := 'errornous builtin type';
+      end;
+    end;
+    vtExtendedType:
+    begin
+      Result := TypeSpec.Extended.FName;
+    end;
+    vtFunction:
+    begin
+      Result := 'function';
+    end;
+  else
+    Result := 'errornous type';
+  end;
+end;
+
+function ThoriumTypeName(const Value: TThoriumValue): String; overload;
+// Returns the type name of the value given.
+begin
+  Result := ThoriumTypeName(ThoriumExtractTypeSpec(Value));
+end;
+
+function ThoriumValueToStr(const Value: TThoriumValue): String;
+begin
+  case Value._Type of
+    vtBuiltIn: case Value.BuiltIn._Type of
+      btNil: Result := 'nil';
+      btUnknown: Result := 'unknown';
+      btInteger: Result := Format('0x%.16x', [Value.BuiltIn.Int]);
+      btFloat: Result := Format('%.8ff', [Value.BuiltIn.Float]);
+      btString:
+      begin
+        if Value.BuiltIn.Str = nil then
+          Result := '""'
+        else
+          Result := Format('"%s"', [Value.BuiltIn.Str^]);
+      end;
+      //btArray: Result := Format('array(%d)', [Value.BuiltIn.ElementCount]);
+    else
+      Result := '(unknown builtin type)';
+    end;
+    vtExtendedType: Result := Format('extended(%s)', [Value.Extended.TypeClass.FName]);
+    vtFunction: Result := 'function';
+    vtHostFunction: Result := 'external function';
+  else
+    Result := '(unknown type)';
+  end;
+end;
+
+function ThoriumSymbolToOperation(const Sym: TThoriumSymbol): TThoriumOperation;
+begin
+  case Sym of
+    tsPlus, tsAdditiveAssign: Result := toAdd;
+    tsMinus, tsSubtractiveAssign: Result := toSubtract;
+    tsMultiply, tsMultiplicativeAssign: Result := toMultiply;
+    tsDivide, tsDivideAssign: Result := toDivide;
+    tsAnd: Result := toAnd;
+    tsOr: Result := toOr;
+    tsXor: Result := toXor;
+    tsDiv: Result := toDiv;
+    tsMod: Result := toMod;
+    tsShl: Result := toShl;
+    tsShr: Result := toShr;
+    tsAssign: Result := toAssign;
+    tsEqual, tsNotEqual, tsLesser, tsGreater, tsLesserEqual, tsGreaterEqual: Result := toCompare;
+  end;
+end;
+
+function ThoriumSymbolToOperator(const Sym: TThoriumSymbol): TThoriumOperator;
+begin
+  case Sym of
+    tsPlus, tsAdditiveAssign: Result := tpAdd;
+    tsMinus, tsSubtractiveAssign: Result := tpSubtract;
+    tsMultiply, tsMultiplicativeAssign: Result := tpMultiply;
+    tsDivide, tsDivideAssign: Result := tpDivide;
+    tsAnd: Result := tpAnd;
+    tsOr: Result := tpOr;
+    tsXor: Result := tpXor;
+    tsDiv: Result := tpDiv;
+    tsMod: Result := tpMod;
+    tsEqual: Result := tpEqual;
+    tsNotEqual: Result := tpNotEqual;
+    tsLesser: Result := tpLess;
+    tsGreater: Result := tpGreater;
+    tsLesserEqual: Result := tpLessEqual;
+    tsGreaterEqual: Result := tpGreaterEqual;
+  end;
+end;
+
+function ThoriumValueToVariant(const AThoriumValue: TThoriumValue;
+  out Value: Variant; const VarType: TThoriumHostType = htNone): Boolean;
+begin
+  case AThoriumValue._Type of
+    vtBuiltIn: case AThoriumValue.BuiltIn._Type of
+      btInteger:
+      begin
+        Result := (VarType in [htIntS8, htIntU8, htIntS16, htIntU16, htIntS32,
+          htIntU32, htIntS64, htIntU64, htAny]);
+        if Result then
+          Value := AThoriumValue.BuiltIn.Int;
+      end;
+      btFloat:
+      begin
+        Result := (VarType in [htIntS8, htIntU8, htIntS16, htIntU16, htIntS32,
+          htIntU32, htIntS64, htIntU64, htFlt32, htFlt64, htFlt80, htAny]);
+        if Result then
+          Value := Extended(AThoriumValue.BuiltIn.Float);
+      end;
+      btString:
+      begin
+        Result := (VarType in [htAny, htStr]);
+        if Result then
+        begin
+          if AThoriumValue.BuiltIn.Str = nil then
+            Value := ''
+          else
+            Value := AThoriumValue.BuiltIn.Str^;
+        end;
+      end;
+    end;
+    vtExtendedType:
+    begin
+      Result := (VarType in [htAny, htExt]);
+      if Result then
+        Value := ptruint(@AThoriumValue.Extended);
+    end;
+  end;
+end;
+
+function ThoriumVariantToValue(const AVariant: Variant;
+  out AThoriumValue: TThoriumValue; const GivenType: TThoriumHostType = htAny): Boolean;
+var
+  VarType: TVarType;
+  Intval: ptruint;
+begin
+  Result := False;
+  VarType := TVarData(AVariant).vtype;
+  (*if (GivenType <> varany) and (VarType <> GivenType) then
+  begin
+    WriteLn('Leave');
+    Exit;
+  end;*)
+  if GivenType = htExt then
+  begin
+    if (not VarType in [{$ifdef CPU32}varlongword, varinteger{$else}varint64, varqword{$endif}, varunknown]) then
+      Exit;
+    Result := True;
+    AThoriumValue._Type := vtExtendedType;
+    Intval := AVariant;
+    AThoriumValue.Extended := PThoriumHostObjectTypeValue(Intval)^;
+    Exit;
+  end;
+  case VarType of
+    varsmallint, varinteger, varshortint, varint64, varbyte, varword,
+    varlongword, varqword:
+    begin
+      AThoriumValue._Type := vtBuiltIn;
+      AThoriumValue.BuiltIn._Type := btInteger;
+      AThoriumValue.BuiltIn.Int := AVariant;
+      Result := True;
+    end;
+    varsingle, vardouble, varcurrency, vardecimal:
+    begin
+      AThoriumValue._Type := vtBuiltIn;
+      AThoriumValue.BuiltIn._Type := btFloat;
+      AThoriumValue.BuiltIn.Float := AVariant;
+      Result := True;
+    end;
+    varstring, varolestr:
+    begin
+      AThoriumValue._Type := vtBuiltIn;
+      AThoriumValue.BuiltIn._Type := btString;
+      New(AThoriumValue.BuiltIn.Str);
+      AThoriumValue.BuiltIn.Str^ := String(AVariant);
+      Result := True;
+    end;
+  end;
+end;
+
+function ThoriumTypeNeedsClear(const AType: TThoriumType): Boolean;
+begin
+  Result := not (((AType.ValueType = vtBuiltIn) and (AType.BuiltInType <> btString)) or (AType.ValueType in [vtFunction, vtHostFunction]));
+end;
+
+procedure ThoriumFreeValue(var AValue: TThoriumValue); inline;
+// Frees the given variable.
+begin
+  if (AValue._Type = vtBuiltIn) and (AValue.BuiltIn._Type <> btString) then
+    Exit;
+  case AValue._Type of
+    vtBuiltIn:
+    begin
+      AValue.BuiltIn.Str^ := '';
+      Dispose(AValue.BuiltIn.Str);
+    end;
+    vtExtendedType:
+    begin
+      AValue.Extended.TypeClass.DisposeValue(AValue.Extended);
+    end;
+  end;
 end;
 
 function HostRecordField(const AType: TThoriumExternalFunctionVarType;
@@ -3321,6 +5254,414 @@ begin
   WriteLn('-- END Instruction array dump');
 end;
 
+function ThoriumEvaluateBuiltInOperation(const Value1, Value2: TThoriumValue; Op: TThoriumOperation; out ResultValue: TThoriumValue): Boolean;
+begin
+  Result := True;
+  ResultValue := ThoriumCreateBuiltInValue(btNil);
+  if Op in [toNot, toNegate, toBoolNot] then
+  begin
+    case Value1.BuiltIn._Type of
+      btInteger:
+      begin
+        ResultValue.BuiltIn._Type := btInteger;
+        case Op of
+          toNot: ResultValue.BuiltIn.Int := not Value1.BuiltIn.Int;
+          toNegate: ResultValue.BuiltIn.Int := -Value1.BuiltIn.Int;
+          toBoolNot: if Value1.BuiltIn.Int = 0 then
+            ResultValue.BuiltIn.Int := 1
+          else
+            ResultValue.BuiltIn.Int := 0;
+        end;
+      end;
+      btFloat:
+      begin
+        ResultValue.BuiltIn._Type := btFloat;
+        if Op = toNegate then
+          ResultValue.BuiltIn.Float := -Value1.BuiltIn.Float
+        else
+          Result := False;
+      end;
+    else
+      Result := False;
+    end;
+    Exit;
+  end;
+  case Value1.BuiltIn._Type of
+    btInteger:
+    begin
+      case Value2.BuiltIn._Type of
+        btInteger:
+        begin
+          ResultValue.BuiltIn._Type := btInteger;
+          case Op of
+            toAdd:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int + Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toSubtract:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int - Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toDivide:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Int / Value2.BuiltIn.Int;
+              ResultValue.BuiltIn._Type := btFloat;
+              Exit;
+            end;
+            toMultiply:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int * Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toDiv:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int div Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toAnd:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int and Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toMod:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int mod Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toOr:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int or Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toXor:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int xor Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toShl:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int shl Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toShr:
+            begin
+              ResultValue.BuiltIn.Int := Value1.BuiltIn.Int shr Value2.BuiltIn.Int;
+            end;
+          end;
+        end;
+        btFloat:
+        begin
+          ResultValue.BuiltIn._Type := btFloat;
+          case Op of
+            toAdd:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Int + Value2.BuiltIn.Float;
+              Exit;
+            end;
+            toSubtract:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Int - Value2.BuiltIn.Float;
+              Exit;
+            end;
+            toMultiply:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Int * Value2.BuiltIn.Float;
+              Exit;
+            end;
+            toDivide:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Int / Value2.BuiltIn.Float;
+              Exit;
+            end;
+          end;
+        end;
+      end;
+    end;
+    btFloat:
+    begin
+      case Value2.BuiltIn._Type of
+        btInteger:
+        begin
+          ResultValue.BuiltIn._Type := btFloat;
+          case Op of
+            toAdd:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Float + Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toSubtract:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Float - Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toMultiply:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Float * Value2.BuiltIn.Int;
+              Exit;
+            end;
+            toDivide:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Float / Value2.BuiltIn.Int;
+              Exit;
+            end;
+          end;
+        end;
+        btFloat:
+        begin
+          ResultValue.BuiltIn._Type := btFloat;
+          case Op of
+            toAdd:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Float + Value2.BuiltIn.Float;
+              Exit;
+            end;
+            toSubtract:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Float - Value2.BuiltIn.Float;
+              Exit;
+            end;
+            toMultiply:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Float * Value2.BuiltIn.Float;
+              Exit;
+            end;
+            toDivide:
+            begin
+              ResultValue.BuiltIn.Float := Value1.BuiltIn.Float / Value2.BuiltIn.Float;
+              Exit;
+            end;
+          end;
+        end;
+      end;
+    end;
+    btString:
+    begin
+      if (Value2.BuiltIn._Type = btString) and (Op = toAdd) then
+      begin
+        ResultValue.BuiltIn._Type := btString;
+        New(ResultValue.BuiltIn.Str);
+        ResultValue.BuiltIn.Str^ := Value1.BuiltIn.Str^ + Value2.BuiltIn.Str^;
+        Exit;
+      end;
+    end;
+  end;
+  Result := False;
+end;
+
+function ThoriumCompareBuiltIn(const Value1, Value2: TThoriumValue; Sym: TThoriumSymbol; out ResultValue: TThoriumValue): Boolean;
+  function BoolToInt(B: Boolean): Int64; inline;
+  begin
+    if B then
+      Result := 1
+    else
+      Result := 0;
+  end;
+begin
+  Result := True;
+  ResultValue := ThoriumCreateBuiltInValue(btInteger);
+  case Value1.BuiltIn._Type of
+    btInteger:
+    begin
+      case Value2.BuiltIn._Type of
+        btInteger:
+        begin
+          case Sym of
+            tsEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int = Value2.BuiltIn.Int);
+              Exit;
+            end;
+            tsNotEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int <> Value2.BuiltIn.Int);
+              Exit
+            end;
+            tsLesser:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int < Value2.BuiltIn.Int);
+              Exit
+            end;
+            tsLesserEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int <= Value2.BuiltIn.Int);
+              Exit
+            end;
+            tsGreater:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int > Value2.BuiltIn.Int);
+              Exit
+            end;
+            tsGreaterEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int >= Value2.BuiltIn.Int);
+              Exit
+            end;
+          end;
+        end;
+        btFloat:
+        begin
+          case Sym of
+            tsEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int = Value2.BuiltIn.Float);
+              Exit;
+            end;
+            tsNotEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int <> Value2.BuiltIn.Float);
+              Exit
+            end;
+            tsLesser:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int < Value2.BuiltIn.Float);
+              Exit
+            end;
+            tsLesserEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int <= Value2.BuiltIn.Float);
+              Exit
+            end;
+            tsGreater:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int > Value2.BuiltIn.Float);
+              Exit
+            end;
+            tsGreaterEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Int >= Value2.BuiltIn.Float);
+              Exit
+            end;
+          end;
+        end;
+      end;
+    end;
+    btFloat:
+    begin
+      case Value2.BuiltIn._Type of
+        btInteger:
+        begin
+          case Sym of
+            tsEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float = Value2.BuiltIn.Int);
+              Exit;
+            end;
+            tsNotEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float <> Value2.BuiltIn.Int);
+              Exit
+            end;
+            tsLesser:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float < Value2.BuiltIn.Int);
+              Exit
+            end;
+            tsLesserEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float <= Value2.BuiltIn.Int);
+              Exit
+            end;
+            tsGreater:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float > Value2.BuiltIn.Int);
+              Exit
+            end;
+            tsGreaterEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float >= Value2.BuiltIn.Int);
+              Exit
+            end;
+          end;
+        end;
+        btFloat:
+        begin
+          case Sym of
+            tsEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float = Value2.BuiltIn.Float);
+              Exit;
+            end;
+            tsNotEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float <> Value2.BuiltIn.Float);
+              Exit
+            end;
+            tsLesser:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float < Value2.BuiltIn.Float);
+              Exit
+            end;
+            tsLesserEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float <= Value2.BuiltIn.Float);
+              Exit
+            end;
+            tsGreater:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float > Value2.BuiltIn.Float);
+              Exit
+            end;
+            tsGreaterEqual:
+            begin
+              ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Float >= Value2.BuiltIn.Float);
+              Exit
+            end;
+          end;
+        end;
+      end;
+    end;
+    btString:
+    begin
+      if (Value2.BuiltIn._Type = btString) then
+      begin
+        case Sym of
+          tsEqual:
+          begin
+            ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Str^ = Value2.BuiltIn.Str^);
+            Exit;
+          end;
+          tsNotEqual:
+          begin
+            ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Str^ <> Value2.BuiltIn.Str^);
+            Exit
+          end;
+          tsLesser:
+          begin
+            ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Str^ < Value2.BuiltIn.Str^);
+            Exit
+          end;
+          tsLesserEqual:
+          begin
+            ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Str^ <= Value2.BuiltIn.Str^);
+            Exit
+          end;
+          tsGreater:
+          begin
+            ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Str^ > Value2.BuiltIn.Str^);
+            Exit
+          end;
+          tsGreaterEqual:
+          begin
+            ResultValue.BuiltIn.Int := BoolToInt(Value1.BuiltIn.Str^ >= Value2.BuiltIn.Str^);
+            Exit
+          end;
+        end;
+      end;
+    end;
+  end;
+  Result := False;
+end;
+
+function OrdBool(B: Boolean): Integer; inline;
+begin
+  if B then
+    Result := 1
+  else
+    Result := 0;
+end;
+
 procedure WriteHash(const AHash: TThoriumHash);
 type
   THash = array [0..15] of Byte;
@@ -3331,26 +5672,7 @@ begin
     Write(IntToHex(THash(AHash)[I], 2));
 end;
 
-function OperationInstructionDescription(const AInstruction: TThoriumInstruction;
-  Op1: Integer = 0; Op2: Integer = 1; Target: Integer = 2): TThoriumOperationInstructionDescription;
-begin
-  Result.Instruction := TThoriumInstructionREG(AInstruction);
-  Result.Value1RIOffset := Op1;
-  Result.Value2RIOffset := Op2;
-  Result.TargetRIOffset := Target;
-end;
 
-function AccessDescription(const AInstruction: TThoriumInstruction;
-  AValueRegister: Integer = -1; ATargetRegister: Integer = -1;
-  AExtendedRegister: Integer = -1; AIndexRegister: Integer = -1): TThoriumAccess;
-begin
-  Result.Allowed := True;
-  Result.Instruction := TThoriumInstructionREG(AInstruction);
-  Result.IndexRIOffset := AIndexRegister;
-  Result.ValueRIOffset := AValueRegister;
-  Result.ExtendedRIOffset := AExtendedRegister;
-  Result.TargetRIOffset := ATargetRegister;
-end;
 
 
 function ThoriumMakeOOPEvent(ACode: Pointer; Userdata: Pointer): TMethod;
@@ -3368,15 +5690,6 @@ begin
   else
     Result := 'ERR';
   end;
-end;
-
-procedure Append(var AArray: TThoriumTableEntryResults; const AItem: TThoriumTableEntryResult);
-var
-  Len: Integer;
-begin
-  Len := Length(AArray);
-  SetLength(AArray, Len + 1);
-  AArray[Len] := AItem;
 end;
 
 function ThoriumInstructionToStr(AInstruction: TThoriumInstruction): String;
@@ -3485,6 +5798,9 @@ begin
     tiXIGET: with TThoriumInstructionXIGET(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(IRI), ThoriumRegisterToStr(ERI), ThoriumRegisterToStr(TRI)]);
     tiXISET: with TThoriumInstructionXISET(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(VRI), ThoriumRegisterToStr(IRI), ThoriumRegisterToStr(ERI)]);
 
+    tiXPGET: with TThoriumInstructionXPGET(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(Prop), ThoriumRegisterToStr(TRI)]);
+    tiXPSET: with TThoriumInstructionXPSET(AInstruction) do Result := Result + Format('%%%s [$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x]', [ThoriumRegisterToStr(SRI), ptrint(Prop)]);
+
     tiXCT: with TThoriumInstructionXCT(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(ERI)]);
 
     tiVASTART: with TThoriumInstructionVASTART(AInstruction) do Result := Result + Format('$0x%.8x $%d', [Length, Pointers]);
@@ -3523,21 +5839,24 @@ begin
   end;
 end;
 
-procedure ThoriumVarTypeToTypeSpec(VarType: TThoriumHostType; var TypeSpec: IThoriumType);
+procedure ThoriumVarTypeToTypeSpec(VarType: TThoriumHostType; var TypeSpec: TThoriumType);
 begin
   case VarType and (htSizeSection or htTypeSection) of
     htIntS8, htIntS16, htIntS32, htIntS64,
     htIntU8, htIntU16, htIntU32, htIntU64:
     begin
-      TypeSpec := TThoriumTypeInteger.Create();
+      TypeSpec.ValueType := vtBuiltIn;
+      TypeSpec.BuiltInType := btInteger;
     end;
     htFlt32, htFlt64, htFlt80:
     begin
-      TypeSpec := TThoriumTypeFloat.Create();
+      TypeSpec.ValueType := vtBuiltIn;
+      TypeSpec.BuiltInType := btFloat;
     end;
     htStr:
     begin
-      TypeSpec := TThoriumTypeString.Create();
+      TypeSpec.ValueType := vtBuiltIn;
+      TypeSpec.BuiltInType := btString;
     end;
     htExt:
     begin
@@ -3637,7 +5956,7 @@ function TThoriumReferenceImplementation._Release: LongInt; stdcall;
 begin
   Result := InterLockedDecrement(FReferences);
   if (Result = 0) and (not FHostControlled) then
-    Free;
+    FTarget.Free;
 end;
 
 function TThoriumReferenceImplementation.QueryInterface(const IID: TGuid; out
@@ -3658,13 +5977,13 @@ procedure TThoriumReferenceImplementation.DisableHostControl;
 begin
   FHostControlled := False;
   if FReferences = 0 then
-    Free;
+    FTarget.Free;
 end;
 
 procedure TThoriumReferenceImplementation.FreeReference;
 begin
   if (InterLockedDecrement(FReferences) = 0) and not FHostControlled then
-    Free;
+    FTarget.Free;
 end;
 
 function TThoriumReferenceImplementation.GetReference: TObject;
@@ -3917,657 +6236,6 @@ begin
     Inc(LocalList);
   end;
 end;
-
-{%ENDREGION}
-
-{%REGION 'Thorium types' /fold}
-
-{ TThoriumType }
-
-constructor TThoriumType.Create;
-begin
-//  FName := AName;
-  FReferences := 0;
-end;
-
-function TThoriumType.QueryInterface(const iid: tguid; out obj): longint;
-  stdcall;
-begin
-  if GetInterface(iid, obj) then
-    Result := S_OK
-  else
-    Result := E_NOINTERFACE;
-end;
-
-function TThoriumType._AddRef: longint; stdcall;
-begin
-  Result := InterLockedIncrement(FReferences);
-end;
-
-function TThoriumType._Release: longint; stdcall;
-begin
-  Result := InterLockedDecrement(FReferences);
-  if Result = 0 then
-    Free;
-end;
-
-function TThoriumType.GetName: String;
-begin
-//  Result := FName;
-end;
-
-procedure TThoriumType.RaiseMissingTheObject;
-begin
-  raise EThoriumException.Create('Missing a valid TheObject parameter.');
-end;
-
-function TThoriumType.CanAssignTo(
-  var Assignment: TThoriumAssignmentDescription; const AnotherType: IThoriumType
-  ): Boolean;
-begin
-  Result := IsEqualTo(AnotherType);
-  if Result then
-  begin
-    Assignment.Cast.Needed := False;
-  end;
-end;
-
-function TThoriumType.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
-begin
-  Result := False;
-end;
-
-function TThoriumType.DuplicateValue(const Input: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result := Input;
-end;
-
-function TThoriumType.HasFieldAccess: Boolean;
-begin
-
-end;
-
-function TThoriumType.HasIndexedAccess: Boolean;
-begin
-
-end;
-
-function TThoriumType.GetClassType: TClass;
-begin
-  Result := ClassType;
-end;
-
-function TThoriumType.GetInstance: TThoriumType;
-begin
-  Result := Self;
-end;
-
-function TThoriumType.UsesType(const AnotherType: IThoriumType;
-  MayRecurse: Boolean): Boolean;
-begin
-  Result := False;
-end;
-
-{ TThoriumTypeSimple }
-
-function TThoriumTypeSimple.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkSimple;
-end;
-
-function TThoriumTypeSimple.IsEqualTo(const AnotherType: IThoriumType): Boolean;
-begin
-  Result := AnotherType.GetClassType = ClassType;
-end;
-
-{ TThoriumTypeInteger }
-
-function TThoriumTypeInteger.CanAssignTo(
-  var Assignment: TThoriumAssignmentDescription; const AnotherType: IThoriumType
-  ): Boolean;
-begin
-  if AnotherType.GetInstance is TThoriumTypeFloat then
-  begin
-    Assignment.Cast.Needed := True;
-    Assignment.Cast.Instruction := TThoriumInstructionCAST(castif(0, 0));
-  end
-  else
-    Result := inherited;
-end;
-
-function TThoriumTypeInteger.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
-
-  function IntIntOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject.GetInstance is TThoriumTypeInteger then
-    begin
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-      Result := True;
-    end
-    else
-      Result := False;
-  end;
-
-  function IntFltOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject.GetInstance is TThoriumTypeFloat then
-    begin
-      Operation.ResultType := TheObject;
-      Operation.Casts[0].Needed := True;
-      Operation.Casts[0].Instruction := TThoriumInstructionCAST(castif(0, 0));
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-      Result := True;
-    end
-    else
-      Result := False;
-  end;
-
-  procedure IntOp(Instruction: TThoriumInstruction);
-  begin
-    Operation.ResultType := Self;
-    Operation.Casts[0].Needed := False;
-    Operation.Casts[1].Needed := False;
-    Operation.OperationInstruction := OperationInstructionDescription(Instruction, 0, -1, -1);
-  end;
-
-begin
-  Result := True;
-  if Operation.Operation in opReflexive then
-  begin
-    case Operation.Operation of
-      opIncrement:
-        IntOp(inci(0));
-      opDecrement:
-        IntOp(deci(0));
-      opBitNot:
-        IntOp(_not(0));
-      opNegate:
-        IntOp(negi(0));
-    else
-      Result := inherited;
-    end;
-    Exit;
-  end
-  else if TheObject = nil then
-    RaiseMissingTheObject
-  else
-  begin
-    case Operation.Operation of
-      opAddition:
-      begin
-        if IntIntOp(addi(0, 0, 0)) then
-          Exit
-        else if IntFltOp(addf(0, 0, 0)) then
-          Exit;
-      end;
-
-      opSubtraction:
-      begin
-        if IntIntOp(subi(0, 0, 0)) then
-          Exit
-        else if IntFltOp(subf(0, 0, 0)) then
-          Exit;
-      end;
-
-      opMultiplication:
-      begin
-        if IntIntOp(muli(0, 0, 0)) then
-          Exit
-        else if IntFltOp(mulf(0, 0, 0)) then
-          Exit;
-      end;
-
-      opDivision:
-      begin
-        if TheObject.GetInstance is TThoriumTypeInteger then
-        begin
-          Operation.ResultType := TThoriumTypeFloat.Create();
-          Operation.Casts[0].Needed := True;
-          Operation.Casts[0].Instruction := TThoriumInstructionCAST(castif(0, 0));
-          Operation.Casts[1].Needed := True;
-          Operation.Casts[1].Instruction := TThoriumInstructionCAST(castif(0, 0));
-          Operation.OperationInstruction := OperationInstructionDescription(divf(0, 0, 0));
-          Exit;
-        end
-        else if IntFltOp(divf(0, 0, 0)) then
-          Exit;
-      end;
-
-      opIntegerDivision:
-        if IntIntOp(divi(0, 0, 0)) then
-          Exit;
-
-      opModulus:
-        if IntIntOp(_mod(0, 0, 0)) then
-          Exit;
-
-      opBitOr:
-        if IntIntOp(_or(0, 0, 0)) then
-          Exit;
-
-      opBitXor:
-        if IntIntOp(_xor(0, 0, 0)) then
-          Exit;
-
-      opBitAnd:
-        if IntIntOp(_and(0, 0, 0)) then
-          Exit;
-
-      opBitShl:
-        if IntIntOp(_shl(0, 0, 0)) then
-          Exit;
-
-      opBitShr:
-        if IntIntOp(_shr(0, 0, 0)) then
-          Exit;
-    end;
-  end;
-  Result := inherited;
-end;
-
-{ TThoriumTypeFloat }
-
-function TThoriumTypeFloat.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
-
-  function FltFltOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject.GetInstance is TThoriumTypeFloat then
-    begin
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-    end
-    else
-      Result := False;
-  end;
-
-  function FltIntOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject.GetInstance is TThoriumTypeInteger then
-    begin
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := True;
-      Operation.Casts[1].Instruction := TThoriumInstructionCAST(castif(0, 0));
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-    end
-    else
-      Result := False;
-  end;
-
-  procedure FltOp(Instruction: TThoriumInstruction);
-  begin
-    Operation.ResultType := Self;
-    Operation.Casts[0].Needed := False;
-    Operation.Casts[1].Needed := False;
-    Operation.OperationInstruction := OperationInstructionDescription(Instruction, 0, -1, -1);
-  end;
-
-begin
-  Result := True;
-  if Operation.Operation in opReflexive then
-  begin
-    case Operation.Operation of
-      opNegate:
-        FltOp(negf(0));
-      opIncrement:
-        FltOp(incf(0));
-      opDecrement:
-        FltOp(decf(0));
-    else
-      Result := inherited;
-    end;
-    Exit;
-  end
-  else if TheObject = nil then
-    RaiseMissingTheObject
-  else
-  begin
-    case Operation.Operation of
-      opAddition:
-        if FltFltOp(addf(0, 0, 0)) then
-          Exit
-        else if FltIntOp(addf(0, 0, 0)) then
-          Exit;
-      opSubtraction:
-        if FltFltOp(subf(0, 0, 0)) then
-          Exit
-        else if FltIntOp(subf(0, 0, 0)) then
-          Exit;
-      opMultiplication:
-        if FltFltOp(mulf(0, 0, 0)) then
-          Exit
-        else if FltIntOp(mulf(0, 0, 0)) then
-          Exit;
-      opDivision:
-        if FltFltOp(divf(0, 0, 0)) then
-          Exit
-        else if FltIntOp(divf(0, 0, 0)) then
-          Exit;
-    end;
-  end;
-  Result := inherited;
-end;
-
-{ TThoriumTypeString }
-
-function TThoriumTypeString.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkString;
-end;
-
-function TThoriumTypeString.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
-
-  function StrStrOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject.GetInstance is TThoriumTypeString then
-    begin
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-    end
-    else
-      Result := False;
-  end;
-
-begin
-  Result := True;
-  if Operation.Operation in opReflexive then
-    Result := inherited
-  else if TheObject = nil then
-    RaiseMissingTheObject
-  else
-  begin
-    case Operation.Operation of
-      opAddition:
-        if StrStrOp(adds(0, 0, 0)) then
-          Exit;
-    end;
-  end;
-  Result := inherited;
-end;
-
-{ TThoriumTypeFunction }
-
-constructor TThoriumTypeFunction.Create;
-begin
-  FParameters := TThoriumParameters.Create;
-  FReturnType := nil;
-end;
-
-destructor TThoriumTypeFunction.Destroy;
-begin
-  FReturnType := nil;
-  FParameters.Free;
-  inherited Destroy;
-end;
-
-function TThoriumTypeFunction.GetHasReturnValue: Boolean;
-begin
-  Result := FReturnType <> nil;
-end;
-
-function TThoriumTypeFunction.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkFunction;
-end;
-
-function TThoriumTypeFunction.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
-begin
-  Result := False;
-end;
-
-function TThoriumTypeFunction.IsEqualTo(const AnotherType: IThoriumType
-  ): Boolean;
-begin
-  raise EThoriumException.Create('TThoriumTypeFunction.IsEqualTo not implemented yet.');
-end;
-
-{ TThoriumTypeHostFunction }
-
-function TThoriumTypeHostFunction.GetTypeKind: TThoriumTypeKind;
-begin
-  Result:=tkHostFunction;
-end;
-
-{ TThoriumTypeHostType }
-
-constructor TThoriumTypeHostType.Create(const AName: String;
-  const AHostType: TThoriumHostObjectType);
-begin
-  FHostType := AHostType;
-end;
-
-function TThoriumTypeHostType.GetTypeKind: TThoriumTypeKind;
-begin
-  Result:=tkHostType;
-end;
-
-function TThoriumTypeHostType.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
-begin
-  raise EThoriumException.Create('Not implemented yet.');
-end;
-
-function TThoriumTypeHostType.IsEqualTo(const AnotherType: IThoriumType
-  ): Boolean;
-begin
-  raise EThoriumException.Create('Not implemented yet.');
-end;
-
-{ TThoriumTypeStruct }
-
-constructor TThoriumTypeStruct.Create(const AName: String);
-begin
-
-end;
-
-destructor TThoriumTypeStruct.Destroy;
-begin
-  inherited Destroy;
-end;
-
-procedure TThoriumTypeStruct.Expand;
-begin
-  SetLength(FFields, Length(FFields) + 8);
-end;
-
-function TThoriumTypeStruct.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkStruct;
-end;
-
-function TThoriumTypeStruct.Add(const AName: String; const ValueType: IThoriumType): Integer;
-begin
-  if ValueType.UsesType(Self) then
-    raise EThoriumException.Create('Cannot cross-refer types in structs.');
-  if FCount = Length(FFields) then
-    Expand;
-  FFields[FCount].Name := AName;
-  FFields[FCount].ValueType := ValueType;
-  FFields[FCount].Offset := SizeOf(TThoriumValue) * FCount;
-  Result := FCount;
-  Inc(FCount);
-end;
-
-function TThoriumTypeStruct.Add(const AReference: TThoriumStructFieldDefinition
-  ): Integer;
-begin
-  Result := Add(AReference.Name, AReference.ValueType);
-end;
-
-function TThoriumTypeStruct.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
-begin
-  Result := inherited CanPerformOperation(Operation, TheObject);
-end;
-
-procedure TThoriumTypeStruct.Delete(const AIndex: Integer);
-var
-  I: Integer;
-begin
-  if (AIndex < 0) or (AIndex >= FCount) then
-    raise EListError.CreateFmt('List index (%d) out of bounds (0…%d)', [AIndex, 0, FCount - 1]);
-  FFields[AIndex].Name := '';
-  FFields[AIndex].ValueType := nil;
-  for I := AIndex + 1 to FCount - 1 do
-  begin
-    FFields[I-1].Name := FFields[I].Name;
-    FFields[I-1].ValueType := FFields[I].ValueType;
-  end;
-  FFields[FCount-1].Name := '';
-  FFields[FCount-1].ValueType := nil;
-  Dec(FCount);
-end;
-
-function TThoriumTypeStruct.IndexOf(const AName: String): Integer;
-begin
-  for Result := 0 to FCount - 1 do
-    if FFields[Result].Name = AName then
-      Exit;
-  Result := -1;
-end;
-
-function TThoriumTypeStruct.IsEqualTo(const AnotherType: IThoriumType): Boolean;
-var
-  OtherInstance: TThoriumTypeStruct;
-  I: Integer;
-begin
-  if not (AnotherType.GetInstance is TThoriumTypeStruct) then
-    Exit(False);
-  OtherInstance := TThoriumTypeStruct(AnotherType.GetInstance);
-  if OtherInstance.FCount <> FCount then
-    Exit(False);
-  for I := 0 to FCount - 1 do
-  begin
-    if OtherInstance.FFields[I].Name <> Self.FFields[I].Name then
-      Exit(False);
-    if OtherInstance.FFields[I].ValueType <> Self.FFields[I].ValueType then
-      Exit(False);
-    if OtherInstance.FFields[I].Offset <> Self.FFields[I].Offset then
-      Exit(False);
-  end;
-  Result := True;
-end;
-
-function TThoriumTypeStruct.UsesType(const AnotherType: IThoriumType;
-  MayRecurse: Boolean): Boolean;
-var
-  I: Integer;
-begin
-  for I := 0 to FCount - 1 do
-  begin
-    if FFields[I].ValueType.GetInstance = AnotherType.GetInstance then
-      Exit(True)
-    else if MayRecurse and FFields[I].ValueType.UsesType(AnotherType) then
-      Exit(True);
-  end;
-  Result := False;
-end;
-
-{ TThoriumTypeArray }
-
-constructor TThoriumTypeArray.Create(const AName: String;
-  const ValueType: IThoriumType);
-begin
-  FValueType := nil;
-  FArrayDimensionKind := akStatic;
-  FArrayDimensionMax := 0;
-  FArrayDimensionMin := 0;
-end;
-
-destructor TThoriumTypeArray.Destroy;
-begin
-  FValueType := nil;
-  inherited Destroy;
-end;
-
-function TThoriumTypeArray.GetTypeKind: TThoriumTypeKind;
-begin
-  Result:=tkArray;
-end;
-
-function TThoriumTypeArray.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
-begin
-  if TheObject.IsEqualTo(Self) then
-  begin
-    case Operation.Operation of
-      opAddition:
-      begin
-        Operation.ResultType := Self;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(0, 0, 0, 0)), 0, 0, 0);
-      end;
-      opMultiplication:
-      begin
-        Operation.ResultType := Self;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(0, 0, 0, 0)), 0, 0, 0);
-      end;
-      opCmpEqual:
-      begin
-        Operation.ResultType := TThoriumTypeInteger.Create();
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(0, 0, 0, 0)), 0, 0, 0);
-      end;
-      opCmpNotEqual:
-      begin
-        Operation.ResultType := TThoriumTypeInteger.Create();
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(0, 0, 0, 0)), 0, 0, 0);
-      end;
-    else
-      Exit(False);
-    end;
-  end;
-  Result := False;
-end;
-
-function TThoriumTypeArray.IsEqualTo(const AnotherType: IThoriumType): Boolean;
-var
-  OtherInstance: TThoriumTypeArray;
-begin
-  if not (AnotherType.GetInstance is TThoriumTypeArray) then
-    Exit(False);
-  OtherInstance := TThoriumTypeArray(AnotherType.GetInstance);
-  if (OtherInstance.FValueType <> FValueType) or ((FValueType <> nil) and (not (OtherInstance.FValueType.IsEqualTo(FValueType)))) then
-    Exit(False);
-  if (OtherInstance.FArrayDimensionKind <> FArrayDimensionKind) then
-    Exit(False);
-  if (FArrayDimensionKind = akStatic) then
-  begin
-    if (OtherInstance.FArrayDimensionMin <> FArrayDimensionMin) or
-      (OtherInstance.FArrayDimensionMax <> FArrayDimensionMax) then
-      Exit(False);
-  end;
-  Result := True;
-end;
-
 {%ENDREGION}
 
 {%REGION 'Thorium functions and variables' /fold}
@@ -4577,7 +6245,7 @@ end;
 constructor TThoriumParameters.Create;
 begin
   inherited Create;
-  FList := TInterfaceList.Create;
+  FList := TFPList.Create;
 end;
 
 destructor TThoriumParameters.Destroy;
@@ -4587,52 +6255,69 @@ begin
   inherited Destroy;
 end;
 
-function TThoriumParameters.GetCount: Integer;
+function TThoriumParameters.GetParameterCount: Integer;
+// Returns the current count of registered parameters
 begin
   Result := FList.Count;
 end;
 
-procedure TThoriumParameters.Add(AType: IThoriumType);
+function TThoriumParameters.AddParameter: PThoriumType;
+// Reserves the memory for a new parameter and returns it's pointer as result
 begin
-  FList.Add(AType);
+  Result := nil;
+  GetMem(Result, SizeOf(TThoriumType));
+  FList.Add(Result);
+end;
+
+procedure TThoriumParameters.RemoveParameter(const Index: Integer);
+// Deletes a parameter from list and frees its memory.
+begin
+  if (Index < 0) or (Index > FList.Count - 1) then
+    Exit;
+  FreeMem(FList.Items[Index]);
+  FList.Delete(Index);
 end;
 
 procedure TThoriumParameters.Clear;
+// Deletes all parameters and frees their memory
+var
+  I: Integer;
 begin
+  for I := 0 to FList.Count - 1 do
+    FreeMem(FList.Items[I]);
   FList.Clear;
 end;
 
-procedure TThoriumParameters.Delete(AIndex: Integer);
+procedure TThoriumParameters.GetParameterSpec(const Index: Integer; out ParamSpec: TThoriumType);
+// Fills the ParamSpec-record with the data of the parameter registered at Index
 begin
-  FList.Delete(AIndex);
-end;
-
-procedure TThoriumParameters.Remove(AType: IThoriumType);
-begin
-  FList.Remove(AType);
+  if (Index < 0) or (Index > FList.Count - 1) then
+    Exit;
+  ParamSpec := PThoriumType(FList.Items[Index])^;
 end;
 
 function TThoriumParameters.Duplicate: TThoriumParameters;
 var
   I: Integer;
+  Entry: PThoriumType;
 begin
   Result := TThoriumParameters.Create;
   for I := 0 to FList.Count - 1 do
   begin
-    Result.FList.Add(FList[I]);
+    Entry := nil;
+    GetMem(Entry, SizeOf(TThoriumType));
+    Move(PThoriumType(FList[I])^, Entry^, SizeOf(TThoriumType));
+    Result.FList.Add(Entry);
   end;
 end;
 
-procedure TThoriumParameters.GetParameterSpec(const Index: Integer; out
-  ParamSpec: IThoriumType);
-begin
-
-end;
-
 procedure TThoriumParameters.LoadFromStream(Stream: TStream);
+var
+  I: Integer;
+  ACount: LongInt;
+  TypeSpec: PThoriumType;
 begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-  (*Clear;
+  Clear;
   Stream.Read(ACount, SizeOf(LongInt));
   FList.Capacity := ACount;
   for I := 0 to ACount - 1 do
@@ -4640,19 +6325,18 @@ begin
     TypeSpec := GetMem(SizeOf(TThoriumType));
     Stream.Read(TypeSpec^, SizeOf(TThoriumType));
     FList.Add(TypeSpec);
-  end;*)
+  end;
 end;
 
 procedure TThoriumParameters.SaveToStream(Stream: TStream);
-(*var
+var
   I: Integer;
-  ACount: LongInt;*)
+  ACount: LongInt;
 begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-  (*ACount := FList.Count;
+  ACount := FList.Count;
   Stream.Write(ACount, SizeOf(LongInt));
   for I := 0 to Count - 1 do
-    Stream.Write(PThoriumType(FList[I])^, SizeOf(TThoriumType));*)
+    Stream.Write(PThoriumType(FList[I])^, SizeOf(TThoriumType));
 end;
 
 { TThoriumPublicValue }
@@ -4682,9 +6366,9 @@ begin
   FEntryPoint := -1;
   //FEventCapsules := TFPObjectHashTable.CreateWith(50, @RSHash);
   FNestingLevel := -1;
-  FPrototype := TThoriumTypeFunction.Create;
-  FPrototypeIntf := FPrototype;
+  FParameters := TThoriumParameters.Create;
   FPrototyped := False;
+  FReturnValues := TThoriumParameters.Create;
   FVisibilityLevel := vsPrivate;
   FPrototypedCalls := TThoriumJumpList.Create;
 end;
@@ -4692,6 +6376,8 @@ end;
 destructor TThoriumFunction.Destroy;
 begin
   FPrototypedCalls.Free;
+  FParameters.Free;
+  FReturnValues.Free;
   inherited Destroy;
 end;
 
@@ -4705,7 +6391,7 @@ var
 begin
   VM := FModule.FThorium.FVirtualMachine;
   Stack := VM.FStack;
-  for I := 0 to FPrototype.FParameters.Count - 1 do
+  for I := 0 to FParameters.Count - 1 do
   begin
     with (Stack.Push)^ do
     begin
@@ -4721,14 +6407,14 @@ begin
     ReturnAddress := THORIUM_JMP_EXIT;
     ReturnModule := -1;
     Params := Length(AParameters);
-    RetVals := 1;
+    RetVals := ReturnValues.Count;
     RegisterDumpRange := 0;
     RegisterDump := nil;
     DropResult := False;
   end;
   VM.FCurrentStackFrame := Stack.EntryCount-1;
   VM.Execute(VM.FThorium.FModules.IndexOf(FModule), FEntryPoint, False);
-  if FPrototype.HasReturnValue then
+  if ReturnValues.Count = 1 then
   begin
     Move(Stack.GetTop(0)^.Value, Result, SizeOf(TThoriumValue));
     Stack.Pop(1, False);
@@ -4741,10 +6427,12 @@ begin
   Result.FName := FName;
   Result.FEntryPoint := FEntryPoint;
   Result.FNestingLevel := FNestingLevel;
+  Result.FParameters.Free;
+  Result.FParameters := FParameters.Duplicate;
   Result.FPrototyped := False;
+  Result.FReturnValues.Free;
+  Result.FReturnValues := FReturnValues.Duplicate;
   Result.FVisibilityLevel := FVisibilityLevel;
-  Result.FPrototype := FPrototype;
-  Result.FPrototypeIntf := FPrototypeIntf;
 end;
 
 function TThoriumFunction.AsEvent(AParameters: array of TThoriumHostType;
@@ -4765,7 +6453,8 @@ begin
   inherited LoadFromStream(Stream);
   Stream.Read(FEntryPoint, SizeOf(TThoriumInstructionAddress));
   Stream.Read(FVisibilityLevel, SizeOf(TThoriumVisibilityLevel));
-  raise Exception.Create('Not re-implemented yet.');
+  FParameters.LoadFromStream(Stream);
+  FReturnValues.LoadFromStream(Stream);
 end;
 
 function TThoriumFunction.SafeCall(AParameters: array of TThoriumValue
@@ -4773,14 +6462,12 @@ function TThoriumFunction.SafeCall(AParameters: array of TThoriumValue
 var
   I: Integer;
   ParamSpec: TThoriumType;
-  ParamCount: Integer;
 begin
   if FModule.FThorium.FVirtualMachine = nil then
     raise EThoriumRuntimeException.Create('Virtual machine not initialized.');
-  ParamCount := FPrototype.FParameters.Count;
-  if (Length(AParameters) <> ParamCount) then
-    raise EThoriumRuntimeException.CreateFmt('Invalid parameter count (got %d, expected %d).', [Length(AParameters), ParamCount]);
-  for I := 0 to ParamCount - 1 do
+  if (Length(AParameters) <> FParameters.Count) then
+    raise EThoriumRuntimeException.CreateFmt('Invalid parameter count (got %d, expected %d).', [Length(AParameters), FParameters.Count]);
+  for I := 0 to FParameters.Count - 1 do
   begin
     FParameters.GetParameterSpec(I, ParamSpec);
     if not ThoriumCompareTypeEx(ThoriumExtractTypeSpec(AParameters[I]), ParamSpec) then
@@ -4988,36 +6675,6 @@ begin
     Result := nil;
 end;
 
-function TThoriumHostObjectType.GetFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-begin
-  Result := False;
-end;
-
-function TThoriumHostObjectType.GetIndexType(const IndexType: IThoriumType; out
-  TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition): Boolean;
-begin
-
-end;
-
-function TThoriumHostObjectType.GetStaticFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-begin
-
-end;
-
-function TThoriumHostObjectType.GetStaticFieldStoring(const AFieldID: QWord
-  ): Boolean;
-begin
-
-end;
-
-procedure TThoriumHostObjectType.OpAssign(const ASource: Pointer;
-  var ADest: TThoriumValue);
-begin
-
-end;
-
 { TThoriumRTTIObjectType }
 
 constructor TThoriumRTTIObjectType.Create(ALibrary: TThoriumLibrary);
@@ -5066,7 +6723,7 @@ begin
     begin
       with FMethods[I] do
       begin
-        FName := ThoriumCase(FMethods[I].FName);
+        FName := UpperCase(FMethods[I].FName);
         FHostObjectType := Self;
       end;
       if FMethods[I] is TThoriumHostMethodNativeCall then
@@ -5079,7 +6736,7 @@ begin
     for I := 0 to High(FStaticMethods) do
     begin
       with FStaticMethods[I] do
-        FName := ThoriumCase(FStaticMethods[I].FName);
+        FName := UpperCase(FStaticMethods[I].FName);
       if FStaticMethods[I] is TThoriumHostFunctionNativeCall then
         TThoriumHostFunctionNativeCall(FStaticMethods[I]).Precompile;
     end;
@@ -5100,20 +6757,25 @@ begin
   inherited Destroy;
 end;
 
-procedure TThoriumRTTIObjectType.ApplyStoring(var AValue: Pointer;
-  MayDecreaseReference: Boolean);
+function TThoriumRTTIObjectType.GetNewInstance: Pointer;
+begin
+  Result := nil;
+end;
+
+procedure TThoriumRTTIObjectType.ApplyStoring(
+  var AValue: TThoriumHostObjectTypeValue; MayDecreaseReference: Boolean = True);
 var
   Intf: IThoriumPersistent;
 begin
   if FCanUsePersistent then
   begin
-    TThoriumPersistent(AValue).FReferenceImplementation.EnableHostControl;
+    TThoriumPersistent(AValue.Value).FReferenceImplementation.EnableHostControl;
     if MayDecreaseReference then
-      TThoriumPersistent(AValue).FReferenceImplementation.FreeReference;
+      TThoriumPersistent(AValue.Value).FReferenceImplementation.FreeReference;
   end
   else
   begin
-    TObject(AValue).GetInterface(IThoriumPersistent, Intf);
+    TObject(AValue.Value).GetInterface(IThoriumPersistent, Intf);
     Intf.EnableHostControl;
     if MayDecreaseReference then
       Intf.FreeReference;
@@ -5121,28 +6783,106 @@ begin
   end;
 end;
 
-procedure TThoriumRTTIObjectType.DisposeValue(var AValue: Pointer);
-begin
-  inherited DisposeValue(AValue);
-end;
-
-function TThoriumRTTIObjectType.DuplicateInstance(const AValue: Pointer
-  ): Pointer;
+function TThoriumRTTIObjectType.DuplicateValue(const AValue: TThoriumHostObjectTypeValue): TThoriumValue;
 var
   Intf: IThoriumPersistent;
 begin
+  // ToDo: Raise an error if the value is not compatible to this class.
+
+  // Duplicate a value. First create a new value and set it's type spec
+  Result := ThoriumCreateExtendedTypeValue(Self);
   // Then assign the pointer from the source value. We can use the GetReference
   // method to automatically increase the stuff...
 
   if FCanUsePersistent then
-    TThoriumPersistent(Result) := TThoriumPersistent(TThoriumPersistent(AValue).FReferenceImplementation.GetReference)
+    TThoriumPersistent(Result.Extended.Value) := TThoriumPersistent(TThoriumPersistent(AValue.Value).FReferenceImplementation.GetReference)
   else
   begin
-    TObject(AValue).GetInterface(IThoriumPersistent, Intf);
-    TObject(Result) := Intf.GetReference;
+    TObject(AValue.Value).GetInterface(IThoriumPersistent, Intf);
+    TObject(Result.Extended.Value) := Intf.GetReference;
     Intf := nil;
   end;
   //TThoriumPersistent(Result.Extended.Value) := TThoriumPersistent(AValue.Value).GetReference;
+end;
+
+procedure TThoriumRTTIObjectType.DisposeValue(var AValue: TThoriumHostObjectTypeValue);
+var
+  Intf: IThoriumPersistent;
+begin
+  // Disposing a RTTI value only means to decrease the reference counter and to
+  // set the value to nil.
+  if FCanUsePersistent then
+  begin
+    if TThoriumPersistent(AValue.Value) <> nil then
+      TThoriumPersistent(AValue.Value).FReferenceImplementation.FreeReference;
+  end
+  else
+  begin
+    if AValue.Value = nil then
+      Exit;
+    TObject(AValue.Value).GetInterface(IThoriumPersistent, Intf);
+    Intf.FreeReference;
+    Intf := nil;
+  end;
+  AValue.Value := nil;
+end;
+
+function TThoriumRTTIObjectType.IsTypeCompatible(const Value1, Value2: TThoriumType; const Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean;
+begin
+  Result := False;
+  // Check if the first value is of the own type, like specified
+  if Value1.Extended <> Self then
+    raise EThoriumCompilerException.Create('Parameter 1 of TThoriumRTTIType.IsTypeCompatible must be an extended type equal to this instance.');
+  // Can only compare or assign to extended types
+  if Value2.ValueType <> vtExtendedType then
+    Exit;
+  // Check if we have a RTTI type
+  if Value2.Extended is TThoriumRTTIObjectType then
+  begin
+    // Check if the operation may be valid
+    if not (Operation in [toAssign, toCompare]) then
+      Exit;
+
+    case Operation of
+      toCompare:
+      begin
+        // Comparsion is always available
+        Result := True;
+      end;
+      toAssign:
+      begin
+        // Assignment only, if the baseclass of the other extended type is the
+        // same or inherits from it.
+        Result := (TThoriumRTTIObjectType(Value2.Extended).FBaseClass = FBaseClass) or
+          TThoriumRTTIObjectType(Value2.Extended).FBaseClass.InheritsFrom(FBaseClass);
+      end;
+    end;
+  end
+  else
+    // Otherwise let the other value decide this.
+    Result := Value2.Extended.IsTypeCompatible(Value2, Value1, Operation, ResultType);
+end;
+
+function TThoriumRTTIObjectType.IsTypeOperationAvailable(const Value: TThoriumType; const Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean;
+begin
+  Result := False;
+  if Value.Extended <> Self then
+    raise EThoriumCompilerException.Create('Parameter 1 of TThoriumRTTIType.IsTypeOperationAvailable must be an extended type equal to this instance.');
+end;
+
+function TThoriumRTTIObjectType.HasFields: Boolean;
+begin
+  Result := True;
+end;
+
+function TThoriumRTTIObjectType.HasStaticFields: Boolean;
+begin
+  Result := True;
+end;
+
+function TThoriumRTTIObjectType.HasIndicies: Boolean;
+begin
+  Result := False;
 end;
 
 function TThoriumRTTIObjectType.FindMethod(const AMethodName: String): TThoriumHostMethodBase;
@@ -5156,203 +6896,6 @@ begin
       Exit;
   end;
   Result := nil;
-end;
-
-function TThoriumRTTIObjectType.GetFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-var
-  FieldName: ShortString;
-  I: Integer;
-begin
-  if Length(FieldIdent) > 255 then
-  begin
-    Result := False;
-    Exit;
-  end;
-  FieldName := FieldIdent;
-  for I := 0 to FPropCount - 1 do
-  begin
-    if (ShortCompareText(FieldName, UpCase(FPropList^[I]^.Name)) = 0) then
-    begin
-      ID := QWord(I);
-      Result := True;
-      Exit;
-    end;
-  end;
-  for I := 0 to High(FMethods) do
-  begin
-    if FieldIdent = FMethods[I].Name then
-    begin
-      ID := QWord(I) or THORIUM_RTTI_METHOD_BIT;
-      Result := True;
-      Exit;
-    end;
-  end;
-  Result := False;
-end;
-
-function TThoriumRTTIObjectType.GetFieldStoring(const AFieldID: QWord
-  ): Boolean;
-var
-  PropInfo: PPropInfo;
-begin
-  if (AFieldID and THORIUM_RTTI_METHOD_BIT <> 0) then
-  begin
-    Result := False;
-    Exit;
-  end;
-  PropInfo := FPropList^[AFieldID];
-  Result := GetPropertyStoring(PropInfo);
-end;
-
-procedure TThoriumRTTIObjectType.GetFieldType(const AFieldID: QWord; out
-  TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition);
-var
-  Info: PPropInfo;
-  TypeData: PTypeData;
-  ObjClass: TClass;
-  ExtType: TThoriumHostObjectType;
-begin
-  if (AFieldID and THORIUM_RTTI_METHOD_BIT = THORIUM_RTTI_METHOD_BIT) then
-  begin
-    Result := True;
-    TypeSpec := TThoriumTypeHostFunction.Create('', FMethods[AFieldID xor THORIUM_RTTI_METHOD_BIT]);
-    Access.ReadAccess.Allowed := False;
-    Access.WriteAccess.Allowed := False;
-  end
-  else
-  begin
-    Info := FPropList^[AFieldID];//PPropInfo(ptruint(AFieldID));
-    Result := True;
-    Access.ReadAccess := AccessDescription(xfget(AFieldID, 0, 0), -1, 5, 4);
-    if Info^.SetProc = nil then
-    begin
-      Access.WriteAccess.Allowed := False;
-    end
-    else
-    begin
-      Access.WriteAccess := AccessDescription(xfset(AFieldID, 0, 0), 5, -1, 4);
-    end;
-    case Info^.PropType^.Kind of
-      tkInteger, tkEnumeration, tkSet, tkInt64, tkQWord, tkBool:
-        TypeSpec := TThoriumTypeInteger.Create;
-      tkFloat:
-        TypeSpec := TThoriumTypeFloat.Create;
-      tkSString, tkLString, tkAString, tkWString:
-        TypeSpec := TThoriumTypeString.Create;
-      tkClass:
-      begin
-        TypeData := GetTypeData(Info^.PropType);
-        ObjClass := TypeData^.ClassType;
-        ExtType := FLibrary.DeepFindRTTITypeByClass(ObjClass);
-        if ExtType <> nil then
-          TypeSpec := ExtType
-        else
-          Result := False;
-      end;
-    else
-      Result := False;
-    end;
-  end;
-end;
-
-function TThoriumRTTIObjectType.GetNewInstance: Pointer;
-begin
-  Result := nil;
-end;
-
-function TThoriumRTTIObjectType.GetPropertyStoring(const PropInfo: PPropInfo
-  ): Boolean;
-begin
-  Reuslt := FStoringProperties.IndexOfObject(TObject(PropInfo)) >= 0;
-end;
-
-function TThoriumRTTIObjectType.GetPropertyStoring(const PropertyName: String
-  ): Boolean;
-var
-  PropInfo: PPropInfo;
-begin
-  PropInfo := GetPropInfo(FBaseClass, PropertyName);
-  if PropInfo = nil then
-    raise EPropertyError.CreateFmt('Property ''%s'' not found.', [PropertyName]);
-  Result := GetPropertyStoring(PropInfo);
-end;
-
-function TThoriumRTTIObjectType.GetStaticFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-var
-  I: Integer;
-begin
-  for I := 0 to High(FStaticMethods) do
-  begin
-    if FStaticMethods[I].Name = FieldIdent then
-    begin
-      ID := QWord(I) or THORIUM_RTTI_METHOD_BIT;
-      Result := True;
-      Exit;
-    end;
-  end;
-  Result := False;
-end;
-
-procedure TThoriumRTTIObjectType.GetStaticFieldType(const AFieldID: QWord; out
-  TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition);
-begin
-  if AFieldID and THORIUM_RTTI_METHOD_BIT = 0 then
-  begin
-    raise EThoriumException.Create('Cannot do that.')
-  end
-  else
-  begin
-    Access.ReadAccess.Allowed := False;
-    Access.WriteAccess.Allowed := False;
-  end;
-end;
-
-function TThoriumRTTIObjectType.OpEvaluate(const AValue: Pointer): Integer;
-begin
-  Result := AValue <> nil;
-end;
-
-function TThoriumRTTIObjectType.OpGetField(const AInstance: Pointer;
-  const AFieldID: QWord): TThoriumValue;
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-procedure TThoriumRTTIObjectType.OpSetField(const AInstance: Pointer;
-  const AFieldID: QWord; const NewValue: TThoriumValue);
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-procedure TThoriumRTTIObjectType.SetPropertyStoring(const PropInfo: PPropInfo;
-  const Storing: Boolean);
-var
-  PropInfo: PPropInfo;
-begin
-  PropInfo := GetPropInfo(FBaseClass, PropertyName);
-  if PropInfo = nil then
-    raise EPropertyError.CreateFmt('Property ''%s'' not found.', [PropertyName]);
-  SetPropertyStoring(PropInfo, Storing);
-end;
-
-procedure TThoriumRTTIObjectType.SetPropertyStoring(const PropertyName: String;
-  const Storing: Boolean);
-var
-  Idx: Integer;
-begin
-  Idx := FStoringProperties.IndexOfObject(TObject(PropInfo));
-  if IsStoring then
-  begin
-    if Idx < 0 then
-      FStoringProperties.AddObject(PropInfo^.Name, TObject(PropInfo));
-  end
-  else
-  begin
-    if Idx >= 0 then
-      FStoringProperties.Delete(Idx);
-  end;
 end;
 
 procedure TThoriumRTTIObjectType.CalcHash;
@@ -5392,6 +6935,242 @@ begin
     Inc(Offset, 16);
   end;
   FHash := TThoriumHash(MD5Buffer(Signature[1], Length(Signature)));
+end;
+
+function TThoriumRTTIObjectType.FieldID(const FieldIdent: String; out ID: QWord): Boolean;
+var
+  FieldName: ShortString;
+//  Info: PPropInfo;
+  I: Integer;
+begin
+  if Length(FieldIdent) > 255 then
+  begin
+    Result := False;
+    Exit;
+  end;
+  FieldName := FieldIdent;
+  for I := 0 to FPropCount - 1 do
+  begin
+    if (ShortCompareText(FieldName, UpCase(FPropList^[I]^.Name)) = 0) then
+    begin
+      ID := QWord(I);
+      Result := True;
+      Exit;
+    end;
+  end;
+  for I := 0 to High(FMethods) do
+  begin
+    if FieldIdent = FMethods[I].Name then
+    begin
+      ID := QWord(I) or THORIUM_RTTI_METHOD_BIT;
+      Result := True;
+      Exit;
+    end;
+  end;
+  Result := False;
+end;
+
+function TThoriumRTTIObjectType.StaticFieldID(const FieldIdent: String; out
+  ID: QWord): Boolean;
+var
+  I: Integer;
+begin
+  for I := 0 to High(FStaticMethods) do
+  begin
+    if FStaticMethods[I].Name = FieldIdent then
+    begin
+      ID := QWord(I) or THORIUM_RTTI_METHOD_BIT;
+      Result := True;
+      Exit;
+    end;
+  end;
+  Result := False;
+end;
+
+function TThoriumRTTIObjectType.FieldType(const AFieldID: QWord; out ResultType: TThoriumTableEntry): Boolean;
+var
+  Info: PPropInfo;
+  TypeData: PTypeData;
+  ObjClass: TClass;
+  ExtType: TThoriumHostObjectType;
+begin
+  if (AFieldID and THORIUM_RTTI_METHOD_BIT = THORIUM_RTTI_METHOD_BIT) then
+  begin
+    Result := True;
+    ResultType.Name := nil;
+    ResultType.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
+    ResultType._Type := etFunction;
+    ResultType.TypeSpec.ValueType := vtHostMethod;
+    ResultType.TypeSpec.HostMethod := FMethods[AFieldID xor THORIUM_RTTI_METHOD_BIT];
+  end
+  else
+  begin
+    Info := FPropList^[AFieldID];//PPropInfo(ptruint(AFieldID));
+    Result := True;
+    ResultType.Name := nil;
+    ResultType.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
+    if Info^.SetProc = nil then
+      ResultType._Type := etStatic
+    else
+      ResultType._Type := etVariable;
+    case Info^.PropType^.Kind of
+      tkInteger, tkEnumeration, tkSet, tkInt64, tkQWord, tkBool:
+        ResultType.TypeSpec := ThoriumBuiltInTypeSpec(btInteger);
+      tkFloat:
+        ResultType.TypeSpec := ThoriumBuiltInTypeSpec(btFloat);
+      tkSString, tkLString, tkAString, tkWString:
+        ResultType.TypeSpec := ThoriumBuiltInTypeSpec(btString);
+      tkClass:
+      begin
+        TypeData := GetTypeData(Info^.PropType);
+        ObjClass := TypeData^.ClassType;
+        ExtType := FLibrary.DeepFindRTTITypeByClass(ObjClass);
+        if ExtType <> nil then
+          ResultType.TypeSpec := ThoriumHostObjectTypeSpec(ExtType)
+        else
+          Result := False;
+      end;
+    else
+      Result := False;
+    end;
+  end;
+end;
+
+function TThoriumRTTIObjectType.StaticFieldType(const AFieldID: QWord; out
+  ResultType: TThoriumTableEntry): Boolean;
+begin
+  if AFieldID and THORIUM_RTTI_METHOD_BIT = 0 then
+  begin
+    Result := False;
+  end
+  else
+  begin
+    ResultType.Name := nil;
+    ResultType.Offset := 0;
+    ResultType.Scope := 0;
+    ResultType.TypeSpec.ValueType := vtHostFunction;
+    ResultType.TypeSpec.HostFunc := FStaticMethods[AFieldID and not THORIUM_RTTI_METHOD_BIT];
+    Result := True;
+  end;
+end;
+
+function TThoriumRTTIObjectType.GetField(const AInstance: TThoriumValue; const AFieldID: QWord): TThoriumValue;
+var
+  Info: PPropInfo;
+begin
+  Info := FPropList^[AFieldID];
+  case Info^.PropType^.Kind of
+    tkInteger, tkEnumeration, tkSet, tkInt64, tkQWord, tkBool:
+    begin
+      Result._Type := vtBuiltIn;
+      Result.BuiltIn._Type := btInteger;
+      Result.BuiltIn.Int := GetOrdProp(TObject(AInstance.Extended.Value), Info);
+    end;
+    tkFloat:
+    begin
+      Result._Type := vtBuiltIn;
+      Result.BuiltIn._Type := btFloat;
+      Result.BuiltIn.Float := GetFloatProp(TObject(AInstance.Extended.Value), Info);
+    end;
+    tkSString, tkLString, tkAString, tkWString:
+    begin
+      Result._Type := vtBuiltIn;
+      Result.BuiltIn._Type := btString;
+      New(Result.BuiltIn.Str);
+      Result.BuiltIn.Str^ := GetStrProp(TObject(AInstance.Extended.Value), Info);
+    end;
+    tkClass:
+    begin
+      Result._Type := vtExtendedType;
+      Result.Extended.TypeClass := FLibrary.DeepFindRTTIType(GetTypeData(Info^.PropType)^.ClassType.ClassName);
+      Result.Extended.Value := TThoriumPersistent(GetObjectProp(TObject(AInstance.Extended.Value), Info)).FReferenceImplementation.GetReference;
+    end;
+  end;
+end;
+
+procedure TThoriumRTTIObjectType.SetField(const AInstance: TThoriumValue; const AFieldID: QWord; const NewValue: TThoriumValue);
+var
+  Info: PPropInfo;
+begin
+  Info := FPropList^[AFieldID];
+  case Info^.PropType^.Kind of
+    tkInteger, tkEnumeration, tkSet, tkInt64, tkQWord, tkBool:
+    begin
+      SetOrdProp(TObject(AInstance.Extended.Value), Info, NewValue.BuiltIn.Int);
+    end;
+    tkFloat:
+    begin
+      SetFloatProp(TObject(AInstance.Extended.Value), Info, NewValue.BuiltIn.Float);
+    end;
+    tkSString, tkLString, tkAString, tkWString:
+    begin
+      SetStrProp(TObject(AInstance.Extended.Value), Info, NewValue.BuiltIn.Str^);
+    end;
+    tkClass:
+    begin
+      SetObjectProp(TObject(AInstance.Extended.Value), Info, TObject(NewValue.Extended.Value));
+    end;
+  end;
+end;
+
+function TThoriumRTTIObjectType.GetPropertyStoring(const PropertyName: String
+  ): Boolean;
+var
+  PropInfo: PPropInfo;
+begin
+  PropInfo := GetPropInfo(FBaseClass, PropertyName);
+  if PropInfo = nil then
+    raise EPropertyError.CreateFmt('Property ''%s'' not found.', [PropertyName]);
+  Result := GetPropertyStoring(PropInfo);
+end;
+
+function TThoriumRTTIObjectType.GetPropertyStoring(const PropInfo: PPropInfo
+  ): Boolean;
+begin
+  Result := FStoringProperties.IndexOfObject(TObject(PropInfo)) >= 0;
+end;
+
+function TThoriumRTTIObjectType.GetPropertyStoring(const AFieldID: QWord
+  ): Boolean;
+var
+  PropInfo: PPropInfo;
+begin
+  if (AFieldID and THORIUM_RTTI_METHOD_BIT <> 0) then
+  begin
+    Result := False;
+    Exit;
+  end;
+  PropInfo := FPropList^[AFieldID];
+  Result := GetPropertyStoring(PropInfo);
+end;
+
+procedure TThoriumRTTIObjectType.SetPropertyStoring(const PropertyName: String;
+  IsStoring: Boolean);
+var
+  PropInfo: PPropInfo;
+begin
+  PropInfo := GetPropInfo(FBaseClass, PropertyName);
+  if PropInfo = nil then
+    raise EPropertyError.CreateFmt('Property ''%s'' not found.', [PropertyName]);
+  SetPropertyStoring(PropInfo);
+end;
+
+procedure TThoriumRTTIObjectType.SetPropertyStoring(const PropInfo: PPropInfo;
+  IsStoring: Boolean);
+var
+  Idx: Integer;
+begin
+  Idx := FStoringProperties.IndexOfObject(TObject(PropInfo));
+  if IsStoring then
+  begin
+    if Idx < 0 then
+      FStoringProperties.AddObject(PropInfo^.Name, TObject(PropInfo));
+  end
+  else
+  begin
+    if Idx >= 0 then
+      FStoringProperties.Delete(Idx);
+  end;
 end;
 
 class function TThoriumRTTIObjectType.NewNativeCallMethod(const AName: String;
@@ -5474,7 +7253,7 @@ begin
   for I := 0 to High(AFields) do
   begin
     FFields[I] := AFields[I];
-    FFields[I].FieldName := ThoriumCase(FFields[I].FieldName);
+    FFields[I].FieldName := UpperCase(FFields[I].FieldName);
   end;
 end;
 
@@ -5521,42 +7300,80 @@ begin
   end;
 end;
 
-function TThoriumHostRecordType.CanAssignTo(
-  var Assignment: TThoriumAssignmentDescription; const AnotherType: IThoriumType
-  ): Boolean;
+function TThoriumHostRecordType.GetNewInstance: Pointer;
+var
+  Value: ^RecordType;
 begin
-  Result := IsEqualTo(AnotherType);
-  if not Result then
-  begin
-    Result := inherited;
-    Exit;
-  end;
-  Assignment.Cast.Needed := False;
+  New(Value);
+  Result := Value;
 end;
 
-function TThoriumHostRecordType.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: IThoriumType
-  ): Boolean;
+function TThoriumHostRecordType.DuplicateValue(
+  const AValue: TThoriumHostObjectTypeValue): TThoriumValue;
+type
+  PRecordType = ^RecordType;
+var
+  Val: PRecordType;
+begin
+  Val := PRecordType(GetNewInstance);
+  Val^ := PRecordType(AValue.Value)^;
+  Result.Extended.TypeClass := Self;
+  Result.Extended.Value := Val;
+end;
+
+procedure TThoriumHostRecordType.DisposeValue(
+  var AValue: TThoriumHostObjectTypeValue);
+type
+  PRecordType = ^RecordType;
+var
+  Value: PRecordType;
+begin
+  Value := PRecordType(AValue.Value);
+  Dispose(Value);
+  AValue.Value := nil;
+end;
+
+function TThoriumHostRecordType.IsTypeCompatible(const Value1,
+  Value2: TThoriumType; const Operation: TThoriumOperation; out
+  ResultType: TThoriumType): Boolean;
+begin
+  Result := ThoriumCompareType(Value1, Value2);
+  if not Result then
+    Exit;
+  case Operation of
+    toAssign:
+    begin
+      ResultType := Value1;
+    end;
+  else
+    Result := False;
+  end;
+end;
+
+function TThoriumHostRecordType.IsTypeOperationAvailable(
+  const Value: TThoriumType; const Operation: TThoriumOperation; out
+  ResultType: TThoriumType): Boolean;
 begin
   Result := False;
 end;
 
-procedure TThoriumHostRecordType.DisposeValue(var AValue: Pointer);
-type
-  PRecordType = ^RecordType;
+function TThoriumHostRecordType.HasFields: Boolean;
 begin
-  Dispose(PRecordType(AValue));
-  AValue := nil;
+  Result := True;
 end;
 
-function TThoriumHostRecordType.DuplicateInstance(const AValue: Pointer
-  ): Pointer;
+function TThoriumHostRecordType.HasStaticFields: Boolean;
 begin
-  raise EThoriumException.Create('Not reimplemented yet.');
+  Result := False;
 end;
 
-function TThoriumHostRecordType.GetFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
+function TThoriumHostRecordType.HasIndicies: Boolean;
+begin
+  Result := False;
+end;
+
+function TThoriumHostRecordType.FieldID(const FieldIdent: String; out ID: QWord
+  ): Boolean;
 var
   FieldDefinitionIdx: Integer;
   FieldDefinition: PThoriumHostRecordField;
@@ -5577,7 +7394,67 @@ begin
   ID := Mask or (QWord(FieldDefinitionIdx) shl 32);
 end;
 
-function TThoriumHostRecordType.GetFieldStoring(const AFieldID: QWord
+function TThoriumHostRecordType.FieldType(const AFieldID: QWord; out
+  ResultType: TThoriumTableEntry): Boolean;
+var
+  FieldDefinition: PThoriumHostRecordField;
+begin
+  FieldDefinition := @FFields[Integer((AFieldID shr 32) and $FFFFFFFF)];
+  ThoriumVarTypeToTypeSpec(FieldDefinition^.FieldType.HostType, ResultType.TypeSpec);
+  ResultType.Scope := 0;
+  ResultType.Ptr := nil;
+  ResultType._Type := etVariable;
+  ResultType.Offset := 0;
+  Result := True;
+end;
+
+function TThoriumHostRecordType.GetField(const AInstance: TThoriumValue;
+  const AFieldID: QWord): TThoriumValue;
+var
+  FieldDefinition: PThoriumHostRecordField;
+  Mask: Cardinal;
+begin
+  FieldDefinition := @FFields[Integer((AFieldID shr 32) and $FFFFFFFF)];
+  case FieldDefinition^.FieldType.HostType of
+    htByte, htShortInt, htWord, htSmallInt, htDWord, htLongInt:
+    begin
+      Mask := AFieldID and $FFFFFFFF;
+      Result._Type := vtBuiltIn;
+      Result.BuiltIn._Type := btInteger;
+      Result.BuiltIn.Int := PDWord(AInstance.Extended.Value + FieldDefinition^.Offset)^ and Mask;
+    end;
+    htQWord, htInt64:
+    begin
+      Result._Type := vtBuiltIn;
+      Result.BuiltIn._Type := btInteger;
+      Result.BuiltIn.Int := PQWord(AInstance.Extended.Value + FieldDefinition^.Offset)^;
+    end;
+    htString:
+      Result := ThoriumCreateStringValue(PString(AInstance.Extended.Value + FieldDefinition^.Offset)^);
+    htSingle:
+      Result := ThoriumCreateFloatValue(PSingle(AInstance.Extended.Value + FieldDefinition^.Offset)^);
+    htDouble:
+      Result := ThoriumCreateFloatValue(PDouble(AInstance.Extended.Value + FieldDefinition^.Offset)^);
+    htFlt80:
+      Result := ThoriumCreateFloatValue(PExtended(AInstance.Extended.Value + FieldDefinition^.Offset)^);
+    htExt or htByRef:
+    begin
+      Result._Type := vtExtendedType;
+      Result.Extended.TypeClass := FieldDefinition^.FieldType.Extended;
+      Result.Extended.Value := PPointer(AInstance.Extended.Value + FieldDefinition^.Offset)^;
+    end;
+    htExt:
+    begin
+      Result._Type := vtExtendedType;
+      Result.Extended.TypeClass := FieldDefinition^.FieldType.Extended;
+      Result.Extended.Value := Pointer(AInstance.Extended.Value + FieldDefinition^.Offset);
+    end;
+  else
+    raise EThoriumRuntimeException.CreateFmt('Cannot get field value, invalid type (%8.8x).', [FieldDefinition^.FieldType.HostType]);
+  end;
+end;
+
+function TThoriumHostRecordType.GetPropertyStoring(const AFieldID: QWord
   ): Boolean;
 var
   FieldDefinition: PThoriumHostRecordField;
@@ -5586,29 +7463,69 @@ begin
   Result := FieldDefinition^.FieldType.Storing;
 end;
 
-procedure TThoriumHostRecordType.GetFieldType(const AFieldID: QWord; out
-  TypeSpec: IThoriumType; out Access: TThoriumAccessDefinition);
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-function TThoriumHostRecordType.GetNewInstance: Pointer;
-type
-  PRecordType = ^RecordType;
-begin
-  New(PRecordType(Result));
-end;
-
-function TThoriumHostRecordType.OpGetField(const AInstance: Pointer;
-  const AFieldID: QWord): TThoriumValue;
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-procedure TThoriumHostRecordType.OpSetField(const AInstance: Pointer;
+procedure TThoriumHostRecordType.SetField(const AInstance: TThoriumValue;
   const AFieldID: QWord; const NewValue: TThoriumValue);
+var
+  FieldDefinition: PThoriumHostRecordField;
+  Mask: Cardinal;
+  Tmp: PDWord;
+  TmpVal: TThoriumValue;
 begin
-  raise EThoriumException.Create('Not reimplemented yet.');
+  FieldDefinition := @FFields[Integer((AFieldID shr 32) and $FFFFFFFF)];
+  case FieldDefinition^.FieldType.HostType of
+    (*htByte, htShortInt, htWord, htSmallInt, htDWord, htLongInt:
+    begin
+      Mask := AFieldID and $FFFFFFFF;
+      Tmp := PDWord(AInstance.Extended.Value + FieldDefinition^.Offset);
+      Tmp^ := (Tmp^ and (not Mask)) or (NewValue.BuiltIn.Int and Mask);
+    end;*)
+    htByte, htShortInt:
+    begin
+      PByte(AInstance.Extended.Value + FieldDefinition^.Offset)^ := Byte(NewValue.BuiltIn.Int);
+    end;
+    htWord, htSmallInt:
+    begin
+      PWord(AInstance.Extended.Value + FieldDefinition^.Offset)^ := Word(NewValue.BuiltIn.Int);
+    end;
+    htDWord, htLongInt:
+    begin
+      PDWord(AInstance.Extended.Value + FieldDefinition^.Offset)^ := DWord(NewValue.BuiltIn.Int);
+    end;
+    htQWord, htInt64:
+    begin
+      PQWord(AInstance.Extended.Value + FieldDefinition^.Offset)^ := NewValue.BuiltIn.Int;
+    end;
+    htString:
+      PString(AInstance.Extended.Value + FieldDefinition^.Offset)^ := NewValue.BuiltIn.Str^;
+    htSingle:
+      PSingle(AInstance.Extended.Value + FieldDefinition^.Offset)^ := NewValue.BuiltIn.Float;
+    htDouble:
+      PDouble(AInstance.Extended.Value + FieldDefinition^.Offset)^ := NewValue.BuiltIn.Float;
+    htFlt80:
+      PExtended(AInstance.Extended.Value + FieldDefinition^.Offset)^ := NewValue.BuiltIn.Float;
+    htExt or htByRef:
+    begin
+      TmpVal._Type := vtExtendedType;
+      TmpVal.Extended.TypeClass := NewValue.Extended.TypeClass;
+      TmpVal.Extended.Value := PPointer(AInstance.Extended.Value + FieldDefinition^.Offset)^;
+      NewValue.Extended.TypeClass.AssignValue(NewValue, TmpVal);
+      //if FieldDefinition^.FieldType.Storing then
+      //  NewValue.Extended.TypeClass.ApplyStoring(TmpVal.Extended, True);
+      PPointer(AInstance.Extended.Value + FieldDefinition^.Offset)^ := TmpVal.Extended.Value;
+    end;
+    htExt:
+    begin
+      TmpVal._Type := vtExtendedType;
+      TmpVal.Extended.TypeClass := NewValue.Extended.TypeClass;
+      TmpVal.Extended.Value := Pointer(AInstance.Extended.Value + FieldDefinition^.Offset);
+      NewValue.Extended.TypeClass.AssignValue(NewValue, TmpVal);
+      //if FieldDefinition^.FieldType.Storing then
+      //  NewValue.Extended.TypeClass.ApplyStoring(TmpVal.Extended, True);
+      Move(TmpVal.Extended.Value^, Pointer(AInstance.Extended.Value + FieldDefinition^.Offset)^, MemSize(TmpVal.Extended.Value));
+    end;
+  else
+    raise EThoriumRuntimeException.CreateFmt('Cannot get field value, invalid type (%8.8x).', [FieldDefinition^.FieldType.HostType]);
+  end;
 end;
 
 {%ENDREGION}
@@ -5665,8 +7582,8 @@ end;
 procedure TThoriumLibraryPropertyDirect.GetValue(
   const AThoriumValue: PThoriumValue);
 begin
-  ThoriumFreeValue(AThoriumValue^);
-  AThoriumValue^ := ThoriumDuplicateValue(FValue);
+  // Do not duplicate! Getter are expected to be non-creative.
+  AThoriumValue^ := FValue;
 end;
 
 function TThoriumLibraryPropertyDirect.GetStatic: Boolean;
@@ -5877,6 +7794,14 @@ procedure TThoriumLibrary.ClearAll;
 var
   I: Integer;
 begin
+  // Properties and constants may contain references to host types, so clear
+  // them before the others.
+  for I := 0 to FProperties.Count - 1 do
+    TThoriumLibraryProperty(FProperties[I]).Free;
+  FProperties.Clear;
+  for I := 0 to FConstants.Count - 1 do
+    TThoriumLibraryConstant(FConstants[I]).Free;
+  FConstants.Clear;
   for I := 0 to FHostTypes.Count - 1 do
     TThoriumHostObjectType(FHostTypes[I]).Free;
   FHostTypes.Clear;
@@ -5884,12 +7809,6 @@ begin
   for I := 0 to FHostFunctions.Count - 1 do
     TThoriumHostFunctionBase(FHostFunctions[I]).Free;
   FHostFunctions.Clear;
-  for I := 0 to FProperties.Count - 1 do
-    TThoriumLibraryProperty(FProperties[I]).Free;
-  FProperties.Clear;
-  for I := 0 to FConstants.Count - 1 do
-    TThoriumLibraryConstant(FConstants[I]).Free;
-  FConstants.Clear;
 end;
 
 procedure TThoriumLibrary.ClearFunctions;
@@ -5906,7 +7825,7 @@ var
   I: Integer;
 begin
   for I := 0 to FHostTypes.Count - 1 do
-    TThoriumHostObjectType(FHostTypes[I])._Release;
+    TThoriumHostObjectType(FHostTypes[I]).Free;
   FHostTypes.Clear;
   FHostRTTITypes.Clear;
 end;
@@ -5934,7 +7853,7 @@ var
   NewName: String;
   Obj: TThoriumLibraryConstant;
 begin
-  NewName := ThoriumCase(AName);
+  NewName := UpperCase(AName);
   if (FindConstant(NewName) <> nil) or (FindProperty(NewName) <> nil) then
     raise EThoriumException.CreateFmt('Library constant or property ''%s'' already defined in ''%s''.', [NewName, AName]);
   Obj := TThoriumLibraryConstant.Create;
@@ -5949,7 +7868,7 @@ function TThoriumLibrary.RegisterFinishedObjectType(const AName: String;
 var
   NewName: String;
 begin
-  NewName := ThoriumCase(AName);
+  NewName := UpperCase(AName);
   if FindHostType(NewName) <> nil then
     raise EThoriumException.CreateFmt('Host type ''%s'' already declared in library ''%s''.', [NewName, FName]);
   Result := AInstance;
@@ -5967,7 +7886,7 @@ var
   NewName: String;
   I: Integer;
 begin
-  NewName := ThoriumCase(AName);
+  NewName := UpperCase(AName);
   if FindHostFunction(NewName) <> nil then
     raise EThoriumException.CreateFmt('Host function ''%s'' already declared in library ''%s''.', [NewName, FName]);
   Result := TThoriumHostFunctionNativeCall(FHostFunctions[FHostFunctions.Add(TThoriumHostFunctionNativeCall.Create)]);
@@ -5992,7 +7911,7 @@ var
   NewName: String;
   I: Integer;
 begin
-  NewName := ThoriumCase(AName);
+  NewName := UpperCase(AName);
   if FindHostFunction(NewName) <> nil then
     raise EThoriumException.CreateFmt('Host function ''%s'' already declared in library ''%s''.', [NewName, FName]);
   Result := TThoriumHostMethodAsFunctionNativeCall(FHostFunctions[FHostFunctions.Add(TThoriumHostMethodAsFunctionNativeCall.Create)]);
@@ -6013,7 +7932,7 @@ function TThoriumLibrary.RegisterObjectType(const AName: String;
 var
   NewName: String;
 begin
-  NewName := ThoriumCase(AName);
+  NewName := UpperCase(AName);
   if FindHostType(NewName) <> nil then
     raise EThoriumException.CreateFmt('Host type ''%s'' already declared in library ''%s''.', [NewName, FName]);
   Result := TThoriumHostObjectType(FHostTypes[FHostTypes.Add(ATypeClass.Create(Self))]);
@@ -6033,6 +7952,7 @@ begin
     FOnPropertyGet := AGetCallback;
     FOnPropertySet := ASetCallback;
   end;
+  // Adding to the list is done in RegisterPropertyCustom
 end;
 
 function TThoriumLibrary.RegisterPropertyCustom(const AName: String;
@@ -6040,11 +7960,12 @@ function TThoriumLibrary.RegisterPropertyCustom(const AName: String;
 var
   NewName: String;
 begin
-  NewName := ThoriumCase(AName);
+  NewName := UpperCase(AName);
   if (FindConstant(NewName) <> nil) or (FindProperty(NewName) <> nil) then
     raise EThoriumException.CreateFmt('Library constant or property ''%s'' already defined in ''%s''.', [NewName, AName]);
   Result := AClass.Create;
-  Result.FName := AName;
+  Result.FName := NewName;
+  FProperties.Add(Result);
 end;
 
 function TThoriumLibrary.RegisterPropertyDirect(const AName: String;
@@ -6058,6 +7979,7 @@ begin
     FStatic := Static;
     FValue := ThoriumCreateValue(FTypeSpec);
   end;
+  // Adding to the list is done in RegisterPropertyCustom
 end;
 
 function TThoriumLibrary.RegisterPropertyDirectCallback(const AName: String;
@@ -6073,6 +7995,7 @@ begin
     FValue := ThoriumCreateValue(FTypeSpec);
     FOnPropertySet := Callback;
   end;
+  // Adding to the list is done in RegisterPropertyCustom
 end;
 
 function TThoriumLibrary.RegisterRTTIType(
@@ -6081,12 +8004,11 @@ function TThoriumLibrary.RegisterRTTIType(
 var
   NewName: String;
 begin
-  NewName := ThoriumCase(AClass.ClassName);
+  NewName := UpperCase(AClass.ClassName);
   if FindHostType(NewName) <> nil then
     raise EThoriumException.CreateFmt('Host RTTI type ''%s'' already declared in library ''%s''.', [NewName, FName]);
   Result := TThoriumRTTIObjectType(FHostTypes[FHostTypes.Add(TThoriumRTTIObjectType.Create(Self, AClass, AbstractClass))]);
   Result.FName := NewName;
-  Result._AddRef;
   FHostRTTITypes.Add(Result);
   FHostTypeMap.Add(AClass.ClassInfo, Result);
 end;
@@ -6098,12 +8020,11 @@ function TThoriumLibrary.RegisterRTTIType(const AClass: TClass;
 var
   NewName: String;
 begin
-  NewName := ThoriumCase(AClass.ClassName);
+  NewName := UpperCase(AClass.ClassName);
   if FindHostType(NewName) <> nil then
     raise EThoriumException.CreateFmt('Host RTTI type ''%s'' already declared in library ''%s''.', [NewName, FName]);
   Result := TThoriumRTTIObjectType(FHostTypes[FHostTypes.Add(TThoriumRTTIObjectType.Create(Self, AClass, AMethodsCallback, AStaticMethodsCallback, AbstractClass))]);
   Result.FName := NewName;
-  Result._AddRef;
   FHostRTTITypes.Add(Result);
   FHostTypeMap.Add(AClass.ClassInfo, Result);
 end;
@@ -6116,7 +8037,7 @@ var
   NewName: String;
   I: Integer;
 begin
-  NewName := ThoriumCase(AName);
+  NewName := UpperCase(AName);
   if FindHostFunction(NewName) <> nil then
     raise EThoriumException.CreateFmt('Host function ''%s'' already declared in library ''%s''.', [NewName, FName]);
   Result := TThoriumHostFunctionSimpleMethod(FHostFunctions[FHostFunctions.Add(TThoriumHostFunctionSimpleMethod.Create)]);
@@ -6185,7 +8106,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FConstants.List;
   for I := 0 to FConstants.Count - 1 do
   begin
@@ -6203,7 +8124,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FHostFunctions.List;
   for I := 0 to FHostFunctions.Count - 1 do
   begin
@@ -6220,7 +8141,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FHostTypes.List;
   for I := 0 to FHostTypes.Count - 1 do
   begin
@@ -6249,7 +8170,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FProperties.List;
   for I := 0 to FProperties.Count - 1 do
   begin
@@ -6267,7 +8188,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FHostRTTITypes.List;
   for I := 0 to FHostRTTITypes.Count - 1 do
   begin
@@ -6300,7 +8221,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FConstants.List;
   for I := 0 to FConstants.Count - 1 do
   begin
@@ -6319,7 +8240,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FHostFunctions.List;
   for I := 0 to FHostFunctions.Count - 1 do
   begin
@@ -6338,7 +8259,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FHostTypes.List;
   for I := 0 to FHostTypes.Count - 1 do
   begin
@@ -6357,7 +8278,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FProperties.List;
   for I := 0 to FProperties.Count - 1 do
   begin
@@ -6376,7 +8297,7 @@ var
   UpName: String;
   List: PPointerList;
 begin
-  UpName := ThoriumCase(AName);
+  UpName := UpperCase(AName);
   List := FHostRTTITypes.List;
   for I := 0 to FHostRTTITypes.Count - 1 do
   begin
@@ -6755,8 +8676,12 @@ begin
   Stack := AVirtualMachine.GetStack;
   ExecuteSubscript(FInstructions, Stack.GetTopStackEntry, FCodePointer, nil);
   if FVAOffset > 0 then
+  begin
     Stack.Pop(2, True);
-  Stack.Pop(Parameters.Count - 1, False);
+    Stack.Pop(Parameters.Count - 1, False);
+  end
+  else
+    Stack.Pop(Parameters.Count, False);
 end;
 
 procedure TThoriumHostFunctionNativeCall.Precompile;
@@ -6780,8 +8705,12 @@ begin
   Stack := AVirtualMachine.GetStack;
   ExecuteSubscript(FInstructions, Stack.GetTopStackEntry, FCodePointer, FDataPointer);
   if FVAOffset > 0 then
+  begin
     Stack.Pop(2, True);
-  Stack.Pop(FParameters.Count - 1, False);
+    Stack.Pop(Parameters.Count - 1, False);
+  end
+  else
+    Stack.Pop(Parameters.Count, False);
 end;
 
 procedure TThoriumHostMethodAsFunctionNativeCall.Precompile;
@@ -6943,8 +8872,12 @@ begin
   Stack := AVirtualMachine.GetStack;
   ExecuteSubscript(FInstructions, Stack.GetTopStackEntry, FCodePointer, OfObject);
   if FVAOffset > 0 then
+  begin
     Stack.Pop(2, True);
-  Stack.Pop(Parameters.Count - 1, False);
+    Stack.Pop(Parameters.Count - 1, False);
+  end
+  else
+    Stack.Pop(Parameters.Count, False);
 end;
 
 procedure TThoriumHostMethodNativeCall.Precompile;
@@ -7148,6 +9081,419 @@ begin
   end;
   Result := False;
 end;
+
+{ TThoriumScanner }
+
+constructor TThoriumScanner.Create(AInputString: String);
+begin
+  inherited Create;
+  FInputPosition := 0;
+  FInputSize := Length(AInputString);
+  FInputString := AInputString;
+  FInputHash := TThoriumHash(MD5String(FInputString));
+  FCurrentSym := tsNone;
+  FCurrentStr := '';
+  FCurrentChar := ' ';
+  FCurrentLine := 1;
+  FCurrentX := 0;
+  FNextSym := tsUnknown;
+  FEndOfStream := False;
+end;
+
+constructor TThoriumScanner.Create(AInputStream: TStream);
+var
+  Buffer: String;
+begin
+  SetLength(Buffer, AInputStream.Size - AInputStream.Position);
+  AInputStream.Read(Buffer[1], Length(Buffer));
+  Create(Buffer);
+end;
+
+destructor TThoriumScanner.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TThoriumScanner.Read(var C: Char); inline;
+begin
+  Inc(FInputPosition);
+  C := FInputString[FInputPosition];
+end;
+
+procedure TThoriumScanner.ScanForSymbol(var Sym: TThoriumSymbol;
+  var Str: String);
+// Scans for the next symbol and sets Sym and Str. Sym will contain the kind of
+// symbol and Str will contains is represence as a string.
+
+  function EndOfStream: Boolean; inline;
+  // Checks if FInputStream is already on it's end.
+  begin
+    Result := (FInputPosition = FInputSize);
+  end;
+
+  function GetChar: Boolean; inline;
+  // Gets the next non-space and non-control-character char.
+  begin
+    Result := True;
+    if not EndOfStream then
+      Read(FCurrentChar)
+    else
+    begin
+      FCurrentChar := ' ';
+      Result := False;
+      Exit;
+    end;
+
+    FIsLineBreak := False;
+    if FCurrentChar = #13 then
+    begin
+      if not EndOfStream then
+        Read(FCurrentChar)
+      else
+        FCurrentChar := #10;
+
+      if FCurrentChar <> #10 then
+        Dec(FInputPosition);
+      Inc(FCurrentLine);
+      FCurrentX := 0;
+      FIsLineBreak := True;
+    end
+    else if FCurrentChar = #10 then
+    begin
+      Inc(FCurrentLine);
+      FCurrentX := 0;
+      FIsLineBreak := True;
+    end;
+
+    if Ord(FCurrentChar) < Ord(' ') then
+      FCurrentChar := ' ';
+    Inc(FCurrentX);
+  end;
+
+var
+  I: TThoriumSymbol;
+  InitialLine: Integer;
+  S2: String;
+
+begin
+  Sym := tsNone;
+  Str := '';
+
+  while True do
+  begin
+    // FCurrentChar := ' ';
+    Sym := tsNone;
+    Str := '';
+
+    while (FCurrentChar = ' ') do
+      if not GetChar then
+        Exit;
+
+    //if EndOfStream then
+    //  Exit;
+
+    case FCurrentChar of
+      'A'..'Z', 'a'..'z', '_': // tsIdentifer or keyword
+      begin
+        while FCurrentChar in (THORIUM_LETTER+THORIUM_DIGIT) do
+        begin
+          Str := Str + FCurrentChar;
+          GetChar;
+        end;
+        Sym := tsIdentifier;
+        Str := UpperCase(Str);
+
+        for I := THORIUM_FIRST_KEYWORD to THORIUM_LAST_KEYWORD do
+          if THORIUM_SYMBOL_CODE[I] = Str then
+          begin
+            Sym := I;
+            Break;
+          end;
+        Exit;
+      end; // end: tsIdentifier or keyword
+
+      '(', ')', '{', '}', ';', ',', '.', '[', ']', '!': // Single char symbols
+      begin
+        Str := FCurrentChar;
+        Sym := tsUnknown;
+        for I := THORIUM_FIRST_SINGLECHAROP to THORIUM_LAST_SINGLECHAROP do
+          if THORIUM_SYMBOL_CODE[I] = Str then
+          begin
+            Sym := I;
+            Break;
+          end;
+        GetChar;
+        Exit;
+      end; // end: Single char symbols
+
+      '/': // Commentary symbols
+      begin
+        Str := FCurrentChar;
+        GetChar;
+        if (Str = '/') and (FCurrentChar = '*') then
+        begin
+          while not EndOfStream do
+          begin
+            GetChar;
+            if (FCurrentChar = '*') then
+            begin
+              GetChar;
+              if (FCurrentChar = '/') then
+              begin
+                GetChar;
+                Break;
+              end;
+            end;
+          end;
+        end
+        else if (Str = '/') and (FCurrentChar = '/') then
+        begin
+          InitialLine := FCurrentLine;
+          while (InitialLine = FCurrentLine) and not EndOfStream do
+            GetChar;
+        end
+        else // A normal slash
+        begin
+          Sym := tsUnknown;
+          //GetChar;
+          if (FCurrentChar = '=') then
+          begin
+            Str := Str + FCurrentChar;
+            Sym := tsDivideAssign;
+            GetChar;
+            Exit;
+          end
+          else
+          begin
+            Sym := tsDivide;
+            Exit;
+          end;
+        end;
+
+      end; // end: Commentary symbols*)
+
+      '+', '-': // Hard coded multichar operators
+      begin
+        Sym := tsUnknown;
+        Str := FCurrentChar;
+        GetChar;
+        if (FCurrentChar = '=') then
+        begin
+          Str := Str + FCurrentChar;
+          if Str = '+=' then
+            Sym := tsAdditiveAssign
+          else
+            Sym := tsSubtractiveAssign;
+          GetChar;
+          Exit;
+        end
+        else if (FCurrentChar = '+') and (Str = '+') then
+        begin
+          Str := '++';
+          Sym := tsPlusPlus;
+          GetChar;
+          Exit;
+        end
+        else if (FCurrentChar = '-') and (Str = '-') then
+        begin
+          Str := '--';
+          Sym := tsMinusMinus;
+          GetChar;
+          Exit;
+        end
+        else
+        begin
+          if Str = '+' then
+          begin
+            Sym := tsPlus;
+            Exit;
+          end
+          else if Str = '-' then
+          begin
+            Sym := tsMinus;
+            Exit;
+          end;
+        end;
+      end; // end: Hard coded multichar operators
+
+      '<', '>', '*', ':', '=': // Multichar operators followed by equal signs
+      begin
+        Sym := tsUnknown;
+        Str := FCurrentChar;
+        GetChar;
+        if (FCurrentChar = '=') then
+        begin
+          Str := Str + FCurrentChar;
+          for I := THORIUM_FIRST_MULTICHAROP to THORIUM_LAST_MULTICHAROP do
+            if THORIUM_SYMBOL_CODE[I] = Str then
+            begin
+              Sym := I;
+              Break;
+            end;
+          GetChar;
+          Exit;
+        end
+        else
+        begin
+          for I := THORIUM_FIRST_MULTICHAROP to THORIUM_LAST_MULTICHAROP do
+            if THORIUM_SYMBOL_CODE[I] = Str then
+            begin
+              Sym := I;
+              Exit;
+            end;
+        end;
+      end; // end: Multichar operators followed by equal signs
+
+      (*'''': // String value
+      begin
+        Sym := tsStringValue;
+        Str := '';
+        while True do
+        begin
+          GetChar;
+          if FCurrentChar = '''' then
+          begin
+            GetChar;
+            if FCurrentChar = '''' then
+              Str := Str + FCurrentChar
+            else
+              Break;
+          end
+          else
+            Str := Str + FCurrentChar;
+        end;
+        Exit;
+      end; // end: String value*)
+      '"': // String value
+      begin
+        Sym := tsStringValue;
+        Str := '';
+        while True do
+        begin
+          GetChar;
+          if FCurrentChar = '"' then
+          begin
+            GetChar;
+            Break;
+          end;
+          if FCurrentChar = '\' then
+          begin
+            GetChar;
+            case LowerCase(FCurrentChar) of
+              'r': Str := Str + #13;
+              'n': Str := Str + #10;
+              'x':
+              begin
+                GetChar;
+                S2 := '$';
+                while FCurrentChar in THORIUM_HEXDIGIT do
+                  S2 := S2 + FCurrentChar;
+                Str := Str + UTF8Chr(Cardinal(StrToInt(S2)));
+              end;
+              '"': Str := Str + '"';
+              '\': Str := Str + '\';
+            else
+              Str := Str + '\' + FCurrentChar;
+            end;
+          end
+          else
+            Str := Str + FCurrentChar;
+        end;
+        Exit;
+      end; // end: String value
+
+      '0'..'9', '#': // Numeric / Ordinal value
+      begin
+        Str := FCurrentChar;
+        (*if Str = '0' then
+        begin
+          Sym := tsIntegerValue;
+          GetChar;
+          while FCurrentChar in THORIUM_HEXDIGIT do
+          begin
+            Str := Str + FCurrentChar;
+            GetChar;
+          end;
+          Exit;
+        end // end: Str = '$'
+        else *)if Str = '#' then
+        begin
+          Sym := tsStringValue;
+          Str := '';
+          GetChar;
+          if FCurrentChar = '$' then
+          begin
+            Str := Str + FCurrentChar;
+            GetChar;
+            while FCurrentChar in THORIUM_HEXDIGIT do
+            begin
+              Str := Str + FCurrentChar;
+              GetChar;
+            end;
+            Str := UTF8Chr(Cardinal(StrToInt(Str)));
+            Exit;
+          end;
+
+          while FCurrentChar in THORIUM_DIGIT do
+          begin
+            Str := Str + FCurrentChar;
+            GetChar;
+          end;
+          Str := UTF8Chr(Cardinal(StrToInt(Str)));
+          Exit;
+        end // end: Str = '#'
+        else
+        begin
+          Sym := tsIntegerValue;
+          GetChar;
+          if (FCurrentChar = 'x') then
+          begin
+            Str := '$';
+            GetChar;
+            while FCurrentChar in THORIUM_HEXDIGIT do
+            begin
+              Str := Str + FCurrentChar;
+              GetChar;
+            end;
+            Exit;
+          end;
+          while FCurrentChar in THORIUM_DIGIT do
+          begin
+            Str := Str + FCurrentChar;
+            GetChar;
+          end;
+
+          if FCurrentChar = '.' then
+          begin
+            Sym := tsFloatValue;
+            Str := Str + FCurrentChar;
+            GetChar;
+            while FCurrentChar in THORIUM_DIGIT do
+            begin
+              Str := Str + FCurrentChar;
+              GetChar;
+            end;
+          end;
+          Exit;
+        end; // end: normal integer / float value
+      end; // end: Numeric / Ordinal value
+    else // Case else
+      Sym := tsError;
+      if (Ord(FCurrentChar) in [33..128]) then
+        Str := 'Unexpected char '''+FCurrentChar+''''
+      else
+        Str := 'Unexpected char #'+IntToStr(Ord(FCurrentChar));
+      Exit;
+    end;
+
+    Assert(Sym <> tsUnknown, 'Unknown symbol');
+  end;
+end;
+
+(*procedure TThoriumScanner.Proceed;
+begin
+  ScanForSymbol(FCurrentSym, FCurrentStr);
+end;*)
 
 { TThoriumInstructions }
 
@@ -7518,10 +9864,7 @@ begin
   FRequiredModules := ATarget.FRequiredModules;
   FRequiredLibraries := ATarget.FRequiredLibraries;
   FStringLibrary := ATarget.FStringLibrary;
-  FTable := TThoriumIdentifierTable.Create;
-  FTableSizes := TThoriumIntStack.Create;
   FThorium := ATarget.FThorium;
-  ResetState;
   {$ifdef HookSIGUSR1}
   SigCurrModule := FModule;
   SigCurrCompiler := Self;
@@ -7530,8 +9873,6 @@ end;
 
 destructor TThoriumCustomCompiler.Destroy;
 begin
-  FTableSizes.Free;
-  FTable.Free;
   inherited Destroy;
 end;
 
@@ -7541,24 +9882,6 @@ begin
   Result := FLibPropUsage.IndexOf(AProp);
   if Result < 0 then
     Result := FLibPropUsage.Add(AProp);
-end;
-
-function TThoriumCustomCompiler.AddLibraryPropertyUsageEx(
-  var TargetArray: TThoriumLibraryPropertyArray; AItem: TThoriumLibraryProperty
-  ): Integer;
-begin
-  Result := Length(TargetArray);
-  SetLength(TargetArray, Result+1);
-  TargetArray[Result] := AItem;
-end;
-
-procedure TThoriumCustomCompiler.AddLibraryPropertyUsages(
-  const AProp: TThoriumLibraryPropertyArray);
-var
-  I: Integer;
-begin
-  for I := 0 to High(AProp) do
-    AddLibraryPropertyUsage(AProp[I]);
 end;
 
 function TThoriumCustomCompiler.AddLibraryPropertyUsageToRelocate(
@@ -7588,24 +9911,6 @@ begin
   Result := FHostTypeUsage.IndexOf(AType);
   if Result < 0 then
     Result := FHostTypeUsage.Add(AType);
-end;
-
-function TThoriumCustomCompiler.AddHostTypeUsageEx(
-  var TargetArray: TThoriumHostObjectTypeArray; AItem: TThoriumHostObjectType
-  ): Integer;
-begin
-  Result := Length(TargetArray);
-  SetLength(TargetArray, Result+1);
-  TargetArray[Result] := AItem;
-end;
-
-procedure TThoriumCustomCompiler.AddHostTypeUsages(
-  const AUsageArray: TThoriumHostObjectTypeArray);
-var
-  I: Integer;
-begin
-  for I := 0 to High(AUsageArray) do
-    AddHostTypeUsage(AUsageArray[I]);
 end;
 
 function TThoriumCustomCompiler.AddHostTypeUsageToRelocate(
@@ -7644,31 +9949,6 @@ begin
   FPublicVariables.Add(Result);
 end;
 
-function TThoriumCustomCompiler.AppendCode(
-  ACodeArray: TThoriumInstructionArray): Integer;
-begin
-  if FCodeHook then
-  begin
-    Result := Length(FCodeHook1^);
-    SetLength(FCodeHook1^, Result + Length(ACodeArray));
-    Move(ACodeArray[0], FCodeHook1^[Result], Length(ACodeArray)*SizeOf(TThoriumInstruction));
-    if FCodeHook2 <> nil then
-    begin
-      Result := Length(FCodeHook2^);
-      SetLength(FCodeHook2^, Result+Length(ACodeArray));
-      Move(ACodeArray[0], CodeHook2^[Result], Length(ACodeArray)*SizeOf(TThoriumInstruction));
-    end;
-    Result := -1;
-  end
-  else
-    Result := FInstructions.AppendCode(ACodeArray);
-end;
-
-procedure TThoriumCustomCompiler.CompilerError(const Msg: String);
-begin
-  CompilerError(Msg, 0, 0);
-end;
-
 procedure TThoriumCustomCompiler.CompilerError(const Msg: String; X, Y: Integer);
 begin
   if (X >= 0) and (Y >= 0) then
@@ -7681,311 +9961,6 @@ end;
 procedure TThoriumCustomCompiler.DumpState;
 begin
 
-end;
-
-function TThoriumCustomCompiler.FindTableEntry(const Ident: String; out
-  Entry: TThoriumTableEntry; out Module: TThoriumModule; RaiseError: Boolean;
-  AllowFar: Boolean): Boolean; inline;
-// Searches all accessible tables for an value with the given identifier
-var
-  I: Integer;
-  VarI: Integer;
-  CurrVar: TThoriumVariable;
-  CurrFunc: TThoriumFunction;
-  CurrExternalFunc: TThoriumHostFunctionBase;
-  CurrConst: TThoriumLibraryConstant;
-  CurrProp: TThoriumLibraryProperty;
-  List: PPointerList;
-begin
-  Module := nil;
-  // First check the own module
-  Result := Table.FindIdentifier(Ident, Entry);
-  // If we could not find anything in here and far access is allowed, we scan
-  // for the included modules.
-  if (not Result) and (AllowFar) and (FThorium <> nil) then
-  begin
-    for I := FRequiredModules.Count - 1 downto 0 do
-    begin
-      // First get the module index.
-      Module := FRequiredModules.Items[I];
-      // Check all function identifiers in the given module
-      List := Module.FPublicFunctions.List;
-      for VarI := Module.FPublicFunctions.Count - 1 downto 0 do
-      begin
-        // Get the function pointer
-        CurrFunc := TThoriumFunction(List^[VarI]);
-        // Check if it matches
-        if CurrFunc.FName = Ident then
-        begin
-          // And if so fill the entry record and return.
-          Entry.Name := nil;
-          Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-          Entry.Offset := -1;
-          Entry._Type := etCallable;
-          Entry.TypeSpec := CurrFunc.PrototypeIntf;
-          Entry.Value.Func := CurrFunc;
-          Result := True;
-          Exit;
-        end;
-      end;
-      // Now check all variables of the module
-      List := CurrModule.FPublicVariables.List;
-      for VarI := CurrModule.FPublicVariables.Count - 1 downto 0 do
-      begin
-        // Get the variable pointer
-        CurrVar := TThoriumVariable(List^[VarI]);
-        // Check if the name matches
-        if CurrVar.FName = Ident then
-        begin
-          // And if so fill the entry record and return.
-          Entry.Name := nil;
-          Entry.Scope := THORIUM_STACK_SCOPE_MODULEROOT;
-          Entry.Offset := CurrVar.FStackPosition;
-          Entry.TypeSpec := CurrVar.FTypeSpec;
-          // The static field needs a special handling
-          if CurrVar.FIsStatic then
-            Entry._Type := etStatic
-          else
-            Entry._Type := etVariable;
-          Result := True;
-          Exit;
-        end;
-      end;
-    end;
-    // Now... No included module could serve us contents, so we look in the
-    // external functions
-    // Let it find us the function :P
-    CurrExternalFunc := FModule.FindHostFunction(Ident); // FThorium.FExternalFunctionRegistry.FindFunctionDirect(Ident);
-    if (CurrExternalFunc <> nil) then
-    begin
-      Entry.Name := nil;
-      Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-      Entry.Offset := -1;
-      Entry._Type := etHostCallable;
-      Entry.TypeSpec := CurrExternalFunc.PrototypeIntf;
-      Entry.Value.HostFunc := CurrExternalFunc;
-      Result := True;
-      Exit;
-    end;
-    CurrProp := FModule.FindLibraryProperty(Ident);
-    if CurrProp <> nil then
-    begin
-      Entry.Name := nil;
-      Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-      Entry.Offset := -1;
-      Entry._Type := etProperty;
-      Entry.TypeSpec := CurrProp.GetType;
-      Entry.Ptr := CurrProp;
-      Result := True;
-      Exit;
-    end;
-    // Well, no function, no variable in a module, nothing, so it can only
-    // be a constant then.
-    CurrConst := FModule.FindLibraryConstant(Ident);
-    if CurrConst <> nil then
-    begin
-      Entry.Name := nil;
-      Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-      Entry.Offset := -1;
-      Entry._Type := etLibraryConstant;
-      Entry.Value := CurrConst.FValue;
-      Entry.TypeSpec := ThoriumExtractTypeSpec(Entry.Value);
-      Entry.Ptr := CurrConst;
-      Result := True;
-      Exit;
-    end;
-  end;
-  // If we were not able to find anything and we are allowed to raise an error
-  // do so.
-  if (not Result) and (RaiseError) then
-    CompilerError('Undeclared identifier: '+Ident);
-end;
-
-function TThoriumCustomCompiler.FindTableEntries(const Ident: String; out
-  Entries: TThoriumTableEntryResults): Boolean;
-// Identifiers are ALL lower case
-
-  procedure ScanIncludedModule(const AModule: TThoriumModule);
-  // Scan order:
-  // * Public var table
-  // * Public func table
-  // * Public type table (TODO)
-  var
-    I: Integer;
-    VarTable: TThoriumVariables;
-    VarEntry: TThoriumVariable;
-    FuncTable: TThoriumFunctions;
-    FuncEntry: TThoriumFunction;
-    Match: TThoriumTableEntryResult;
-  begin
-    Match.SourceModule := AModule;
-    VarTable := AModule.FPublicVariables;
-    for I := 0 to VarTable.Count - 1 do
-    begin
-      VarEntry := VarTable[I];
-      if VarEntry.FName = Ident then
-      begin
-        with Match.Entry do
-        begin
-          Name := nil;
-          Offset := VarEntry.FStackPosition;
-          Scope := THORIUM_STACK_SCOPE_MODULEROOT;
-          TypeSpec := VarEntry.FTypeSpec;
-          IsStatic := False;
-          _Type := etVariable;
-        end;
-        Append(Entries, Match);
-        Break; // We can break here, since two variables with the same name in
-               // the same module are not allowed.
-      end;
-    end;
-
-    FuncTable := AModule.FPublicFunctions;
-    for I := 0 to FuncTable.Count - 1 do
-    begin
-      FuncEntry := FuncTable[I];
-      if FuncEntry.FName = Ident then
-      begin
-        with Match.Entry do
-        begin
-          _Type := etCallable;
-          Name := nil;
-          TypeSpec := FuncEntry.FPrototypeIntf;
-          Value.Func := FuncEntry;
-        end;
-        Append(Entries, Match);
-      end;
-    end;
-  end;
-
-  procedure ScanIncludedLibrary(const ALibrary: TThoriumLibrary);
-  var
-    Func: TThoriumHostFunctionBase;
-    Prop: TThoriumLibraryProperty;
-    Cons: TThoriumLibraryConstant;
-    HostType: TThoriumHostObjectType;
-  begin
-    Func := ALibrary.FindHostFunction(Ident);
-    Prop := ALibrary.FindProperty(Ident);
-    Cons := ALibrary.FindConstant(Ident);
-    HostType := ALibrary.FindHostType(Ident);
-  end;
-
-// Search all accessible modules and contexts for entries matching the
-// identifier Ident.
-// Scan order:
-// * Own module symbol table
-// * Included module symbol tables
-// * Included library symbol tables
-// * Global symbol tables
-begin
-
-end;
-
-function TThoriumCustomCompiler.GenCode(AInstruction: TThoriumInstruction; ACodeLine: Cardinal): Integer;
-begin
-  if FCodeHook then
-  begin
-    Result := Length(FCodeHook1^);
-    SetLength(FCodeHook1^, Result+1);
-    Move(AInstruction, FCodeHook1^[Result], SizeOf(TThoriumInstruction));
-    FCodeHook1^[Result].CodeLine := ACodeLine;
-    if FCodeHook2 <> nil then
-    begin
-      Result := Length(FCodeHook2^);
-      SetLength(FCodeHook2^, Result+1);
-      FCodeHook2^[Result] := FCodeHook1^[Result];
-    end;
-  end
-  else
-  begin
-    AInstruction.CodeLine := ACodeLine
-    Result := FInstructions.AppendCode(AInstruction);
-  end;
-end;
-
-function TThoriumCustomCompiler.GenCodeEx(
-  var TargetArray: TThoriumInstructionArray; AInstruction: TThoriumInstruction
-  ): Integer;
-begin
-  Result := Length(TargetArray);
-  SetLength(TargetArray, Result+1);
-  TargetArray[Result] := AInstruction;
-  TargetArray[Result].CodeLine := Scanner.CurrentLine - (Integer(Scanner.FIsLinebreak));
-end;
-
-function TThoriumCustomCompiler.GetCurrentTableStackPos: Integer;
-begin
-  Result := FTableSizes.Count;
-end;
-
-function TThoriumCustomCompiler.GetFreeRegister(Kind: TThoriumRegisterKind; out
-  RegisterID: TThoriumRegisterID; ThrowError: Boolean): Boolean;
-var
-  I: Word;
-  Min, Max: Word;
-begin
-  Result := False;
-  case Kind of
-    trC:
-    begin
-      Min := THORIUM_REGISTER_C_MIN;
-      Max := THORIUM_REGISTER_C_MAX;
-    end;
-    trEXP:
-    begin
-      Min := THORIUM_REGISTER_EXP_MIN;
-      Max := THORIUM_REGISTER_EXP_MAX;
-    end;
-  else
-    raise EThoriumCompilerException.CreateFmt('Invalid register kind: %d', [Ord(Kind)]);
-  end;
-  for I := Min to Max do
-  begin
-    if not (FRegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (I mod THORIUM_REGISTER_MASK_BLOCK_SIZE)) <> 0) then
-    begin
-      Result := True;
-      RegisterID := I;
-      FRegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] := FRegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] xor ((FRegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (I mod THORIUM_REGISTER_MASK_BLOCK_SIZE))) xor (1 shl (I mod THORIUM_REGISTER_MASK_BLOCK_SIZE)));
-      Exit;
-    end;
-  end;
-  if ThrowError then
-  begin
-    case Kind of
-      trC: CompilerError('Internal error: Compiler dynamically uses CACHE-registers.');
-      trEXP: CompilerError('Need more expression registers (currently '+IntToStr(THORIUM_REGISTER_EXP_COUNT)+'). Recompile compiler with more registers or try to crop down your expressions.');
-    end;
-  end;
-end;
-
-function TThoriumCustomCompiler.GetHighestRegisterInUse: TThoriumRegisterID;
-var
-  I: TThoriumRegisterID;
-begin
-  Result := THORIUM_REGISTER_C_MAX;
-  for I := THORIUM_REGISTER_EXP_MIN to THORIUM_REGISTER_EXP_MAX do
-  begin
-    if (RegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (I mod THORIUM_REGISTER_MASK_BLOCK_SIZE)) <> 0) then
-      Result := I;
-  end;
-end;
-
-function TThoriumCustomCompiler.GetHookedInstructionPointerA(AIndex: Integer
-  ): PThoriumInstruction;
-begin
-  Result := @CodeHook1^[AIndex];
-end;
-
-function TThoriumCustomCompiler.GetHookedInstructionPointerB(AIndex: Integer
-  ): PThoriumInstruction;
-begin
-  Result := @CodeHook2^[AIndex];
-end;
-
-function TThoriumCustomCompiler.GetTableEntriesTo(StackPos: Integer): Integer;
-begin
-  Result := FTable.Count - FTableSizes.Items[StackPos-1];
 end;
 
 procedure TThoriumCustomCompiler.FindRelocationTargets;
@@ -8078,51 +10053,6 @@ begin
     end;
     vtFunction: Result := False;
   end;
-end;
-
-procedure TThoriumCustomCompiler.LoadLibrary(const LibName: String);
-var
-  Lib: TThoriumLibrary;
-  I: Integer;
-begin
-  if FThorium <> nil then
-  begin
-    Lib := FThorium.FindLibrary(LibName);
-    if Lib = nil then
-    begin
-      CompilerError('Could not load library "'+LibName+'". Library not found.');
-      Exit;
-    end;
-    if FRequiredLibraries.IndexOf(Lib) < 0 then
-      FRequiredLibraries.Add(Lib);
-  end
-  else
-    CompilerError('Could not load library "'+LibName+'". No Thorium context available.');
-end;
-
-procedure TThoriumCustomCompiler.LoadModule(const ModName: String);
-var
-  Module: TThoriumModule;
-  I: Integer;
-begin
-  if FThorium <> nil then
-  begin
-    Module := FThorium.FindModule(ModName);
-    if Module = nil then
-    begin
-      CompilerError('Could not load module "'+ModName+'". Module not found.');
-      Exit;
-    end;
-    if not Module.Compiled then
-    begin
-      CompilerError('Could not load module "'+ModName+'". Circular module reference (or threading problem).');
-      Exit;
-    end;
-    if FRequiredModules.IndexOf(Module) < 0 then
-      FRequiredModules.Add(Module);
-  end
-  else
-    CompilerError('Could not load module "'+ModName+'". No Thorium context available.');
 end;
 
 procedure TThoriumCustomCompiler.OptimizeCode;
@@ -8836,70 +10766,220 @@ begin
   end;
 end;
 
-procedure TThoriumCustomCompiler.ReleaseRegister(ID: TThoriumRegisterID);
+{ TThoriumDefaultCompiler }
+
+procedure TThoriumDefaultCompiler.DumpState;
 begin
-  FRegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] := FRegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] xor (FRegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (ID mod THORIUM_REGISTER_MASK_BLOCK_SIZE)));
+  if Scanner <> nil then
+  begin
+    WriteLn(' Scanner at line ', Scanner.FCurrentLine, ' x = ', Scanner.FCurrentX);
+    WriteLn(' Current sym id = ', Ord(Scanner.FCurrentSym), '; ', GetEnumName(TypeInfo(TThoriumSymbol), Ord(Scanner.FCurrentSym)));
+    WriteLn(' Current str = ', Scanner.FCurrentStr);
+  end;
 end;
 
-procedure TThoriumCustomCompiler.ResetState;
-begin
-  FillByte(FRegisterUsage, SizeOf(TThoriumRegisterMask), 0);
-end;
-
-procedure TThoriumCustomCompiler.RestoreTable(var Offset: Integer;
-  GenerateCode: Boolean);
+function TThoriumDefaultCompiler.CompileFromStream(SourceStream: TStream;
+  Flags: TThoriumCompilerFlags): Boolean;
+// Compiles the source code given with SourceStream to binary instruction code.
 var
-  OldSize: Integer;
-  StackDiff: Integer;
-begin
-  // Fetch the old size from the TableSize-stack.
-  OldSize := FTableSizes.Pop;
-  // Check if it differs...
-  if OldSize < FTable.Count then
-  begin
-    // first get the stack difference when the table gets cleared so far
-    StackDiff := FTable.ClearTableTo(OldSize);
-    // ... and if this is the case do: if allowed code generation...
-    if GenerateCode and (StackDiff > 0) then
-      GenCode(pop_s(StackDiff));
-    // anyway the decreasement of the current identifier offset...
-    Dec(Offset, StackDiff);
-  end;
-end;
+  Table: TThoriumIdentifierTable;
 
-procedure TThoriumCustomCompiler.SaveTable;
-begin
-  TableSizes.Push(Table.Count);
-end;
+  CurrentSym: TThoriumSymbol;
+  CurrentStr: String;
 
-function TThoriumCustomCompiler.TypeSpecByName(TypeName: String; out
-  TypeSpec: IThoriumType): Boolean;
-begin
-  TypeName := ThoriumCase(TypeName);
-  if TypeName = THORIUM_TYPE_NAME_INTEGER then
-  begin
-    TypeSpec := TThoriumTypeInteger.Create;
-    Exit(True);
-  end
-  else if TypeName = THORIUM_TYPE_NAME_STRING then
-  begin
-    TypeSpec := TThoriumTypeString.Create;
-    Exit(True);
-  end
-  else if TypeName = THORIUM_TYPE_NAME_FLOAT then
-  begin
-    TypeSpec := TThoriumTypeFloat.Create;
-    Exit(True);
-  end
-  else
-  begin
+  BreakJumps: TThoriumJumpList;
+  Jumps: TThoriumJumpList;
+  //FuncReturns: TThoriumReturnList;
+  TableSizes: TThoriumIntStack;
 
+  CodeHook: Boolean;
+  CodeHook1, CodeHook2: PThoriumInstructionArray;
+
+  RegisterUsage: TThoriumRegisterMask;
+
+  procedure Proceed; inline;
+  begin
+    Scanner.ScanForSymbol(CurrentSym, CurrentStr);
   end;
 
-  (*function TypeSpecByName(Ident: String; var TypeSpec: TThoriumType; AllowExtended: Boolean): Boolean; inline;
+  function InlineProceedTrue: Boolean; inline;
+  begin
+    Scanner.ScanForSymbol(CurrentSym, CurrentStr);
+    Result := True;
+  end;
+
+  function InlineProceedFalse: Boolean; inline;
+  begin
+    Scanner.ScanForSymbol(CurrentSym, CurrentStr);
+    Result := False;
+  end;
+
+  procedure CompilerError(const Msg: String); inline;
+  begin
+    Self.CompilerError(Msg, Scanner.FCurrentX, Scanner.CurrentLine);
+  end;
+
+  function GenCode(AInstruction: TThoriumInstruction): Integer; inline;
+  // Add an instruction to the module instructions or to the current code hook
+  begin
+    if CodeHook then
+    begin
+      Result := Length(CodeHook1^);
+      SetLength(CodeHook1^, Result+1);
+      (*CodeHook1^[Result].Instruction := InstructionCode;
+      CodeHook1^[Result].Parameter1 := Param1;
+      CodeHook1^[Result].Parameter2 := Param2;
+      CodeHook1^[Result].Parameter3 := Param3;*)
+      Move(AInstruction, CodeHook1^[Result], SizeOf(TThoriumInstruction));
+      CodeHook1^[Result].CodeLine := Scanner.CurrentLine - (Integer(Scanner.FIsLinebreak));
+      if CodeHook2 <> nil then
+      begin
+        Result := Length(CodeHook2^);
+        SetLength(CodeHook2^, Result+1);
+        CodeHook2^[Result] := CodeHook1^[Length(CodeHook1^)-1];
+      end;
+    end
+    else
+    begin
+      //Result := FInstructions.GenCode(InstructionCode, Param1, Param2, Param3, Scanner.CurrentLine - (Integer(Scanner.FIsLinebreak)));
+      AInstruction.CodeLine := Scanner.CurrentLine - (Integer(Scanner.FIsLinebreak));
+      Result := FInstructions.AppendCode(AInstruction);
+    end;
+  end;
+
+  function AppendCode(ACodeArray: TThoriumInstructionArray): Integer; inline;
+  // Append a bunch of instructions to the module instructions or to the current
+  // code hook
+  begin
+    (*if (not CodeHook) and (CodeHook1 <> nil) then
+      WriteLn('Weird stuff happens here');*)
+    if CodeHook then
+    begin
+      Result := Length(CodeHook1^);
+      //WriteLn(Length(ACodeArray), ' ', Length(CodeHook1^), ' (', IntToHex(ptruint(CodeHook1), SizeOf(ptruint)*2), ')');
+      SetLength(CodeHook1^, Result + Length(ACodeArray));
+      Move(ACodeArray[0], CodeHook1^[Result], Length(ACodeArray)*SizeOf(TThoriumInstruction));
+      if CodeHook2 <> nil then
+      begin
+        Result := Length(CodeHook2^);
+        SetLength(CodeHook2^, Result+Length(ACodeArray));
+        Move(ACodeArray[0], CodeHook2^[Result], Length(ACodeArray)*SizeOf(TThoriumInstruction));
+      end;
+      Result := -1;
+    end
+    else
+    begin
+      Result := FInstructions.AppendCode(ACodeArray);
+    end;
+  end;
+
+  function GetHookedInstructionPointerA(AIndex: Integer): PThoriumInstruction; inline;
+  begin
+    Result := @CodeHook1^[AIndex];
+  end;
+
+  function GetHookedInstructionPointerB(AIndex: Integer): PThoriumInstruction; inline;
+  begin
+    Result := @CodeHook2^[AIndex];
+  end;
+
+  procedure AddHostTypeUsages(Usages: TThoriumHostObjectTypeArray); inline;
+  var
+    I: Integer;
+  begin
+    for I := 0 to Length(Usages) - 1 do
+      AddHostTypeUsage(Usages[I])
+  end;
+
+  procedure AddLibraryPropertyUsages(Usages: TThoriumLibraryPropertyArray); inline;
+  var
+    I: Integer;
+  begin
+    for I := 0 to Length(Usages) - 1 do
+      AddLibraryPropertyUsage(Usages[I]);
+  end;
+
+  function PushEmpty(AType: TThoriumType): Integer; inline;
+  // Pushes an empty value of the given type on the stack.
+  begin
+    case AType.ValueType of
+      vtBuiltIn: case AType.BuiltInType of
+        btFloat: Result := GenCode(flt_s(0.0));
+        btInteger: Result := GenCode(int_s(0));
+        btString: Result := GenCode(str_s());
+      end;
+      vtExtendedType:
+      begin
+        GenCode(ext_s(AType.Extended));
+        AddHostTypeUsage(AType.Extended);
+      end;
+      vtFunction: raise EThoriumCompilerException.Create('There is no support for functions on the stack.');
+    end;
+  end;
+
+  function NeedTypeOperation(Value1, Value2: TThoriumType; Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean; inline;
+  // Checks for a type operation and throws a compiler error if it's not
+  // available
+  begin
+    Result := IsTypeCompatible(Value1, Value2, Operation, ResultType);
+    if not Result then
+      CompilerError('Operation '+THORIUM_OPERATION_NAME[Operation]+' is not available for '+ThoriumTypeName(Value1)+' and '+ThoriumTypeName(Value2)+'.');
+  end;
+
+  function NeedTypeOperation(Value: TThoriumType; Operation: TThoriumOperation; out ResultType: TThoriumType): Boolean; inline;
+  // Checks for a type operation and throws a compiler error if it's not
+  // available
+  begin
+    Result := IsTypeOperationAvailable(Value, Operation, ResultType);
+    if not Result then
+      CompilerError('Operation '+THORIUM_OPERATION_NAME[Operation]+' is not available for '+ThoriumTypeName(Value)+'.');
+  end;
+
+  function ExpectSymbol(SymbolMask: TThoriumSymbols; ThrowError: Boolean = True): Boolean; inline;
+  // Checks if the current symbol matches the symbol mask and returns true if
+  // this is the case. If ThrowError is true and the check fails, a compiler
+  // error is generated.
+  var
+    SymStr: String;
+  begin
+    Result := (CurrentSym in SymbolMask);
+    if (not Result) and (ThrowError) then
+    begin
+      SymStr := THORIUM_SYMBOL_NAMES[CurrentSym];
+      if (CurrentSym = tsUnknown) then
+        SymStr := SymStr + '(''' + CurrentStr + ''')';
+      if SymbolMask <> [tsNone] then
+      begin
+        case CurrentSym of
+          tsIdentifier: CompilerError('Unexpected symbol: '+SymStr+' ('''+CurrentStr+''')');
+        else
+          CompilerError('Unexpected symbol: '+SymStr);
+        end;
+      end
+      else
+        CompilerError('Unexpected symbol: '+SymStr+' (expected end of stream).');
+    end;
+  end;
+
+  function BuiltInType(Ident: String): TThoriumBuiltInType; inline;
+  // Converts a type identifier to the built in type identifier.
+  begin
+    if Ident = 'INT' then
+      Result := btInteger
+    else if Ident = 'STRING' then
+      Result := btString
+    else if Ident = 'FLOAT' then
+      Result := btFloat
+    else if Ident = 'VOID' then
+      Result := btNil
+    else
+      Result := btUnknown;
+  end;
+
+  function TypeSpecByName(Ident: String; var TypeSpec: TThoriumType; AllowExtended: Boolean): Boolean; inline;
   // Converts a type identifier to a complete type spec structure.
   begin
-    Ident := ThoriumCase(Ident);
+    Ident := UpperCase(Ident);
     TypeSpec.BuiltInType := BuiltInType(Ident);
     if (TypeSpec.BuiltInType <> btUnknown) then
     begin
@@ -8918,7 +10998,3890 @@ begin
       end;
     end;
     Result := False;
-  end; *)
+  end;
+
+  function FindTableEntry(const Ident: String; out Entry: TThoriumTableEntry; out Module: Integer; RaiseError: Boolean = True; AllowFar: Boolean = True): Boolean; inline;
+  // Searches all accessible tables for an value with the given identifier
+  var
+    I: Integer;
+    VarI: Integer;
+    CurrVar: TThoriumVariable;
+    CurrFunc: TThoriumFunction;
+    CurrExternalFunc: TThoriumHostFunctionBase;
+    CurrModule: TThoriumModule;
+    CurrConst: TThoriumLibraryConstant;
+    CurrProp: TThoriumLibraryProperty;
+    List: PPointerList;
+  begin
+    Module := -1;
+    // First check the own module
+    Result := Table.FindIdentifier(Ident, Entry);
+    // If we could not find anything in here and far access is allowed, we scan
+    // for the included modules.
+    if (not Result) and (AllowFar) and (FThorium <> nil) then
+    begin
+      for I := FRequiredModules.Count - 1 downto 0 do
+      begin
+        // First get the module index.
+        Module := FRequiredModules.Items[I];
+        // Then the module pointer
+        CurrModule := FThorium.Module[Module];
+        // Check all function identifiers in the given module
+        List := CurrModule.FPublicFunctions.List;
+        for VarI := CurrModule.FPublicFunctions.Count - 1 downto 0 do
+        begin
+          // Get the function pointer
+          CurrFunc := TThoriumFunction(List^[VarI]);
+          // Check if it matches
+          if CurrFunc.FName = Ident then
+          begin
+            // And if so fill the entry record and return.
+            Entry.Name := nil;
+            Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
+            Entry.Offset := -1;
+            Entry._Type := etFunction;
+            Entry.TypeSpec.ValueType := vtFunction;
+            Entry.TypeSpec.Func := CurrFunc;
+            Result := True;
+            Exit;
+          end;
+        end;
+        // Now check all variables of the module
+        List := CurrModule.FPublicVariables.List;
+        for VarI := CurrModule.FPublicVariables.Count - 1 downto 0 do
+        begin
+          // Get the variable pointer
+          CurrVar := TThoriumVariable(List^[VarI]);
+          // Check if the name matches
+          if CurrVar.FName = Ident then
+          begin
+            // And if so fill the entry record and return.
+            Entry.Name := nil;
+            Entry.Scope := THORIUM_STACK_SCOPE_MODULEROOT;
+            Entry.Offset := CurrVar.FStackPosition;
+            Entry.TypeSpec := CurrVar.FTypeSpec;
+            // The static field needs a special handling
+            if CurrVar.FIsStatic then
+              Entry._Type := etStatic
+            else
+              Entry._Type := etVariable;
+            Result := True;
+            Exit;
+          end;
+        end;
+      end;
+      // Now... No included module could serve us contents, so we look in the
+      // external functions
+      // Let it find us the function :P
+      CurrExternalFunc := FModule.FindHostFunction(Ident); // FThorium.FExternalFunctionRegistry.FindFunctionDirect(Ident);
+      if (CurrExternalFunc <> nil) then
+      begin
+        Entry.Name := nil;
+        Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
+        Entry.Offset := -1;
+        Entry._Type := etFunction;
+        Entry.TypeSpec.ValueType := vtHostFunction;
+        Entry.TypeSpec.HostFunc := CurrExternalFunc;
+        Result := True;
+        Exit;
+      end;
+      CurrProp := FModule.FindLibraryProperty(Ident);
+      if CurrProp <> nil then
+      begin
+        Entry.Name := nil;
+        Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
+        Entry.Offset := -1;
+        Entry._Type := etProperty;
+        Entry.TypeSpec := CurrProp.GetType;
+        Entry.Ptr := CurrProp;
+        Result := True;
+        Exit;
+      end;
+      // Well, no function, no variable in a module, nothing, so it can only
+      // be a constant then.
+      CurrConst := FModule.FindLibraryConstant(Ident);
+      if CurrConst <> nil then
+      begin
+        Entry.Name := nil;
+        Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
+        Entry.Offset := -1;
+        Entry._Type := etLibraryConstant;
+        Entry.Value := CurrConst.FValue;
+        Entry.TypeSpec := ThoriumExtractTypeSpec(Entry.Value);
+        Entry.Ptr := CurrConst;
+        Result := True;
+        Exit;
+      end;
+    end;
+    // If we were not able to find anything and we are allowed to raise an error
+    // do so.
+    if (not Result) and (RaiseError) then
+      CompilerError('Undeclared identifier: '+Ident);
+  end;
+
+  function CurrentTableStackPos: Integer; inline;
+  // Get the current pos of the table stack. Can be used with RestoreTableTo
+  // to restore multiple frames.
+  begin
+    Result := TableSizes.Count;
+  end;
+
+  function GetTableEntriesTo(StackPos: Integer): Integer; inline;
+  begin
+    Result := Table.Count - TableSizes.Items[StackPos-1];
+  end;
+
+  procedure SaveTable; inline;
+  // Pushes the current table size to the TableSize-stack for later restoration.
+  begin
+    TableSizes.Push(Table.Count);
+  end;
+
+  (*procedure RestoreTableTo(var Offset: Integer; Count: Integer; GenerateCode: Boolean = True); inline;
+  // Restore the table size until the size of TableSize-stack is the one given
+  // with Count.
+  var
+    OldSize: Integer;
+    Amount: Integer;
+  begin
+    Amount := 0;
+    while TableSizes.Count > Count do
+    begin
+      // Fetch the old size from the TableSize-stack.
+      OldSize := TableSizes.Pop;
+      // Check if it differs...
+      if OldSize < Table.Count then
+      begin
+        // add the offset to the amount
+        Amount += (Table.Count - OldSize);
+        // decrease the offset
+        Dec(Offset, Table.Count - OldSize);
+        // clear the table downto the size
+        Table.ClearTableTo(OldSize);
+      end;
+    end;
+    // if code generation is allowed, we write a pop instruction
+    if GenerateCode then
+      GenCode(POP_S(Amount));
+  end;*)
+
+  procedure RestoreTable(var Offset: Integer; GenerateCode: Boolean = True); inline;
+  // Restore the table size of the last SaveTable-call.
+  var
+    OldSize: Integer;
+    StackDiff: Integer;
+  begin
+    // Fetch the old size from the TableSize-stack.
+    OldSize := TableSizes.Pop;
+    // Check if it differs...
+    if OldSize < Table.Count then
+    begin
+      // first get the stack difference when the table gets cleared so far
+      StackDiff := Table.ClearTableTo(OldSize);
+      // ... and if this is the case do: if allowed code generation...
+      if GenerateCode and (StackDiff > 0) then
+        GenCode(pop_s(StackDiff));
+      // anyway the decreasement of the current identifier offset...
+      Dec(Offset, StackDiff);
+    end;
+  end;
+
+  function GetFreeRegister(Kind: TThoriumRegisterKind; out RegisterID: TThoriumRegisterID; ThrowError: Boolean = True): Boolean; inline;
+  // Searches a free register of the specified kind and returns its ID. If no
+  // free register can be found, THORIUM_INVALID_REGISTER will be returned.
+  var
+    I: Word;
+    Min, Max: Word;
+  begin
+    Result := False;
+    case Kind of
+      trC:
+      begin
+        Min := THORIUM_REGISTER_C_MIN;
+        Max := THORIUM_REGISTER_C_MAX;
+      end;
+      trEXP:
+      begin
+        Min := THORIUM_REGISTER_EXP_MIN;
+        Max := THORIUM_REGISTER_EXP_MAX;
+      end;
+    else
+      raise EThoriumCompilerException.CreateFmt('Invalid register kind: %d', [Ord(Kind)]);
+    end;
+    for I := Min to Max do
+    begin
+      if not (RegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (I mod THORIUM_REGISTER_MASK_BLOCK_SIZE)) <> 0) then
+      begin
+        Result := True;
+        RegisterID := I;
+        RegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] := RegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] xor ((RegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (I mod THORIUM_REGISTER_MASK_BLOCK_SIZE))) xor (1 shl (I mod THORIUM_REGISTER_MASK_BLOCK_SIZE)));
+        Exit;
+      end;
+    end;
+    if ThrowError then
+    begin
+      case Kind of
+        trC: CompilerError('Internal error: Compiler uses CACHE-registers.');//CompilerError('Need more C registers (currently '+IntToStr(THORIUM_REGISTER_C_COUNT)+'). Recompile compiler with more registers or try to crop down your expressions.');
+        trEXP: CompilerError('Need more expression registers (currently '+IntToStr(THORIUM_REGISTER_EXP_COUNT)+'). Recompile compiler with more registers or try to crop down your expressions.');
+      end;
+    end;
+  end;
+
+  procedure ReleaseRegister(ID: TThoriumRegisterID);
+  // Unsets the usage flag of the specified register.
+  begin
+    RegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] := RegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] xor (RegisterUsage[ID div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (ID mod THORIUM_REGISTER_MASK_BLOCK_SIZE)));
+  end;
+
+  function GetHighestRegisterInUse: TThoriumRegisterID;
+  var
+    I: TThoriumRegisterID;
+  begin
+    Result := THORIUM_REGISTER_C_MAX;
+    for I := THORIUM_REGISTER_EXP_MIN to THORIUM_REGISTER_EXP_MAX do
+    begin
+      if (RegisterUsage[I div THORIUM_REGISTER_MASK_BLOCK_SIZE] and (1 shl (I mod THORIUM_REGISTER_MASK_BLOCK_SIZE)) <> 0) then
+        Result := I;
+    end;
+  end;
+
+  procedure Module;
+  // Compile a module.
+  var
+    CurrentReturnType: TThoriumType;
+    CurrentScope: Integer;
+    //CurrentFunction: TThoriumFunction;
+    CurrentFunctionTableStack: Integer;
+
+    // We need a forward declaration of Expression for use in QualifyIdentifier.
+    function Expression(TargetRegister: TThoriumRegisterID; NeedStatic: Boolean = False; IsStatic: PBoolean = nil; StaticValue: PThoriumValue = nil; IsExpressionBased: PBoolean = nil): TThoriumType; forward;
+
+    function QualifyIdentifier(out Ident: TThoriumQualifiedIdentifier;
+      AllowedKinds: TThoriumQualifiedIdentifierKinds;
+      TargetRegister: TThoriumRegisterID): Boolean;
+    // Parse a whole identifier and return its specs in Ident. This includes
+    // also any instructions needed for getting or setting the value of the
+    // variable or object the identfifier identifies, if it is not a type or
+    // a function.
+    // Currently, there are the following identifiers supported:
+    //   - Variable or constant identifiers
+    //   - Type identifiers
+    //   - Function identifiers
+    //   - Undeclared identifiers
+
+      function GenCodeEx(var TargetArray: TThoriumInstructionArray;
+        AInstruction: TThoriumInstruction): Integer;
+      // This generates different code for the getter and setter codes.
+      begin
+        Result := Length(TargetArray);
+        SetLength(TargetArray, Result+1);
+        TargetArray[Result] := AInstruction;
+        TargetArray[Result].CodeLine := Scanner.CurrentLine - (Integer(Scanner.FIsLinebreak));
+        (*TargetArray[Result].Instruction := InstructionCode;
+        TargetArray[Result].Parameter1 := Param1;
+        TargetArray[Result].Parameter2 := Param2;
+        TargetArray[Result].Parameter3 := Param3;
+        TargetArray[Result].CodeLine := Scanner.CurrentLine;*)
+      end;
+
+      function AddExtendedTypeUsageEx(var TargetArray: TThoriumHostObjectTypeArray;
+        AItem: TThoriumHostObjectType): Integer;
+      begin
+        Result := Length(TargetArray);
+        SetLength(TargetArray, Result+1);
+        TargetArray[Result] := AItem;
+      end;
+
+      function AddLibPropertyUsageEx(var TargetArray: TThoriumLibraryPropertyArray;
+        AItem: TThoriumLibraryProperty): Integer;
+      begin
+        Result := Length(TargetArray);
+        SetLength(TargetArray, Result+1);
+        TargetArray[Result] := AItem;
+      end;
+
+    var
+      CurrIdent: String;
+      CurrEntry, NewEntry: TThoriumTableEntry;
+      CurrType, ExprType: TThoriumType;
+      CurrModule: Integer;
+      Prop: TThoriumLibraryProperty;
+      BufInstruction: PThoriumInstruction;
+
+      procedure CallExternalFunction(AsMethod: Boolean = False; ExtendedTypeRegister: TThoriumRegisterID = 0);
+      var
+        I: Integer;
+        Func: TThoriumHostFunctionBase;
+        ExprType, OldExprType, ParamType: TThoriumType;
+        ParamRegID: TThoriumRegisterID;
+        VACount, FltCount, ItemSize, ToClearCount: Cardinal;
+        Untyped: Boolean;
+        ExternalParamType: PThoriumExternalFunctionVarType;
+        HostParamType: TThoriumHostType;
+        VAStartIdx: TThoriumInstructionAddress;
+        InstructionFunc: TThoriumInstructionFunc1R;
+        PointerBased: Boolean;
+        StaticStringList: TThoriumIntList;
+        IsExpressionBased: Boolean;
+      begin
+        // Retreive the function
+        Func := CurrType.HostFunc;
+        // Check for a return value
+        StaticStringList := TThoriumIntList.Create;
+        try
+          if Func.ReturnType.HostType <> htNone then
+          begin
+            // Push an empty slot to the stack for this
+            //ThoriumVarTypeToTypeSpec(Func.ReturnType, ParamType);
+            ThoriumExternalVarTypeToTypeSpec(@Func.ReturnType, ParamType);
+            CurrType := ParamType;
+            PushEmpty(ParamType);
+          end
+          else
+            CurrType := ThoriumBuiltInTypeSpec(btNil);
+          // Allocate a register for caching parameters
+          if not GetFreeRegister(trEXP, ParamRegID) then
+            Exit;
+          // Now go through all parameters and get them...
+          VACount := 0;
+          for I := 0 to Func.Parameters.Count - 1 do
+          begin
+            HostParamType := Func.Parameters.Types[I];
+            if HostParamType and htArray = htArray then
+            begin
+              // For now, you can only use varargs as the last parameter. So raise
+              // compiler error if this is not the case.
+              if I < Func.Parameters.Count - 1 then
+              begin
+                CompilerError('Host environment mistake: Varargs are only allowed as last parameter.');
+                Exit;
+              end;
+
+              if I > 0 then
+              begin
+                if not ExpectSymbol([tsComma], False) then
+                begin
+                  // No varargs, so just push a zero to the stack.
+                  GenCode(vastart(0, False));
+                  GenCode(int_s(0));
+                  // We can break here since this is per definitionem the last
+                  // parameter.
+                  Break;
+                end
+                else
+                  Proceed;
+              end
+              else
+              begin
+                if ExpectSymbol([tsCloseBracket], False) then
+                begin
+                  // No varargs either, so just push a zero to the stack.
+                  GenCode(vastart(0, False));
+                  GenCode(int_s(0));
+                  Break;
+                end;
+              end;
+              // Get the parameter type spec
+              ExternalParamType := Func.Parameters.CompleteTypes[I];
+
+              if HostParamType and (not htFlagSection) = htAny then
+                Untyped := True
+              else
+              begin
+                // Strip the vararray flag from the vartype, since that is not
+                // supported by ThoriumExternalVarTypeToTypeSpec.
+                ExternalParamType^.HostType := ExternalParamType^.HostType and (not htFlagSection);
+                ThoriumExternalVarTypeToTypeSpec(ExternalParamType, ParamType);
+                PointerBased := False;
+                case ExternalParamType^.HostType of
+                  htIntS8:
+                  begin
+                    InstructionFunc := @va_i8s;
+                    ItemSize := 1;
+                  end;
+                  htIntU8:
+                  begin
+                    InstructionFunc := @va_i8;
+                    ItemSize := 1;
+                  end;
+                  htIntS16:
+                  begin
+                    InstructionFunc := @va_i16s;
+                    ItemSize := 2;
+                  end;
+                  htIntU16:
+                  begin
+                    InstructionFunc := @va_i16;
+                    ItemSize := 2;
+                  end;
+                  htIntS32:
+                  begin
+                    InstructionFunc := @va_i32s;
+                    ItemSize := 4;
+                  end;
+                  htIntU32:
+                  begin
+                    InstructionFunc := @va_i32;
+                    ItemSize := 4;
+                  end;
+                  htIntS64:
+                  begin
+                    InstructionFunc := @va_i64s;
+                    ItemSize := 8;
+                  end;
+                  htIntU64:
+                  begin
+                    InstructionFunc := @va_i64;
+                    ItemSize := 8;
+                  end;
+                  htFlt32:
+                  begin
+                    InstructionFunc := @va_f32;
+                    ItemSize := 4;
+                  end;
+                  htFlt64:
+                  begin
+                    InstructionFunc := @va_f64;
+                    ItemSize := 8;
+                  end;
+                  htFlt80:
+                  begin
+                    InstructionFunc := @va_f80;
+                    ItemSize := 10;
+                  end;
+                  htStr:
+                  begin
+                    InstructionFunc := @va_s;
+                    PointerBased := True;
+                  end;
+                  htExt:
+                  begin
+                    InstructionFunc := @va_x;
+                    PointerBased := True;
+                  end
+                else
+                  CompilerError('Unknown host type.');
+                  Exit;
+                end;
+                ExternalParamType^.HostType := ExternalParamType^.HostType or htFlagSection;
+                Untyped := False;
+              end;
+
+              FltCount := 0;
+              VACount := 0;
+              ToClearCount := 0;
+              if Untyped then
+                VAStartIdx := GenCode(vastart_t(0, 0, 0))
+              else
+                VAStartIdx := GenCode(vastart(0, PointerBased));
+              repeat
+                // Parse the given expression
+                ExprType := Expression(ParamRegID, False, nil, nil, @IsExpressionBased);
+                if HasError then
+                  Exit;
+                // Check if the types are compatible.
+                OldExprType := ExprType;
+                if (not Untyped) and (not NeedTypeOperation(ParamType, ExprType, toAssign, ExprType)) then
+                begin
+                  CompilerError('Incompatible type for argument '+IntToStr(I+VACount)+' of '+Func.Name);
+                  Exit;
+                end;
+                if not Untyped then
+                begin
+                  // Cast if the types are not exactly equal.
+                  if not ThoriumCompareTypeEx(OldExprType, ParamType) then
+                    GenCode(_cast(ParamRegID, ParamRegID, OldExprType, ParamType));
+                  if (ExternalParamType^.Storing) and (ExternalParamType^.Extended is TThoriumRTTIObjectType) then
+                    GenCode(xct(ParamRegID));
+                  // Move the value to the varargs.
+                  GenCode(InstructionFunc(ParamRegID));
+                end
+                else
+                begin
+                  case ExprType.ValueType of
+                    vtBuiltIn:
+                      case ExprType.BuiltInType of
+                        btInteger:
+                          GenCode(vat_i(ParamRegID));
+                        btFloat:
+                        begin
+                          GenCode(vat_f(ParamRegID));
+                          Inc(FltCount);
+                        end;
+                        btString:
+                        begin
+                          GenCode(vat_s(ParamRegID));
+                          Inc(ToClearCount);
+                        end;
+                      else
+                        CompilerError('Invalid type as argument for untyped varargs.');
+                        Exit;
+                      end;
+                    vtExtendedType:
+                    begin
+                      if (ExternalParamType^.Storing) and (ExternalParamType^.Extended is TThoriumRTTIObjectType) then
+                        GenCode(xct(ParamRegID));
+                      GenCode(vat_x(ParamRegID));
+                      Inc(ToClearCount);
+                    end;
+                  else
+                    CompilerError('Invalid type as argument for untyped varargs.');
+                    Exit;
+                  end;
+                end;
+                // Push the value on the stack
+                //GenCode(mover_st(ParamRegID));
+                Inc(VACount);
+
+                if IsExpressionBased then
+                begin
+                  if ThoriumTypeNeedsClear(ParamType) then
+                  begin
+                    StaticStringList.AddEntry(ParamRegID);
+                    if not GetFreeRegister(trEXP, ParamRegID) then
+                      Exit;
+                  end;
+                end;
+              until (CurrentSym <> tsComma) or (InlineProceedFalse);
+              GenCode(int_s(VACount));
+              if Untyped then
+              begin
+                if CodeHook then
+                begin
+                  with TThoriumInstructionVASTART_T(GetHookedInstructionPointerA(VAStartIdx)^) do
+                  begin
+                    Length := VACount;
+                    Floats := FltCount;
+                    ToClear := ToClearCount;
+                  end;
+                  if CodeHook2 <> nil then
+                    with TThoriumInstructionVASTART_T(GetHookedInstructionPointerB(VAStartIdx)^) do
+                    begin
+                      Length := VACount;
+                      Floats := FltCount;
+                      ToClear := ToClearCount;
+                    end;
+                end
+                else
+                begin
+                  with TThoriumInstructionVASTART_T(FInstructions.Instruction[VAStartIdx]^) do
+                  begin
+                    Length := VACount;
+                    Floats := FltCount;
+                    ToClear := ToClearCount;
+                  end;
+                end;
+              end
+              else
+              begin
+                // If not pointer based, the amount of bytes is expected to be in
+                // the length field. So we multiply the count of arguments with
+                // the size of each.
+                if not PointerBased then
+                  VACount := VACount * ItemSize;
+                if CodeHook then
+                begin
+                  TThoriumInstructionVASTART(GetHookedInstructionPointerA(VAStartIdx)^).Length := VACount;
+                  if CodeHook2 <> nil then
+                    TThoriumInstructionVASTART(GetHookedInstructionPointerB(VAStartIdx)^).Length := VACount;
+                end
+                else
+                  TThoriumInstructionVASTART(FInstructions.Instruction[VAStartIdx]^).Length := VACount;
+              end;
+            end
+            else
+            begin
+              // Check for the comma
+              if I > 0 then
+              begin
+                if not ExpectSymbol([tsComma]) then
+                begin
+                  CompilerError('Too few parameters for '+Func.Name);
+                  Exit;
+                end;
+                Proceed;
+              end
+              else
+              begin
+                if ExpectSymbol([tsCloseBracket], False) then
+                begin
+                  CompilerError('Too few parameters for '+Func.Name);
+                  Exit;
+                end;
+              end;
+              // Parse the given expression
+              ExprType := Expression(ParamRegID, False, nil, nil, @IsExpressionBased);
+              if HasError then
+                Exit;
+              // Get the parameter type spec
+              ExternalParamType := Func.Parameters.CompleteTypes[I];
+              ThoriumExternalVarTypeToTypeSpec(ExternalParamType, ParamType);
+              // Check if the types are compatible.
+              OldExprType := ExprType;
+              if not NeedTypeOperation(ParamType, ExprType, toAssign, ExprType) then
+              begin
+                CompilerError('Incompatible type for argument '+IntToStr(I+VACount)+' of '+Func.Name);
+                Exit;
+              end;
+              // Cast if neccessary
+              if not ThoriumCompareTypeEx(OldExprType, ParamType) then
+                GenCode(_cast(ParamRegID, ParamRegID, OldExprType, ParamType));
+              if (ExternalParamType^.Storing) and (ExternalParamType^.Extended is TThoriumRTTIObjectType) then
+                GenCode(xct(ParamRegID));
+              // Push the value on the stack
+              GenCode(mover_st(ParamRegID));
+              if IsExpressionBased then
+              begin
+                if ThoriumTypeNeedsClear(ParamType) then
+                begin
+                  StaticStringList.AddEntry(ParamRegID);
+                  if not GetFreeRegister(trEXP, ParamRegID) then
+                    Exit;
+                end;
+              end;
+            end;
+          end;
+          // Release the parameter register
+          ReleaseRegister(ParamRegID);
+          // Check for the closing bracket.
+          if not ExpectSymbol([tsCloseBracket]) then
+            Exit;
+          // Perform the external function call
+          if AsMethod then
+            GenCode(xcall_m(TThoriumHostMethodBase(Func), ExtendedTypeRegister))
+          else
+            GenCode(xcall(Func));
+          if VACount > 0 then
+            GenCode(vafinish());
+          if (Func.ReturnType.HostType <> htNone) then
+          begin
+            // Read the result from stack and write it to the target register
+            GenCode(movest(TargetRegister));
+          end;
+          for I := 0 to StaticStringList.Count - 1 do
+          begin
+            ParamRegID := StaticStringList.Items[I];
+            GenCode(clr(ParamRegID));
+            ReleaseRegister(ParamRegID);
+          end;
+        finally
+          StaticStringList.Free;
+        end;
+      end;
+
+      procedure CallFunction; inline;
+      // Handle an internal function call.
+      var
+        I: Integer;
+        Func: TThoriumFunction;
+        ExprType, ParamType, OldExprType: TThoriumType;
+        ParamRegID: TThoriumRegisterID;
+        IsExpressionBased: Boolean;
+        ExpressionFreeList: TThoriumIntList;
+      begin
+        // Get the function
+        Func := CurrType.Func;
+
+        // Create a list to store the registers which are needed to free values
+        // later.
+        ExpressionFreeList := TThoriumIntList.Create;
+        try
+          // Check if there is a return value
+          if Func.ReturnValues.Count > 0 then
+          begin
+            // And push an empty value on the stack if this is the case.
+            Func.ReturnValues.GetParameterSpec(0, ParamType);
+            CurrType := ParamType;
+          end
+          else
+            CurrType := ThoriumBuiltInTypeSpec(btNil);
+          // Allocate the register where the parameters will be cached.
+          if not GetFreeRegister(trEXP, ParamRegID) then
+            Exit;
+          // Now iterate through the parameters and parse their expressions.
+          for I := 0 to Func.Parameters.Count - 1 do
+          begin
+            // Parse the given expression
+            ExprType := Expression(ParamRegID, False, nil, nil, @IsExpressionBased);
+            OldExprType := ExprType;
+            // Get the parameter type spec
+            Func.Parameters.GetParameterSpec(I, ParamType);
+            // Check if the types are compatible.
+            if not NeedTypeOperation(ParamType, ExprType, toAssign, ExprType) then
+            begin
+              CompilerError('Incompatible type for argument '+IntToStr(I)+' of '+Func.Name);
+              Exit;
+            end;
+            // Cast if neccessary
+            if not ThoriumCompareTypeEx(OldExprType, ParamType) then
+              GenCode(_cast(ParamRegID, ParamRegID, OldExprType, ParamType));
+            // If this is not the last parameter, check for a separating comma.
+            if I < Func.Parameters.Count - 1 then
+            begin
+              if not ExpectSymbol([tsComma]) then
+                Exit;
+              Proceed;
+            end;
+            // Push the value on the stack
+            GenCode(mover_st(ParamRegID));
+
+            if IsExpressionBased then
+            begin
+              if ThoriumTypeNeedsClear(ParamType) then
+              begin
+                ExpressionFreeList.AddEntry(ParamRegID);
+                if not GetFreeRegister(trEXP, ParamRegID) then
+                  Exit;
+              end;
+            end;
+          end;
+          // Release the buffer register
+          ReleaseRegister(ParamRegID);
+          // Check for the closing bracket.
+          if not ExpectSymbol([tsCloseBracket]) then
+            Exit;
+          // If this is a prototyped function...
+          if Func.FPrototyped then
+          begin
+            // Write a NOOPMARK for later parsing to fill in the entry point which
+            // is not known at the moment. If this is not a module local function
+            // we need to locate the module. Otherwise we can write -1.
+            if Func.FModule <> FModule then
+              GenCode(noop(THORIUM_NOOPMARK_CALL, ptrint(Func), FThorium.FModules.IndexOf(Func.FModule), GetHighestRegisterInUse()))
+            else
+              GenCode(noop(THORIUM_NOOPMARK_CALL, ptrint(Func), -1, GetHighestRegisterInUse()));
+          end
+          else
+          begin
+            // Write the calling code. If this is not a module local function, we
+            // have to write a fcall instruction instead of CALL to tell the vm
+            // to switch the whole context.
+            if Func.FModule <> FModule then
+              GenCode(fcall(Func.EntryPoint, FThorium.FModules.IndexOf(Func.FModule), GetHighestRegisterInUse(), Func.ReturnValues.Count, Func.Parameters.Count))
+            else
+              GenCode(call(Func.EntryPoint, GetHighestRegisterInUse(), Func.ReturnValues.Count, Func.Parameters.Count));
+          end;
+          if (Func.ReturnValues.Count > 0) then
+          begin
+            // Read the result from stack and write it to the target register
+            GenCode(movest(TargetRegister));
+          end;
+          for I := 0 to ExpressionFreeList.Count - 1 do
+          begin
+            ParamRegID := ExpressionFreeList[I];
+            GenCode(clr(ParamRegID));
+            ReleaseRegister(ParamRegID);
+          end;
+        finally
+          ExpressionFreeList.Free;
+        end;
+      end;
+
+    var
+      FieldID: QWord;
+      RegID, ExprRegID: Word;
+      //UseStack: Boolean;
+      PreviousWasExtended: Boolean;
+      OldHook: Boolean;
+      OldHook1, OldHook2: PThoriumInstructionArray;
+    begin
+      //UseStack := TargetRegister = THORIUM_REGISTER_INVALID;
+      Result := False;
+      if not GetFreeRegister(trEXP, RegID) then
+        Exit;
+      OldHook := CodeHook;
+      OldHook1 := CodeHook1;
+      OldHook2 := CodeHook2;
+      try
+        SetLength(Ident.GetCode, 0);
+        SetLength(Ident.SetCode, 0);
+        CodeHook := True;
+        CodeHook1 := @Ident.GetCode;
+        CodeHook2 := @Ident.SetCode;
+        // WriteLn('Declared hook: ', IntToHex(ptruint(CodeHook1), SizeOf(ptruint)*2));
+        Result := False;
+        if not ExpectSymbol([tsIdentifier]) then
+          Exit;
+        CurrIdent := CurrentStr;
+        Proceed;
+
+        Ident.IsStatic := False;
+        Ident.Value := ThoriumCreateBuiltInValue(btUnknown);
+        Prop := nil;
+        Result := FindTableEntry(CurrIdent, CurrEntry, CurrModule, False, not (ikNoFar in AllowedKinds));
+        if not Result then
+        begin
+          Result := TypeSpecByName(CurrIdent, CurrType, True);
+          if not Result then
+          begin
+            // Okay, neither type nor variable, so we have something undeclared...
+            if not (ikUndeclared in AllowedKinds) then
+            begin
+              // .. which is not allowed
+              CompilerError('Undeclared identifier: '''+CurrIdent+'''.');
+              Exit;
+            end;
+            Ident.Kind := ikUndeclared;
+            Ident.FullStr := CurrIdent;
+            Result := True;
+            Exit;
+          end;
+          // This seems to be a type. First check if types are allowed here
+          if not (ikType in AllowedKinds) then
+          begin
+            // Last chance: Check if this is an extended type with static values
+            if CurrType.ValueType = vtExtendedType then
+            begin
+              if not CurrType.Extended.HasStaticFields then
+              begin
+                CompilerError('Types are not allowed here and the specified extended type does not have any static fields.');
+                Result := False;
+                Exit;
+              end;
+              CurrEntry._Type := etExtendedType;
+              CurrEntry.TypeSpec := CurrType;
+              CurrEntry.Offset := 0;
+              CurrEntry.Scope := 0;
+            end
+            else
+            begin
+              // And if not, throw an error, set the result to false and quit.
+              CompilerError('Types are not allowed here.');
+              Result := False;
+              Exit;
+            end;
+          end
+          else
+          begin
+            // Set the result type
+            if (CurrType.ValueType = vtExtendedType) and (ikComplex in AllowedKinds) then
+            begin
+              CurrEntry._Type := etExtendedType;
+              CurrEntry.TypeSpec := CurrType;
+              CurrEntry.Offset := 0;
+              CurrEntry.Scope := 0;
+            end
+            else
+            begin
+              Ident.FinalType := CurrType;
+              Ident.Kind := ikType;
+              if CurrType.ValueType = vtExtendedType then
+                 AddExtendedTypeUsageEx(Ident.UsedExtendedTypes, CurrType.Extended);
+              Result := True;
+              Exit;
+            end;
+          end;
+          (*if (CurrentSym = tsOpenSquareBracket) then
+          begin
+            // Check if it is an array type.
+            Proceed;
+            if not ExpectSymbol([tsCloseSquareBracket, tsIntegerValue]) then
+              Exit;
+            if (CurrentSym = tsIntegerValue) then
+            begin
+              Ident.FinalType.ArrayKind := akStatic;
+              Ident.FinalType.ArrayCount := StrToInt(CurrentStr);
+              Proceed;
+              if not ExpectSymbol([tsCloseSquareBracket]) then
+                Exit;
+            end
+            else if (CurrentSym = tsCloseSquareBracket) then
+              Ident.FinalType.ArrayKind := akDynamic;
+            Proceed;
+          end;*)
+        end;
+        Result := False;
+
+        case CurrEntry._Type of
+          etVariable, etRegisterVariable: Ident.Kind := ikVariable;
+          etProperty:
+          begin
+            Prop := TThoriumLibraryProperty(CurrEntry.Ptr);
+            Ident.Kind := ikComplex;
+            Ident.IsStatic := Prop.GetStatic;
+          end;
+          etLibraryConstant:
+          begin
+            Ident.Kind := ikStatic;
+            Ident.IsStatic := True;
+            Ident.Value := ThoriumDuplicateValue(CurrEntry.Value);
+          end;
+          etStatic:
+          begin
+            Ident.Kind := ikStatic;
+            Ident.IsStatic := True;
+            Ident.Value := ThoriumDuplicateValue(CurrEntry.Value);
+          end;
+          etFunction:
+          begin
+            Ident.Kind := ikStatic;
+            Ident.IsStatic := True;
+          end;
+          etExtendedType:
+          begin
+            Ident.Kind := ikType;
+            Ident.IsStatic := True;
+          end;
+        end;
+
+        if AllowedKinds = [ikUndeclared, ikPrototypedFunction] then
+        begin
+          // Special handling for this combination because of its usage in the
+          // FunctionDeclaration function.
+          if CurrEntry._Type = etFunction then
+          begin
+            if CurrEntry.TypeSpec.Func.FPrototyped then
+            begin
+              Ident.IsStatic := True;
+              Ident.Kind := ikPrototypedFunction;
+              Ident.FinalType := CurrEntry.TypeSpec;
+              Result := True;
+              Exit;
+            end;
+          end;
+          CompilerError('Duplicate identifier: '''+CurrIdent+'''.');
+          Result := False;
+          Exit;
+        end;
+
+        CurrType := CurrEntry.TypeSpec;
+        // If it's a variable or a constant, write the code for storing it in
+        // the given register
+        if (CurrEntry._Type <> etFunction) and (CurrEntry._Type <> etExtendedType) then
+        begin
+          case CurrEntry._Type of
+            etRegisterVariable:
+            begin
+              GenCodeEx(Ident.GetCode, mover(CurrEntry.Offset, TargetRegister));
+              GenCodeEx(Ident.SetCode, mover(TargetRegister, CurrEntry.Offset));
+            end;
+            etVariable, etStatic:
+            begin
+              if CurrModule <> -1 then
+              begin
+                // The value is in another module, so we have to perform the far
+                // operations.
+                GenCodeEx(Ident.GetCode, movefs(CurrModule, CurrEntry.Offset, TargetRegister));
+                GenCodeEx(Ident.SetCode, mover_fs(TargetRegister, CurrModule, CurrEntry.Offset));
+              end
+              else
+              begin
+                // In this case, the value is in this module, so we have to perform
+                // the local operations.
+                GenCodeEx(Ident.GetCode, moves(CurrEntry.Scope, CurrEntry.Offset, TargetRegister));
+                GenCodeEx(Ident.SetCode, mover_s(TargetRegister, CurrEntry.Scope, CurrEntry.Offset));
+              end;
+            end;
+            etProperty:
+            begin
+              GenCodeEx(Ident.GetCode, xpget(Prop, TargetRegister));
+              GenCodeEx(Ident.SetCode, xpset(Prop, TargetRegister));
+            end;
+          end;
+        end;
+
+        // Check if an extended type occurs and if so, add it to the list
+        if CurrEntry.TypeSpec.ValueType = vtExtendedType then
+          AddExtendedTypeUsageEx(Ident.UsedExtendedTypes, CurrEntry.TypeSpec.Extended);
+
+        //RegID := TargetRegister;
+
+        PreviousWasExtended := False;
+        // Now, proceed with qualifiers.
+        while CurrentSym in [tsDot, tsOpenBracket, tsOpenSquareBracket] do
+        begin
+          PreviousWasExtended := CurrType.ValueType = vtExtendedType;
+          // Set the identifier kind to complex
+          Ident.Kind := ikComplex;
+          // If we use registers, we will have to change the target registers
+          // for the operations, since we cannot use the final register target.
+          if (Length(Ident.GetCode) > 0) then
+          begin
+            // Get the pointer to the buffer instruction
+            BufInstruction := @Ident.GetCode[Length(Ident.GetCode)-1];
+            case BufInstruction^.Instruction of
+              tiMOVES: TThoriumInstructionMOVES(BufInstruction^).TRI := RegID;
+              tiMOVER_S: TThoriumInstructionMOVER_S(BufInstruction^).SRI := RegID;
+              tiMOVER_FS: TThoriumInstructionMOVER_FS(BufInstruction^).SRI := RegID;
+              tiMOVEFS: TThoriumInstructionMOVEFS(BufInstruction^).TRI := RegID;
+              tiXFGET: TThoriumInstructionXFGET(BufInstruction^).TRI := RegID;
+              tiXIGET: TThoriumInstructionXIGET(BufInstruction^).TRI := RegID;
+              tiXPGET: TThoriumInstructionXPGET(BufInstruction^).TRI := RegID;
+            end;
+          end;
+          // Use the same getter and setter for the last operation when having
+          // complex expressions
+          if (Length(Ident.SetCode) > 0) then
+          begin
+            Ident.SetCode[Length(Ident.SetCode)-1] := Ident.GetCode[Length(Ident.GetCode)-1];
+            if (Length(Ident.SetCode) > 1) then
+            begin
+              BufInstruction := @Ident.SetCode[Length(Ident.SetCode)-2];
+              if BufInstruction^.Instruction = tiXCT then
+              begin
+                BufInstruction^ := Ident.SetCode[Length(Ident.SetCode)-1];
+                SetLength(Ident.SetCode, Length(Ident.SetCode)-1);
+              end;
+            end;
+          end;
+
+          case CurrentSym of
+            tsDot: // Access a member of an extended type
+            begin
+              // Check if we have an extended type.
+              if CurrType.ValueType <> vtExtendedType then
+              begin
+                CompilerError('Extended type expected, but '+ThoriumTypeName(CurrType)+' found.');
+                Result := False;
+                Exit;
+              end;
+              // Check for and get the next identifier
+              Proceed;
+              if not ExpectSymbol([tsIdentifier]) then
+                Exit;
+
+              // Check if we are going to access a static member
+              if CurrEntry._Type = etExtendedType then
+              begin
+                // Just set this to any other value, we do not need it anymore
+                CurrEntry._Type := etVariable;
+                // Check for the field and if existing then get the ID
+                if not CurrType.Extended.StaticFieldID(CurrentStr, FieldID) then
+                begin
+                  // If there is no field with this name, raise compiler error and
+                  // exit.
+                  CompilerError(ThoriumTypeName(CurrType)+' has no field named '''+CurrentStr+'''.');
+                  Result := False;
+                  Exit;
+                end;
+                // Retrieve the field information
+                if not CurrType.Extended.StaticFieldType(FieldID, NewEntry) then
+                begin
+                  // If there is no field with this ID, we have to raise a
+                  // compiler error.
+                  CompilerError(ThoriumTypeName(CurrType)+' returned an invalid field ID.');
+                  Result := False;
+                  Exit;
+                end;
+
+
+                if not (NewEntry.TypeSpec.ValueType in [vtFunction, vtHostFunction, vtHostMethod]) then
+                begin
+                  // Generate the code for accessing the value of the field
+                  GenCodeEx(Ident.GetCode, xsfget(FieldID, CurrType.Extended, TargetRegister));
+                  GenCodeEx(Ident.SetCode, xsfset(FieldID, CurrType.Extended, TargetRegister));
+                end;
+              end
+              else
+              begin
+                // Check for the field and if existing then get the ID
+                if not CurrType.Extended.FieldID(CurrentStr, FieldID) then
+                begin
+                  // If there is no field with this name, raise compiler error and
+                  // exit.
+                  CompilerError(ThoriumTypeName(CurrType)+' has no field named '''+CurrentStr+'''.');
+                  Result := False;
+                  Exit;
+                end;
+                // Retrieve the field information
+                if not CurrType.Extended.FieldType(FieldID, NewEntry) then
+                begin
+                  // If there is no field with this ID, we have to raise a
+                  // compiler error.
+                  CompilerError(ThoriumTypeName(CurrType)+' returned an invalid field ID.');
+                  Result := False;
+                  Exit;
+                end;
+
+
+                if not (NewEntry.TypeSpec.ValueType in [vtFunction, vtHostFunction, vtHostMethod]) then
+                begin
+                  // Generate the code for accessing the value of the field
+                  GenCodeEx(Ident.GetCode, xfget(FieldID, RegID, TargetRegister));
+                  if CurrType.Extended.GetPropertyStoring(FieldID) then
+                    GenCodeEx(Ident.SetCode, xct(TargetRegister));
+                  GenCodeEx(Ident.SetCode, xfset(FieldID, RegID, TargetRegister));
+                end;
+              end;
+
+              // Link through the type
+              CurrType := NewEntry.TypeSpec;
+              // Set the static flag
+              Ident.IsStatic := NewEntry._Type <> etVariable;
+
+              Proceed;
+            end;
+            tsOpenSquareBracket: // Access a field of an array or an extended type.
+            begin
+              // Check if we have an extended type
+              // (later: add ORed check for array here)
+              if CurrType.ValueType <> vtExtendedType then
+              begin
+                CompilerError('Extended type expected, but '''+ThoriumTypeName(CurrType)+''' found.');
+                Result := False;
+                Exit;
+              end;
+              // Check if the extended type has an index
+              if not CurrType.Extended.HasIndicies then
+              begin
+                CompilerError('No indicies in '''+ThoriumTypeName(CurrType)+'''.');
+                Result := False;
+                Exit;
+              end;
+              Proceed;
+
+              // Get the buffer register for the expression
+              if not GetFreeRegister(trEXP, ExprRegID) then
+                Exit;
+
+              // Get the expression in the square brackets.
+              ExprType := Expression(ExprRegID, False);
+              if HasError then
+                Exit;
+
+              GenCodeEx(Ident.GetCode, xiget(ExprRegID, RegID, TargetRegister));
+              GenCodeEx(Ident.SetCode, xiset(ExprRegID, TargetRegister, RegID));
+
+              // Release register
+              ReleaseRegister(ExprRegID);
+
+              // Check if the given type is compatible to the indicies of the
+              // extended type.
+              if not CurrType.Extended.IndexType(ExprType, NewEntry) then
+              begin
+                CompilerError('No index for this type in '''+ThoriumTypeName(CurrType)+'''.');
+                Result := False;
+                Exit;
+              end;
+
+              // Check for trailing closing bracket
+              if not ExpectSymbol([tsCloseSquareBracket]) then
+                Exit;
+              Proceed;
+
+
+            end;
+            tsOpenBracket: // Perform a function call
+            begin
+              if not (CurrType.ValueType in [vtFunction, vtHostFunction, vtHostMethod]) then
+              begin
+                CompilerError('Function expected, but '''+ThoriumTypeName(CurrType)+''' found.');
+                Result := False;
+                Exit;
+              end;
+              Proceed;
+
+              case CurrType.ValueType of
+                vtFunction: CallFunction;
+                vtHostFunction: CallExternalFunction;
+                vtHostMethod: CallExternalFunction(True, RegID);
+              end;
+              Proceed;
+            end;
+          end;
+          // Check if an extended type occurs and if so, add it to the list
+          if CurrType.ValueType = vtExtendedType then
+            AddExtendedTypeUsageEx(Ident.UsedExtendedTypes, CurrType.Extended);
+        end;
+
+        (*if RegID <> TargetRegister then
+        begin
+          GenCodeEx(Ident.SetCode, Ident.SetCode[Length(Ident.SetCode)-1]);
+          Ident.SetCode[Length(Ident.SetCode)-2] := mover(TargetRegister, RegID);
+          Ident.SetCode[Length(Ident.SetCode)-2].CodeLine := Ident.SetCode[Length(Ident.SetCode)-1].CodeLine;
+        end;*)
+
+        if (Ident.Kind = ikType) and not (ikType in AllowedKinds) then
+        begin
+          CompilerError('Types are not allowed here.');
+          Result := False;
+          Exit;
+        end;
+
+        if PreviousWasExtended then
+        begin
+          //GenCodeEx(Ident.GetCode, clr(RegID));
+          //GenCodeEx(Ident.SetCode, clr(RegID));
+        end;
+
+        Result := True;
+        if not (Ident.Kind in AllowedKinds) and (ikUndeclared in AllowedKinds) then
+        begin
+          if (Ident.Kind in [ikStatic, ikVariable]) then
+          begin
+            if CurrEntry.Scope < CurrentScope then
+            begin
+              Ident.Kind := ikUndeclared;
+              Exit;
+            end;
+            CompilerError('Identifier already declared: '''+Ident.FullStr+'''.');
+            Result := False;
+            Exit;
+          end;
+          CompilerError('Undeclared identifier expected but '''+Ident.FullStr+''' found.');
+          Result := False;
+          Exit;
+        end;
+
+        if not (Ident.Kind in AllowedKinds) then
+        begin
+          CompilerError(THORIUM_IDENTIFIER_KIND_NAMES[Ident.Kind]+'s not allowed here.');
+          Result := False;
+          Exit;
+        end;
+        if (Ident.IsStatic) and (not (ikStatic in AllowedKinds)) then
+        begin
+          CompilerError('Static identifier not allowed here.');
+          Result := False;
+          Exit;
+        end;
+        Ident.FinalType := CurrType;
+      finally
+        CodeHook := OldHook;
+        CodeHook1 := OldHook1;
+        CodeHook2 := OldHook2;
+        ReleaseRegister(RegID);
+      end;
+    end;
+
+    procedure ConstantDeclaration(TypeIdent, Ident: TThoriumQualifiedIdentifier;
+      VisibilityLevel: TThoriumVisibilityLevel; var Offset: Integer);
+    // This function processes a declaration of a static identifier.
+    // On entering this function, the current symbol is the tsAssign symbol.
+    var
+      Static: Boolean;
+      Value: TThoriumValue;
+      TypeSpec: TThoriumType;
+    begin
+      // Check if the type specification is valid for a constant (this means,
+      // must be a built-in value)
+      if (TypeIdent.FinalType.ValueType <> vtBuiltIn) or (TypeIdent.FinalType.BuiltInType < btInteger) then
+      begin
+        CompilerError('Illegal type for static value.');
+        Exit;
+      end;
+      // Check if the following symbol is the expected tsAssign
+      if not ExpectSymbol([tsAssign]) then
+        Exit;
+      Proceed;
+      TypeSpec := Expression(0, True, @Static, @Value);
+      if not ThoriumCompareTypeEx(TypeSpec, TypeIdent.FinalType) then
+      begin
+        CompilerError('Incompatible type.');
+        Exit;
+      end;
+      case TypeSpec.BuiltInType of
+        btInteger:
+        begin
+          GenCode(int_s(Value.BuiltIn.Int));
+        end;
+        btFloat:
+        begin
+          GenCode(flt_s(Value.BuiltIn.Float));
+        end;
+        btString:
+        begin
+          if Value.BuiltIn.Str^ = '' then
+            GenCode(str_s())
+          else
+            GenCode(strl_s(AddLibraryString(Value.BuiltIn.Str^)));
+        end;
+      end;
+      // Write the identifier to the identifier table of the compiler
+      Table.AddConstantIdentifier(Ident.FullStr, CurrentScope, Offset, TypeIdent.FinalType, Value);
+      // If the static value is public...
+      if VisibilityLevel > vsPrivate then
+      begin
+        // ... add it to the public variable register
+        with AddPublicVariable do
+        begin
+          FName := Ident.FullStr;
+          FIsStatic := True;
+          FTypeSpec := TypeIdent.FinalType;
+          FStackPosition := Offset;
+        end;
+      end;
+      // Increase the current stack offset
+      Inc(Offset);
+      // Check for the trailing semicolon
+      if not ExpectSymbol([tsSemicolon]) then
+        Exit;
+      Proceed;
+    end;
+
+    procedure VariableDeclaration(TypeIdent, Ident: TThoriumQualifiedIdentifier;
+      VisibilityLevel: TThoriumVisibilityLevel; var Offset: Integer;
+      RegisterVariable: TThoriumRegisterID = THORIUM_REGISTER_INVALID);
+    // This function processes the declaration of a non-static identifier.
+    // On entering this function, the current symbol is either the tsAssign or
+    // the semicolon
+    var
+      ValueType: TThoriumType;
+      RegID: TThoriumRegisterID;
+    begin
+      // Check if the following symbol for being tsAssign or tsSemicolon
+      if not ExpectSymbol([tsAssign, tsSemicolon]) then
+        Exit;
+      // Initialize the helper value
+      // Check if we have an initial value...
+      if CurrentSym = tsAssign then
+      begin
+        Proceed;
+        // If this is going to be a register variable, we do not need one more
+        // intermediate register. Just reuse the target.
+        if RegisterVariable <> THORIUM_REGISTER_INVALID then
+          RegID := RegisterVariable
+        else
+          if not GetFreeRegister(trEXP, RegID) then
+            Exit;
+        // Parse the expression and if possible, compile time evaluate it.
+        ValueType := Expression(RegID, False);
+        // There is no need to care about static expressions. We would only do
+        // the same with them as the default handling would do.
+        if RegisterVariable = THORIUM_REGISTER_INVALID then
+        begin
+          // In this case we need to release the register reserved and to move
+          // the variable to the stack.
+          GenCode(mover_st(RegID));
+          ReleaseRegister(RegID);
+        end;
+      end
+      else
+      begin
+        // In case of a normal variable...
+        if RegisterVariable = THORIUM_REGISTER_INVALID then
+        begin
+          // Check which type we have and write a corresponding instruction with
+          // a default initial value.
+          PushEmpty(TypeIdent.FinalType);
+        end
+        else
+        begin
+          // Register variables need special handling (gouuchy gouuchy).
+          case TypeIdent.FinalType.ValueType of
+            vtBuiltIn:
+            begin
+              case TypeIdent.FinalType.BuiltInType of
+                btInteger:
+                begin
+                  GenCode(int(0, RegisterVariable));
+                end;
+                btFloat:
+                begin
+                  GenCode(flt(0, RegisterVariable));
+                end;
+                btString:
+                begin
+                  GenCode(str(RegisterVariable));
+                end;
+              end;
+            end;
+            vtExtendedType:
+            begin
+              GenCode(ext(TypeIdent.FinalType.Extended, RegisterVariable));
+            end;
+          else
+            raise EThoriumCompilerException.Create('Invalid type for register variable.');
+          end;
+        end;
+      end;
+
+      if RegisterVariable <> THORIUM_REGISTER_INVALID then
+      begin
+        // Add the identifier to the identifier table of the compiler
+        Table.AddRegisterVariableIdentifier(Ident.FullStr, RegisterVariable, TypeIdent.FinalType);
+        if VisibilityLevel > vsPrivate then
+          raise EThoriumCompilerException.Create('Register variables cannot be public!');
+      end
+      else
+      begin
+        // Add the identifier to the identifier table of the compiler.
+        Table.AddVariableIdentifier(Ident.FullStr, CurrentScope, Offset, TypeIdent.FinalType);
+        // If it's a public value...
+        if VisibilityLevel > vsPrivate then
+        begin
+          // ... we register it at the public variables.
+          with AddPublicVariable do
+          begin
+            FName := Ident.FullStr;
+            FIsStatic := False;
+            FStackPosition := Offset;
+            FTypeSpec := TypeIdent.FinalType;
+          end;
+        end;
+        // Increase the stack offset.
+        Inc(Offset);
+      end;
+      // Check for the trailing semicolon
+      if not ExpectSymbol([tsSemicolon]) then
+        Exit;
+      Proceed;
+    end;
+
+    function SimpleExpression(TargetRegister: TThoriumRegisterID; NeedStatic: Boolean = False; IsStatic: PBoolean = nil; StaticValue: PThoriumValue = nil; IsExpressionBased: PBoolean = nil): TThoriumType;
+    // This pareses a simple expresion. A simple expression consists of
+    // Terms which can be added.
+
+      function Term(TargetRegister: TThoriumRegisterID; out IsStatic: Boolean; out StaticValue: TThoriumValue; out IsExpressionBased: Boolean): TThoriumType;
+      // This parses a term. A term can consist of multiple factors which
+      // might be combined using a multiplication.
+
+        function Factor(TargetRegister: TThoriumRegisterID; out IsStatic: Boolean; out StaticValue: TThoriumValue; out IsExpressionBased: Boolean): TThoriumType;
+        // This parses a factor. A factor can be:
+        // - A string
+        // - An integer
+        // - A float
+        // - An expression (enclosed in brackets)
+        // - An identifier
+        var
+          HasPrecedingOperator: Boolean;
+          Sym: TThoriumSymbol;
+          IdentInfo: TThoriumQualifiedIdentifier;
+          Dummy: TThoriumType;
+          Int: Int64;
+          Float: Double;
+          Static: Boolean;
+          Value: TThoriumValue;
+        begin
+          HasPrecedingOperator := CurrentSym in [tsPlusPlus, tsMinusMinus, tsNot, tsMinus, tsBoolNot];
+          if HasPrecedingOperator then
+          begin
+            Sym := CurrentSym;
+            Proceed;
+            if Sym in [tsNot, tsMinus, tsBoolNot] then
+            begin
+              Result := Factor(TargetRegister, Static, Value, IsExpressionBased);
+              IsExpressionBased := True;
+              IsStatic := Static;
+              case Sym of
+                tsNot:
+                begin
+                  if Static then
+                  begin
+                    if not ThoriumEvaluateBuiltInOperation(Value, StaticValue, toNot, StaticValue) then
+                    begin
+                      CompilerError('Cannot apply NOT operator on this operand.');
+                      Exit;
+                    end;
+                  end
+                  else
+                  begin
+                    if not IsTypeOperationAvailable(Result, toNot, Result) then
+                    begin
+                      CompilerError('Cannot apply NOT operator on this operand.');
+                      Exit;
+                    end;
+                    GenCode(_operator(TargetRegister, 0, TargetRegister, Result, toNot));
+                  end;
+                end;
+                tsMinus:
+                begin
+                  if Static then
+                  begin
+                    if not ThoriumEvaluateBuiltInOperation(Value, StaticValue, toNegate, StaticValue) then
+                    begin
+                      CompilerError('Cannot apply NEGATE operator on this operand.');
+                      Exit;
+                    end;
+                  end
+                  else
+                  begin
+                    if not IsTypeOperationAvailable(Result, toNegate, Result) then
+                    begin
+                      CompilerError('Cannot apply NEGATE operator on this operand.');
+                      Exit;
+                    end;
+                    GenCode(_operator(TargetRegister, 0, TargetRegister, Result, toNegate));
+                  end;
+                end;
+                tsBoolNot:
+                begin
+                  if Static then
+                  begin
+                    if not ThoriumEvaluateBuiltInOperation(Value, StaticValue, toBoolNot, StaticValue) then
+                    begin
+                      CompilerError('Cannot apply BOOLEAN NOT operator on this operand.');
+                      Exit;
+                    end;
+                  end
+                  else
+                  begin
+                    if not IsTypeOperationAvailable(Result, toBoolNot, Result) then
+                    begin
+                      CompilerError('Cannot apply BOOLEAN NOT operator on this operand.');
+                      Exit;
+                    end;
+                    GenCode(_operator(TargetRegister, 0, TargetRegister, Result, toBoolNot));
+                  end;
+                end;
+              end;
+              Exit;
+            end;
+          end;
+
+          IsStatic := False;
+
+          case CurrentSym of
+            tsIntegerValue: // An integer value
+            begin
+              // Check if there is a preceding operator (which is not allowed
+              // on this kind of factor).
+              if HasPrecedingOperator then
+              begin
+                CompilerError('Cannot apply '+THORIUM_SYMBOL_NAMES[Sym]+' to static values.');
+                Exit;
+              end;
+
+              // Read it out and write it to the target register.
+              IsStatic := True;
+              Result := ThoriumBuiltInTypeSpec(btInteger);
+              Int := StrToInt64(CurrentStr);
+              // GenCode(int(Int, TargetRegister));
+              IsStatic := True;
+              IsExpressionBased := True;
+              StaticValue := ThoriumCreateBuiltInValue(btInteger);
+              StaticValue.BuiltIn.Int := Int;
+              Proceed;
+            end;
+            tsFloatValue: // A float value
+            begin
+              // Check if there is a preceding operator (which is not allowed
+              // on this kind of factor).
+              if HasPrecedingOperator then
+              begin
+                CompilerError('Cannot apply '+THORIUM_SYMBOL_NAMES[Sym]+' to static values.');
+                Exit;
+              end;
+
+              // Read it out, convert it to int64 and write it to the target
+              // register.
+              Result := ThoriumBuiltInTypeSpec(btFloat);
+              Float := StrToFloat(CurrentStr, THORIUM_NUMBER_FORMAT);
+              // GenCode(flt(Float, TargetRegister));
+              IsStatic := True;
+              IsExpressionBased := True;
+              StaticValue := ThoriumCreateBuiltInValue(btFloat);
+              StaticValue.BuiltIn.Float := Float;
+              Proceed;
+            end;
+            tsStringValue: // A string value
+            begin
+              // Check if there is a preceding operator (which is not allowed
+              // on this kind of factor).
+              if HasPrecedingOperator then
+              begin
+                CompilerError('Cannot apply '+THORIUM_SYMBOL_NAMES[Sym]+' to static values.');
+                Exit;
+              end;
+
+              // Read the string, save it to the library and generate the
+              // loading instruction.
+              Result := ThoriumBuiltInTypeSpec(btString);
+              (*if CurrentStr = '' then
+                GenCode(str(TargetRegister))
+              else
+                GenCode(strl(AddLibraryString(CurrentStr), TargetRegister)); *)
+              IsStatic := True;
+              IsExpressionBased := True;
+              StaticValue := ThoriumCreateBuiltInValue(btString);
+              StaticValue.BuiltIn.Str^ := CurrentStr;
+              Proceed;
+            end;
+            tsOpenBracket: // A nested expression
+            begin
+              // Check if there is a preceding operator (which is not allowed
+              // on this kind of factor).
+              if HasPrecedingOperator then
+              begin
+                CompilerError('Cannot apply '+THORIUM_SYMBOL_NAMES[Sym]+' to static values.');
+                Exit;
+              end;
+
+              Proceed;
+              // Parse the expression (we can just chain the register through)
+              Result := Expression(TargetRegister, NeedStatic, @IsStatic, @StaticValue, @IsExpressionBased);
+              if HasError then
+                Exit;
+              if not ExpectSymbol([tsCloseBracket]) then
+                Exit;
+              Proceed;
+            end;
+            tsTrue: // A simple true
+            begin
+              // Check if there is a preceding operator (which is not allowed
+              // on this kind of factor).
+              if HasPrecedingOperator then
+              begin
+                CompilerError('Cannot apply '+THORIUM_SYMBOL_NAMES[Sym]+' to static values.');
+                Exit;
+              end;
+
+              // Write a true (= 1) to the target register
+              // GenCode(int(1, TargetRegister));
+              Result := ThoriumBuiltInTypeSpec(btInteger);
+              IsStatic := True;
+              IsExpressionBased := True;
+              StaticValue := ThoriumCreateBuiltInValue(btInteger);
+              StaticValue.BuiltIn.Int := 1;
+              Proceed;
+            end;
+            tsFalse: // A simple false
+            begin
+              // Check if there is a preceding operator (which is not allowed
+              // on this kind of factor).
+              if HasPrecedingOperator then
+              begin
+                CompilerError('Cannot apply '+THORIUM_SYMBOL_NAMES[Sym]+' to static values.');
+                Exit;
+              end;
+
+              // Write a false (= 0) to the target register.
+              // GenCode(int(0, TargetRegister));
+              Result := ThoriumBuiltInTypeSpec(btInteger);
+              IsStatic := True;
+              IsExpressionBased := True;
+              StaticValue := ThoriumCreateBuiltInValue(btInteger);
+              StaticValue.BuiltIn.Int := 0;
+              Proceed;
+            end;
+            tsIdentifier: // An identifier
+            begin
+              // WriteLn('=== Ident: ', CurrentStr);
+              // Parse the identifier
+              if not QualifyIdentifier(IdentInfo, [ikVariable, ikStatic, ikComplex], TargetRegister) then
+                Exit;
+              if HasError then
+                Exit;
+              // Check if we have a preceding operator and something else than
+              // a variable.
+              if HasPrecedingOperator and (IdentInfo.Kind <> ikVariable) then
+              begin
+                CompilerError('Cannot apply '+THORIUM_SYMBOL_NAMES[Sym]+' to anything but variables.');
+                Exit;
+              end;
+              // Check if we have a operator behind the identifier
+              if (CurrentSym in [tsPlusPlus, tsMinusMinus]) then
+              begin
+                if (IdentInfo.Kind <> ikVariable) then
+                begin
+                  CompilerError('Cannot apply '+THORIUM_SYMBOL_NAMES[Sym]+' to anything but variables.');
+                  Exit;
+                end
+                else if HasPrecedingOperator then
+                begin
+                  CompilerError('Cannot apply a plusplus/minusminus operator twice.');
+                  Exit;
+                end;
+              end;
+
+              // Process the preceding operator
+              if HasPrecedingOperator then
+              begin
+                if (IdentInfo.FinalType.ValueType <> vtBuiltIn) then
+                begin
+                  CompilerError('Cannot apply ++/-- operator on extended values or functions.');
+                  Exit;
+                end
+                else if (not IsTypeOperationAvailable(IdentInfo.FinalType, toINC_DEC, Dummy)) then
+                begin
+                  CompilerError('Cannot apply ++/-- operator on the given type.');
+                  Exit;
+                end;
+                // Direct access ability is forced, so we can access it directly.
+                if IdentInfo.GetCode[0].Instruction = tiCOPYS then
+                begin
+                  // Apply inc/dec depending on given type
+                  case Sym of
+                    tsPlusPlus:
+                    begin
+                      case IdentInfo.FinalType.BuiltInType of
+                        btInteger: GenCode(inci_s(TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                        btFloat: GenCode(incf_s(TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                    tsMinusMinus:
+                    begin
+                      case IdentInfo.FinalType.BuiltInType of
+                        btInteger: GenCode(deci_s(TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                        btFloat: GenCode(decf_s(TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                  end;
+                end
+                else if IdentInfo.GetCode[0].Instruction = tiCOPYFS then
+                begin
+                  case Sym of
+                    tsPlusPlus:
+                    begin
+                      case IdentInfo.FinalType.BuiltInType of
+                        btInteger: GenCode(inci_fs(TThoriumInstructionCOPYFS(IdentInfo.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                        btFloat: GenCode(incf_fs(TThoriumInstructionCOPYFS(IdentInfo.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                    tsMinusMinus:
+                    begin
+                      case IdentInfo.FinalType.BuiltInType of
+                        btInteger: GenCode(deci_fs(TThoriumInstructionCOPYFS(IdentInfo.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                        btFloat: GenCode(decf_fs(TThoriumInstructionCOPYFS(IdentInfo.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+
+              if (IdentInfo.IsStatic) and (IdentInfo.Value._Type = vtBuiltIn) and (IdentInfo.Value.BuiltIn._Type <> btUnknown) then
+              begin
+                IsStatic := True;
+                StaticValue := IdentInfo.Value;
+              end
+              else
+              begin
+                AppendCode(IdentInfo.GetCode);
+                AddHostTypeUsages(IdentInfo.UsedExtendedTypes);
+              end;
+
+              // Process the trailing operator
+              if CurrentSym in [tsPlusPlus, tsMinusMinus] then
+              begin
+                if (IdentInfo.FinalType.ValueType <> vtBuiltIn) then
+                begin
+                  CompilerError('Cannot apply ++/-- operator on extended values or functions.');
+                  Exit;
+                end
+                else if (not IsTypeOperationAvailable(IdentInfo.FinalType, toINC_DEC, Dummy)) then
+                begin
+                  CompilerError('Cannot apply ++/-- operator on the given type.');
+                  Exit;
+                end;
+                // Direct access ability is forced, so we can access it directly.
+                if IdentInfo.GetCode[0].Instruction = tiCOPYS then
+                begin
+                  // Apply inc/dec depending on given type
+                  case Sym of
+                    tsPlusPlus:
+                    begin
+                      case IdentInfo.FinalType.BuiltInType of
+                        btInteger: GenCode(inci_s(TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                        btFloat: GenCode(incf_s(TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                    tsMinusMinus:
+                    begin
+                      case IdentInfo.FinalType.BuiltInType of
+                        btInteger: GenCode(deci_s(TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                        btFloat: GenCode(decf_s(TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                  end;
+                end
+                else if IdentInfo.GetCode[0].Instruction = tiCOPYFS then
+                begin
+                  case Sym of
+                    tsPlusPlus:
+                    begin
+                      case IdentInfo.FinalType.BuiltInType of
+                        btInteger: GenCode(inci_fs(TThoriumInstructionCOPYFS(IdentInfo.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                        btFloat: GenCode(incf_fs(TThoriumInstructionCOPYFS(IdentInfo.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                    tsMinusMinus:
+                    begin
+                      case IdentInfo.FinalType.BuiltInType of
+                        btInteger: GenCode(deci_fs(TThoriumInstructionCOPYFS(IdentInfo.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                        btFloat: GenCode(decf_fs(TThoriumInstructionCOPYFS(IdentInfo.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                  end;
+                end;
+                Proceed;
+              end;
+
+              IsExpressionBased := False;
+              Result := IdentInfo.FinalType;
+            end;
+          else
+            CompilerError('Invalid operand.');
+          end;
+        end;
+
+      var
+        Sym: TThoriumSymbol;
+        Op: TThoriumOperation;
+        PrevType: TThoriumType;
+        OperandType: TThoriumType;
+        RegID2, RegBuf: TThoriumRegisterID;
+        Static1, Static2: Boolean;
+        Value1, Value2, ResultValue: TThoriumValue;
+      begin
+        // (Term)
+        Static1 := False;
+        Static2 := False;
+
+        // Parse the factor
+        Result := Factor(TargetRegister, Static1, Value1, IsExpressionBased);
+        if HasError then
+          Exit;
+        // Allocate two more registers
+        if not GetFreeRegister(trEXP, RegID2, True) then
+          Exit;
+        // Parse more operators and operands
+        while CurrentSym in THORIUM_MULTIPLICATIVE_OPERATOR do
+        begin
+          // Save the symbol and operator
+          Sym := CurrentSym;
+          Op := ThoriumSymbolToOperation(Sym);
+          Proceed;
+          // Parse the next factor
+          if Static2 then
+            ThoriumFreeValue(Value2);
+          OperandType := Factor(RegID2, Static2, Value2, IsExpressionBased);
+          IsExpressionBased := True;
+          if HasError then
+            Exit;
+          // Check if the specified operation is available for the given
+          // types
+          PrevType := Result;
+          if not NeedTypeOperation(Result, OperandType, Op, Result) then
+            Exit;
+
+          // Check if both operands are static. If that is the case, we can
+          // evaluate the expression in compile time which is much better.
+          // We do not have to check for builtin type since Factor is only able
+          // to give such values as static.
+          if (Static1 and Static2) then
+          begin
+            if ThoriumEvaluateBuiltInOperation(Value1, Value2, Op, ResultValue) then
+            begin
+              ReleaseRegister(RegID2);
+              ThoriumFreeValue(Value1);
+              ThoriumFreeValue(Value2);
+              Value1 := ResultValue;
+              Continue;
+            end;
+          end;
+          if Static1 then
+          begin
+            // Write the static value to the target register since it seems not
+            // to be possible to evaluate the result at compile time.
+            case Value1.BuiltIn._Type of
+              btInteger: GenCode(int(Value1.BuiltIn.Int, TargetRegister));
+              btFloat: GenCode(flt(Value1.BuiltIn.Float, TargetRegister));
+              btString:
+              begin
+                if Value1.BuiltIn.Str^ = '' then
+                  GenCode(str(TargetRegister))
+                else
+                  GenCode(strl(AddLibraryString(Value1.BuiltIn.Str^), TargetRegister));
+              end;
+            end;
+            // Release the value and mark it as non-static
+            ThoriumFreeValue(Value1);
+            Static1 := False;
+          end;
+          if Static2 then
+          begin
+            // Write the static value to the register RegID2 since it seems to
+            // be impossible to evaluate the result at compile time.
+            case Value2.BuiltIn._Type of
+              btInteger: GenCode(int(Value2.BuiltIn.Int, RegID2));
+              btFloat: GenCode(flt(Value2.BuiltIn.Float, RegID2));
+              btString:
+              begin
+                if Value2.BuiltIn.Str^ = '' then
+                  GenCode(str(RegID2))
+                else
+                  GenCode(strl(AddLibraryString(Value2.BuiltIn.Str^), RegID2));
+              end;
+            end;
+            // Free the value and mark it as non-static.
+            ThoriumFreeValue(Value2);
+            Static2 := False;
+          end;
+
+          if ThoriumTypeNeedsClear(OperandType) then
+          begin
+            if not ThoriumCompareTypeEx(OperandType, Result) then
+            begin
+              if not GetFreeRegister(trEXP, RegBuf) then
+                Exit;
+              GenCode(_cast(RegID2, RegBuf, OperandType, Result));
+              GenCode(clr(RegID2));
+              ReleaseRegister(RegID2);
+              RegID2 := RegBuf;
+            end;
+          end
+          else
+            if not ThoriumCompareTypeEx(OperandType, Result) then
+              GenCode(_cast(RegID2, RegID2, OperandType, Result));
+          if ThoriumTypeNeedsClear(PrevType) and not ThoriumCompareTypeEx(PrevType, Result) then
+          begin
+            if not GetFreeRegister(trEXP, RegBuf) then
+              Exit;
+            GenCode(_cast(TargetRegister, RegBuf, PrevType, Result));
+            GenCode(clr(TargetRegister));
+            GenCode(_operator(RegBuf, RegID2, TargetRegister, Result, Op));
+            if ThoriumTypeNeedsClear(Result) then
+              GenCode(clr(RegBuf));
+            ReleaseRegister(RegBuf);
+          end
+          else
+          begin
+            if not ThoriumCompareTypeEx(PrevType, Result) then
+              GenCode(_cast(TargetRegister, TargetRegister, PrevType, Result));
+            GenCode(_operator(TargetRegister, RegID2, TargetRegister, Result, Op));
+          end;
+        end;
+        ReleaseRegister(RegID2);
+        IsStatic := Static1;
+        StaticValue := Value1;
+      end;
+
+    var
+      Sym: TThoriumSymbol;
+      Op: TThoriumOperation;
+      PrevType: TThoriumType;
+      OperandType: TThoriumType;
+      RegBuf: TThoriumRegisterID;
+      RegID2: TThoriumRegisterID;
+      Static1, Static2: Boolean;
+      ExpressionBased: Boolean;
+      Value1, Value2, ResultValue: TThoriumValue;
+    begin
+      // (Simple Expression)
+      Static1 := False;
+      Static2 := False;
+
+      // Parse the first term.
+      Result := Term(TargetRegister, Static1, Value1, ExpressionBased);
+      if HasError then
+        Exit;
+      // Allocate two more registers
+      if not GetFreeRegister(trEXP, RegID2, True) then
+        Exit;
+      // Parse more operators and operands
+      while CurrentSym in THORIUM_ADDITIVE_OPERATOR do
+      begin
+        // Save the symbol and operator
+        Sym := CurrentSym;
+        Op := ThoriumSymbolToOperation(Sym);
+        Proceed;
+        // Parse the term
+        if Static2 then
+          ThoriumFreeValue(Value2);
+        OperandType := Term(RegID2, Static2, Value2, ExpressionBased);
+        ExpressionBased := True;
+        if HasError then
+          Exit;
+        // Check if the operation is available
+        PrevType := Result;
+        if not NeedTypeOperation(Result, OperandType, Op, Result) then
+          Exit;
+
+        // See the same code in Term for more info
+        if Static1 and Static2 then
+        begin
+          if ThoriumEvaluateBuiltInOperation(Value1, Value2, Op, ResultValue) then
+          begin
+            ReleaseRegister(RegID2);
+            ThoriumFreeValue(Value1);
+            ThoriumFreeValue(Value2);
+            Value1 := ResultValue;
+            Continue;
+          end;
+        end;
+        if Static1 then
+        begin
+          // Write the static value to the target register since it seems not
+          // to be possible to evaluate the result at compile time.
+          case Value1.BuiltIn._Type of
+            btInteger: GenCode(int(Value1.BuiltIn.Int, TargetRegister));
+            btFloat: GenCode(flt(Value1.BuiltIn.Float, TargetRegister));
+            btString:
+            begin
+              if Value1.BuiltIn.Str^ = '' then
+                GenCode(str(TargetRegister))
+              else
+                GenCode(strl(AddLibraryString(Value1.BuiltIn.Str^), TargetRegister));
+            end;
+          end;
+          // Release the value and mark it as non-static
+          ThoriumFreeValue(Value1);
+          Static1 := False;
+        end;
+        if Static2 then
+        begin
+          // Write the static value to the register RegID2 since it seems to
+          // be impossible to evaluate the result at compile time.
+          case Value2.BuiltIn._Type of
+            btInteger: GenCode(int(Value2.BuiltIn.Int, RegID2));
+            btFloat: GenCode(flt(Value2.BuiltIn.Float, RegID2));
+            btString:
+            begin
+              if Value2.BuiltIn.Str^ = '' then
+                GenCode(str(RegID2))
+              else
+                GenCode(strl(AddLibraryString(Value2.BuiltIn.Str^), RegID2));
+            end;
+          end;
+          // Free the value and mark it as non-static.
+          ThoriumFreeValue(Value2);
+          Static2 := False;
+        end;
+
+        // Finally generate the code for the specific operation
+        if ThoriumTypeNeedsClear(OperandType) then
+        begin
+          if not ThoriumCompareTypeEx(OperandType, Result) then
+          begin
+            if not GetFreeRegister(trEXP, RegBuf) then
+              Exit;
+            GenCode(_cast(RegID2, RegBuf, OperandType, Result));
+            GenCode(clr(RegID2));
+            ReleaseRegister(RegID2);
+            RegID2 := RegBuf;
+          end;
+        end
+        else
+          if not ThoriumCompareTypeEx(OperandType, Result) then
+            GenCode(_cast(RegID2, RegID2, OperandType, Result));
+        if ThoriumTypeNeedsClear(PrevType) and not ThoriumCompareTypeEx(PrevType, Result) then
+        begin
+          if not GetFreeRegister(trEXP, RegBuf) then
+            Exit;
+          GenCode(_cast(TargetRegister, RegBuf, PrevType, Result));
+          GenCode(clr(TargetRegister));
+          GenCode(_operator(RegBuf, RegID2, TargetRegister, Result, Op));
+          if ThoriumTypeNeedsClear(Result) then
+            GenCode(clr(RegBuf));
+          ReleaseRegister(RegBuf);
+        end
+        else
+        begin
+          if not ThoriumCompareTypeEx(PrevType, Result) then
+            GenCode(_cast(TargetRegister, TargetRegister, PrevType, Result));
+          GenCode(_operator(TargetRegister, RegID2, TargetRegister, Result, Op));
+        end;
+        // Release the register
+        ReleaseRegister(RegID2);
+        (*case Op of
+          toAdd: GenCode(ADD_R(THORIUM_OP_A_ADD, 0, TargetRegister));
+          toSubtract: GenCode(ADD_R(THORIUM_OP_A_SUBTRACT, 0, TargetRegister));
+          toOr: GenCode(ADD_R(THORIUM_OP_A_OR, 0, TargetRegister));
+          toXor: GenCode(ADD_R(THORIUM_OP_A_XOR, 0, TargetRegister));
+        else
+          CompilerError('Invalid operation');
+        end;*)
+      end;
+      ReleaseRegister(RegID2);
+      if IsStatic <> nil then
+      begin
+        IsStatic^ := Static1;
+        StaticValue^ := Value1;
+      end
+      else
+      begin
+        if Static1 then
+        begin
+          case Value1.BuiltIn._Type of
+            btInteger: GenCode(int(Value1.BuiltIn.Int, TargetRegister));
+            btFloat: GenCode(flt(Value1.BuiltIn.Float, TargetRegister));
+            btString:
+            begin
+              if Value1.BuiltIn.Str^ = '' then
+                GenCode(str(TargetRegister))
+              else
+                GenCode(strl(AddLibraryString(Value1.BuiltIn.Str^), TargetRegister));
+            end;
+          end;
+          // Release the value and mark it as non-static
+          ThoriumFreeValue(Value1);
+          Static1 := False;
+        end;
+      end;
+      if IsExpressionBased <> nil then
+        IsExpressionBased^ := ExpressionBased;
+    end;
+
+    function Expression(TargetRegister: TThoriumRegisterID; NeedStatic: Boolean = False; IsStatic: PBoolean = nil; StaticValue: PThoriumValue = nil; IsExpressionBased: PBoolean = nil): TThoriumType; inline;
+    // This function parses a given expression.
+
+    var
+      Sym: TThoriumSymbol;
+      Op: TThoriumOperation;
+      PrevType: TThoriumType;
+      OperandType: TThoriumType;
+      RegID2: TThoriumRegisterID;
+      Static1, Static2: Boolean;
+      ExpressionBased: Boolean;
+      Value1, Value2, ResultValue: TThoriumValue;
+    begin
+      // (Expression)
+      Static1 := False;
+      Static2 := False;
+
+      // First we check if it can be an expression at all by checking if the
+      // given symbol can be the initiator of a factor.
+      if not ExpectSymbol(THORIUM_FACTOR_INITIATOR) then
+        Exit;
+      // Then we get the first simple expression part.
+      ExpressionBased := False;
+      Result := SimpleExpression(TargetRegister, NeedStatic, @Static1, @Value1, @ExpressionBased);
+      if HasError then
+        Exit;
+
+      // Parse more operators and operands.
+      while CurrentSym in THORIUM_RELATIONAL_OPERATOR do
+      begin
+        // Allocate the needed registers.
+        if not GetFreeRegister(trEXP, RegID2, True) then
+          Exit;
+        Sym := CurrentSym;
+        Op := ThoriumSymbolToOperation(Sym);
+        Proceed;
+        ExpressionBased := True;
+        OperandType := SimpleExpression(RegID2, NeedStatic, @Static2, @Value2);
+        if HasError then
+          Exit;
+        // Check if the operation is available
+        PrevType := Result;
+        if not NeedTypeOperation(Result, OperandType, Op, Result) then
+          Exit;
+
+        if (Static1 and Static2) then
+        begin
+          if ThoriumCompareBuiltIn(Value1, Value2, Sym, ResultValue) then
+          begin
+            ReleaseRegister(RegID2);
+            ThoriumFreeValue(Value1);
+            ThoriumFreeValue(Value2);
+            Value1 := ResultValue;
+            Continue;
+          end;
+        end;
+        if Static1 then
+        begin
+          case Value1.BuiltIn._Type of
+            btInteger: GenCode(int(Value1.BuiltIn.Int, TargetRegister));
+            btFloat: GenCode(flt(Value1.BuiltIn.Float, TargetRegister));
+            btString:
+            begin
+              if Value1.BuiltIn.Str^ = '' then
+                GenCode(str(TargetRegister))
+              else
+                GenCode(strl(AddLibraryString(Value1.BuiltIn.Str^), TargetRegister));
+            end;
+          end;
+          // Release the value and mark it as non-static
+          ThoriumFreeValue(Value1);
+          Static1 := False;
+        end;
+        if Static2 then
+        begin
+          case Value2.BuiltIn._Type of
+            btInteger: GenCode(int(Value2.BuiltIn.Int, RegID2));
+            btFloat: GenCode(flt(Value2.BuiltIn.Float, RegID2));
+            btString:
+            begin
+              if Value2.BuiltIn.Str^ = '' then
+                GenCode(str(RegID2))
+              else
+                GenCode(strl(AddLibraryString(Value2.BuiltIn.Str^), RegID2));
+            end;
+          end;
+          // Release the value and mark it as non-static
+          ThoriumFreeValue(Value2);
+          Static2 := False;
+        end;
+
+        // Finally generate the code for the specific operation
+        GenCode(_cmpOperator(TargetRegister, RegID2, PrevType, OperandType));
+        if ThoriumTypeNeedsClear(PrevType) then
+          GenCode(clr(TargetRegister));
+        if ThoriumTypeNeedsClear(OperandType) then
+          GenCode(clr(RegID2));
+        // Release the operand registers.
+        ReleaseRegister(RegID2);
+        case Sym of
+          tsEqual: GenCode(intb(TargetRegister, THORIUM_OP_EQUAL));
+          tsNotEqual: GenCode(intb(TargetRegister, THORIUM_OP_NOTEQUAL));
+          tsLesser: GenCode(intb(TargetRegister, THORIUM_OP_LESS));
+          tsLesserEqual: GenCode(intb(TargetRegister, THORIUM_OP_LESSEQUAL));
+          tsGreater: GenCode(intb(TargetRegister, THORIUM_OP_GREATER));
+          tsGreaterEqual: GenCode(intb(TargetRegister, THORIUM_OP_GREATEREQUAL));
+        end;
+        // Set the current output as first operand and set the result to integer
+        Result := ThoriumBuiltInTypeSpec(btInteger);
+      end;
+
+      if (IsStatic <> nil) then
+      begin
+        IsStatic^ := Static1;
+        StaticValue^ := Value1;
+      end
+      else
+      begin
+        if Static1 then
+        begin
+          case Value1.BuiltIn._Type of
+            btInteger: GenCode(int(Value1.BuiltIn.Int, TargetRegister));
+            btFloat: GenCode(flt(Value1.BuiltIn.Float, TargetRegister));
+            btString:
+            begin
+              if Value1.BuiltIn.Str^ = '' then
+                GenCode(str(TargetRegister))
+              else
+                GenCode(strl(AddLibraryString(Value1.BuiltIn.Str^), TargetRegister));
+            end;
+          end;
+          // Release the value and mark it as non-static
+          ThoriumFreeValue(Value1);
+          Static1 := False;
+        end;
+      end;
+      if IsExpressionBased <> nil then
+        IsExpressionBased^ := ExpressionBased;
+    end;
+
+    function ConditionalExpressionRegisterCaching(TrueAddress: TThoriumInstructionAddress; FalseAddress: TThoriumInstructionAddress; CacheRegister: TThoriumRegisterID; CompareInstruction: PThoriumInstructionAddress = nil; IsStatic: PBoolean = nil; TrueJmp: PCardinal = nil; FalseJmp: PCardinal = nil): TThoriumType;
+    // Parses a comparing expression. It tries to cache a constant member of
+    // this expression in a register to avoid the writing of a value in a loop
+    // for example.
+    // It returns the type of the expression which is cached in the register to
+    // allow the user to clear the register if neccessary.
+    var
+      Sym: TThoriumSymbol;
+      OldHook: Boolean;
+      OldHook1, OldHook2: PThoriumInstructionArray;
+      MyHook1, MyHook2: TThoriumInstructionArray;
+      RegID1, RegID2: TThoriumRegisterID;
+      Static1, Static2: Boolean;
+      Value1, Value2, ResultValue: TThoriumValue;
+      Type1, Type2, ResultType: TThoriumType;
+      Op: TThoriumOperator;
+      I: Integer;
+    begin
+      // (ConditionalExpressionRegisterCaching)
+      OldHook := CodeHook;
+      OldHook1 := CodeHook1;
+      OldHook2 := CodeHook2;
+      try
+        CodeHook := True;
+        CodeHook1 := @MyHook1;
+        CodeHook2 := nil;
+        if not GetFreeRegister(trEXP, RegID1) then
+          Exit;
+        Type1 := SimpleExpression(RegID1, False, @Static1, @Value1);
+        if HasError then Exit;
+        if not ExpectSymbol(THORIUM_RELATIONAL_OPERATOR) then
+          Exit;
+        Sym := CurrentSym;
+        Proceed;
+
+        CodeHook1 := @MyHook2;
+        if not GetFreeRegister(trEXP, RegID2) then
+          Exit;
+        Type2 := SimpleExpression(RegID2, False, @Static2, @Value2);
+        if HasError then Exit;
+
+        if not NeedTypeOperation(Type1, Type2, toCompare, ResultType) then
+          Exit;
+      finally
+        CodeHook := OldHook;
+        CodeHook1 := OldHook1;
+        CodeHook2 := OldHook2;
+      end;
+      if Static1 and Static2 then
+      begin
+        if ThoriumCompareBuiltIn(Value1, Value2, Sym, ResultValue) then
+        begin
+          ReleaseRegister(RegID1);
+          ReleaseRegister(RegID2);
+          if IsStatic <> nil then
+            IsStatic^ := True;
+          if CompareInstruction <> nil then
+            CompareInstruction^ := FInstructions.Position;
+          if ResultValue.BuiltIn.Int = 1 then
+          begin
+            if TrueAddress <> THORIUM_JMP_INVALID then
+              GenCode(jmp(TrueAddress));
+          end
+          else
+          begin
+            if FalseAddress <> THORIUM_JMP_INVALID then
+              GenCode(jmp(FalseAddress));
+          end;
+          Result := ThoriumBuiltInTypeSpec(btUnknown);
+          Exit;
+        end
+        else
+          raise EThoriumCompilerException.Create('Compiler cries for help: "I dunno what to do now :("');
+      end;
+      Result := ThoriumBuiltInTypeSpec(btUnknown);
+      if Static1 then
+      begin
+        case Value1.BuiltIn._Type of
+          btInteger: GenCode(int(Value1.BuiltIn.Int, CacheRegister));
+          btFloat: GenCode(flt(Value1.BuiltIn.Float, CacheRegister));
+          btString:
+          begin
+            if Value1.BuiltIn.Str^ = '' then
+              GenCode(str(CacheRegister))
+            else
+              GenCode(strl(AddLibraryString(Value1.BuiltIn.Str^), CacheRegister));
+          end;
+        end;
+        // Release the value and mark it as non-static
+        Result := ThoriumExtractTypeSpec(Value1);
+        ThoriumFreeValue(Value1);
+      end;
+      if Static2 then
+      begin
+        case Value2.BuiltIn._Type of
+          btInteger: GenCode(int(Value2.BuiltIn.Int, CacheRegister));
+          btFloat: GenCode(flt(Value2.BuiltIn.Float, CacheRegister));
+          btString:
+          begin
+            if Value2.BuiltIn.Str^ = '' then
+              GenCode(str(CacheRegister))
+            else
+              GenCode(strl(AddLibraryString(Value2.BuiltIn.Str^), CacheRegister));
+          end;
+        end;
+        // Release the value and mark it as non-static
+        Result := ThoriumExtractTypeSpec(Value2);
+        ThoriumFreeValue(Value2);
+      end;
+      if not (Static1 or Static2) then
+      begin
+        if MyHook1[0].Instruction = tiCOPYR then
+        begin
+          // This one is a register variable - fast access, no need to cache
+          if MyHook2[0].Instruction <> tiCOPYR then
+          begin
+            // mkay... now, find out where the TRI value of the last instruction
+            // lies...
+            I := Length(MyHook2)-1;
+            while MyHook2[I].Instruction = tiCLR do
+              Dec(I);
+            Static2 := True;
+            case MyHook2[I].Instruction of
+              tiADDF, tiADDI, tiADDS, tiSUBF, tiSUBI, tiMULF, tiMULI, tiDIVF,
+              tiDIVI, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR:
+                TThoriumInstructionADDI(MyHook2[I]).TRI := CacheRegister;
+              tiINT, tiFLT, tiEXT:
+                TThoriumInstructionINT(MyHook2[I]).TRI := CacheRegister;
+              tiSTR:
+                TThoriumInstructionSTR(MyHook2[I]).TRI := CacheRegister;
+              tiSTRL:
+                TThoriumInstructionSTRL(MyHook2[I]).TRI := CacheRegister;
+              tiCOPYS:
+                TThoriumInstructionCOPYS(MyHook2[I]).TRI := CacheRegister;
+              tiCOPYFS:
+                TThoriumInstructionCOPYFS(MyHook2[I]).TRI := CacheRegister;
+              tiMOVEST:
+                TThoriumInstructionMOVEST(MyHook2[I]).TRI := CacheRegister;
+            else
+              // It was not possible to change it accordingly...
+              Static2 := False;
+            end;
+            if Static2 then
+              AppendCode(MyHook2);
+          end;
+        end
+        else if MyHook2[0].Instruction = tiCOPYR then
+        begin
+          // This one is a register variable - fast access, no need to cache
+          if MyHook1[0].Instruction <> tiCOPYR then
+          begin
+            // mkay... now, find out where the TRI value of the last instruction
+            // lies...
+            I := Length(MyHook1)-1;
+            while MyHook1[I].Instruction = tiCLR do
+              Dec(I);
+            Static1 := True;
+            case MyHook1[I].Instruction of
+              tiADDF, tiADDI, tiADDS, tiSUBF, tiSUBI, tiMULF, tiMULI, tiDIVF,
+              tiDIVI, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR:
+                TThoriumInstructionADDI(MyHook1[I]).TRI := CacheRegister;
+              tiINT, tiFLT, tiEXT:
+                TThoriumInstructionINT(MyHook1[I]).TRI := CacheRegister;
+              tiSTR:
+                TThoriumInstructionSTR(MyHook1[I]).TRI := CacheRegister;
+              tiSTRL:
+                TThoriumInstructionSTRL(MyHook1[I]).TRI := CacheRegister;
+              tiCOPYS:
+                TThoriumInstructionCOPYS(MyHook1[I]).TRI := CacheRegister;
+              tiCOPYFS:
+                TThoriumInstructionCOPYFS(MyHook1[I]).TRI := CacheRegister;
+              tiMOVEST:
+                TThoriumInstructionMOVEST(MyHook1[I]).TRI := CacheRegister;
+            else
+              // It was not possible to change it accordingly...
+              Static1 := False;
+            end;
+            if Static1 then
+              AppendCode(MyHook1);
+          end;
+        end;
+      end;
+      if CompareInstruction <> nil then
+        CompareInstruction^ := FInstructions.Position;
+
+      if Static1 then
+      begin
+        AppendCode(MyHook2);
+        GenCode(_cmpOperator(CacheRegister, RegID2, Type1, Type2));
+      end
+      else if Static2 then
+      begin
+        AppendCode(MyHook1);
+        GenCode(_cmpOperator(RegID1, CacheRegister, Type1, Type2))
+      end
+      else
+      begin
+        AppendCode(MyHook1);
+        AppendCode(MyHook2);
+        GenCode(_cmpOperator(RegID1, RegID2, Type1, Type2));
+      end;
+      if not Static1 and ThoriumTypeNeedsClear(Type1) then
+        GenCode(clr(RegID1));
+      if not Static2 and ThoriumTypeNeedsClear(Type2) then
+        GenCode(clr(RegID2));
+      if HasError then
+        Exit;
+      Op := ThoriumSymbolToOperator(Sym);
+      if TrueAddress = THORIUM_JMP_INVALID then
+      begin
+        // No true jump is expected, so we reverse the whole condition and
+        // perform those jumps to the false address.
+        if FalseAddress = THORIUM_JMP_INVALID then
+        begin
+          // Yeah, someone did a joke to us -.-. No jumps wanted... Just the
+          // expression parsed... Weird, but ok. We will send a note output.
+          raise EThoriumCompilerException.Create('Compiler Debug Exception: Compiler called ExpressionConditionalJump without any target jump address. It is recommended to change this to ExpressionComparing.');
+        end;
+        // Write the FalseJmp position
+        if FalseJmp <> nil then
+          FalseJmp^ := FInstructions.Position;
+        // Generate the code for the inverted operation.
+        case Op of
+          tpNotEqual: GenCode(je(FalseAddress));
+          tpGreater: GenCode(jle(FalseAddress));
+          tpGreaterEqual: GenCode(jlt(FalseAddress));
+          tpEqual: GenCode(jne(FalseAddress));
+          tpLessEqual: GenCode(jgt(FalseAddress));
+          tpLess: GenCode(jge(FalseAddress));
+        end;
+      end
+      else
+      begin
+        // Generate code for the different comparsions
+        if TrueJmp <> nil then
+          TrueJmp^ := FInstructions.Position;
+        case Op of
+          tpNotEqual: GenCode(jne(TrueAddress));
+          tpGreater: GenCode(jgt(TrueAddress));
+          tpGreaterEqual: GenCode(jge(TrueAddress));
+          tpEqual: GenCode(je(TrueAddress));
+          tpLessEqual: GenCode(jle(TrueAddress));
+          tpLess: GenCode(jlt(TrueAddress));
+        end;
+        // Genereate code for "false"-jump
+        if (FalseAddress <> THORIUM_JMP_INVALID) then
+        begin
+          if FalseJmp <> nil then
+            FalseJmp^ := FInstructions.Position;
+          GenCode(jmp(FalseAddress));
+        end;
+      end;
+      // Release the temporary registers
+      ReleaseRegister(RegID1);
+      ReleaseRegister(RegID2);
+    end;
+
+    function ExpressionComparing(NeedStatic: Boolean = False): TThoriumOperator; inline;
+    // This function parses a given expression.
+
+    var
+      Sym: TThoriumSymbol;
+      Op: TThoriumOperation;
+      PrevType, Dummy: TThoriumType;
+      OperandType: TThoriumType;
+      RegID1, RegID2: TThoriumRegisterID;
+    begin
+      // (Expression)
+      // First we check if it can be an expression at all by checking if the
+      // given symbol can be the initiator of a factor.
+      if not ExpectSymbol(THORIUM_FACTOR_INITIATOR) then
+        Exit;
+      // Get a free register for the first operand
+      if not GetFreeRegister(trEXP, RegID1) then
+        Exit;
+      // Then we get the first simple expression part.
+      PrevType := SimpleExpression(RegID1, NeedStatic);
+      if HasError then
+      begin
+        ReleaseRegister(RegID1);
+        Exit;
+      end;
+
+      if not ExpectSymbol(THORIUM_RELATIONAL_OPERATOR, False) then
+      begin
+        if (PrevType.ValueType = vtBuiltIn) and (Prevtype.BuiltInType = btInteger) then
+        begin
+          if not GetFreeRegister(trEXP, RegID2, True) then
+          begin
+            ReleaseRegister(RegID1);
+            Exit;
+          end;
+          GenCode(int(0, RegID2));
+          Result := tpNotEqual;
+          GenCode(_cmpOperator(RegID1, RegID2, PrevType, PrevType));
+          ReleaseRegister(RegID1);
+          ReleaseRegister(RegID2);
+          Exit;
+        end
+        else
+        begin
+          CompilerError('Incompatible types: Expected boolean/int, got '+ThoriumTypeName(PrevType));
+          Exit;
+        end;
+        ReleaseRegister(RegID1);
+        Exit;
+      end
+      else
+      begin
+        // Get the register for the second operand
+        if not GetFreeRegister(trEXP, RegID2, True) then
+        begin
+          ReleaseRegister(RegID1);
+          Exit;
+        end;
+        Sym := CurrentSym;
+        Op := ThoriumSymbolToOperation(Sym);
+        Proceed;
+        OperandType := SimpleExpression(RegID2, NeedStatic);
+        if HasError then
+          Exit;
+        // Check if the operation is available
+        if not NeedTypeOperation(PrevType, OperandType, Op, Dummy) then
+          Exit;
+
+        // Perform comparsion
+        GenCode(_cmpOperator(RegID1, RegID2, PrevType, OperandType));
+        if ThoriumTypeNeedsClear(PrevType) then
+          GenCode(clr(RegID1));
+        if ThoriumTypeNeedsClear(OperandType) then
+          GenCode(clr(RegID2));
+        // Release the temporary registers
+        ReleaseRegister(RegID1);
+        ReleaseRegister(RegID2);
+        Result := ThoriumSymbolToOperator(Sym);
+      end;
+    end;
+
+    function ExpressionConditionalJump(TrueAddress: TThoriumInstructionAddress; FalseAddress: TThoriumInstructionAddress; ForceBrackets: Boolean = False; TrueJmp: PCardinal = nil; FalseJmp: PCardinal = nil): Boolean;
+    var
+      Op: TThoriumOperator;
+    begin
+      Result := False;
+      if ForceBrackets then
+      begin
+        if (not ExpectSymbol([tsOpenBracket])) then
+          Exit;
+        Proceed;
+      end;
+      // Evaluate a comparing expression
+      Op := ExpressionComparing;
+      if HasError then
+        Exit;
+      if TrueAddress = THORIUM_JMP_INVALID then
+      begin
+        // No true jump is expected, so we reverse the whole condition and
+        // perform those jumps to the false address.
+        if FalseAddress = THORIUM_JMP_INVALID then
+        begin
+          // Yeah, someone did a joke to us -.-. No jumps wanted... Just the
+          // expression parsed... Weird, but ok. We will send a note output.
+          raise EThoriumCompilerException.Create('Compiler Debug Exception: Compiler called ExpressionConditionalJump without any target jump address. It is recommended to change this to ExpressionComparing.');
+          if ForceBrackets then
+          begin
+            if (not ExpectSymbol([tsCloseBracket])) then
+              Exit;
+            Proceed;
+          end;
+          Result := True;
+          Exit;
+        end;
+        // Write the FalseJmp position
+        if FalseJmp <> nil then
+          FalseJmp^ := FInstructions.Position;
+        // Generate the code for the inverted operation.
+        case Op of
+          tpNotEqual: GenCode(je(FalseAddress));
+          tpGreater: GenCode(jle(FalseAddress));
+          tpGreaterEqual: GenCode(jlt(FalseAddress));
+          tpEqual: GenCode(jne(FalseAddress));
+          tpLessEqual: GenCode(jgt(FalseAddress));
+          tpLess: GenCode(jge(FalseAddress));
+        end;
+      end
+      else
+      begin
+        // Generate code for the different comparsions
+        if TrueJmp <> nil then
+          TrueJmp^ := FInstructions.Position;
+        case Op of
+          tpNotEqual: GenCode(jne(TrueAddress));
+          tpGreater: GenCode(jgt(TrueAddress));
+          tpGreaterEqual: GenCode(jge(TrueAddress));
+          tpEqual: GenCode(je(TrueAddress));
+          tpLessEqual: GenCode(jle(TrueAddress));
+          tpLess: GenCode(jlt(TrueAddress));
+        end;
+        // Genereate code for "false"-jump
+        if (FalseAddress <> THORIUM_JMP_INVALID) then
+        begin
+          if FalseJmp <> nil then
+            FalseJmp^ := FInstructions.Position;
+          GenCode(jmp(FalseAddress));
+        end;
+      end;
+      if ForceBrackets then
+      begin
+        if (not ExpectSymbol([tsCloseBracket])) then
+          Exit;
+        Proceed;
+      end;
+      Result := True;
+    end;
+
+    procedure Statement(var Offset: Integer; AllowedStatements: TThoriumStatementKinds = THORIUM_ALL_STATEMENTS; ExpectSemicolon: Boolean = True);
+    // This function compiles all statements which can occur.
+    var
+      ExpressionType: TThoriumType;
+
+      (*function ConditionalExpression(TargetRegister: TThoriumRegisterID): Boolean; inline;
+      // Just a helper function which checks for a expression in brackets
+      // and treats it like a condition. This means, if the result on the
+      // stack is not an integer, we convert it using the OP.C-instruction.
+      var
+        ExpressionType: TThoriumType;
+      begin
+        Result := False;
+        if not ExpectSymbol([tsOpenBracket]) then
+          Exit;
+        Proceed;
+        ExpressionType := Expression(TargetRegister);
+        if HasError then Exit;
+        if not ExpectSymbol([tsCloseBracket]) then
+          Exit;
+        Proceed;
+        Result := True;
+      end;*)
+
+      procedure IfStatement;
+      // Compiles an if statement with any elseif or else constructs.
+      var
+        LastJump: TThoriumInstructionAddress;
+        JumpSize: Integer;
+      begin
+        JumpSize := Jumps.Count;
+        Proceed;
+        // Evaluate the condition and save the position of the to-the-end jump
+        if not ExpressionConditionalJump(THORIUM_JMP_INVALID, 0, True, nil, @LastJump) then
+          Exit;
+        // Evaluate the statments
+        Statement(Offset);
+        if HasError then Exit;
+        // And add the jump-to-end JMP
+        Jumps.AddEntry(GenCode(jmp(0)));
+
+        while CurrentSym = tsElseIf do
+        begin
+          // Fill in the last JMP.F-instruction with the position of the next
+          // instruction
+          TThoriumInstructionJMP(FInstructions.Instruction[LastJump]^).NewAddress := FInstructions.Position;
+
+          Proceed;
+          // Evaluate the condition and save the position of the to-the-end jump
+          if not ExpressionConditionalJump(THORIUM_JMP_INVALID, 0, True, nil, @LastJump) then
+            Exit;
+          // And evaluate the statements
+          Statement(Offset);
+          if HasError then Exit;
+          // Now add the jump-to-end JMP
+          Jumps.AddEntry(GenCode(jmp(0)));
+        end;
+
+        // Set the last jump position to the next instruction.
+        TThoriumInstructionJMP(FInstructions.Instruction[LastJump]^).NewAddress := FInstructions.Position;
+
+        // If there is a else-branch...
+        if CurrentSym = tsElse then
+        begin
+          Proceed;
+          // ... generate the code for the statement in there.
+          Statement(Offset);
+          if HasError then Exit;
+        end;
+
+        Jumps.FillAddresses(JumpSize, FInstructions.Count, FInstructions);
+      end;
+
+      procedure WhileStatement(Reverse: Boolean);
+      // Compiles a while statement which can also be reversed (do..while).
+      var
+        JumpPos, Backref: TThoriumInstructionAddress;
+        BreakCount: Integer;
+      begin
+        Proceed;
+        // Save the position of the next instruction. It does not matter, if we
+        // have a reversed while-loop or a normal one. The position will be
+        // needed later.
+        if not Reverse then
+        begin
+          Backref := FInstructions.Position;
+          if not ExpressionConditionalJump(THORIUM_JMP_INVALID, 0, True, nil, @JumpPos) then
+            Exit;
+        end
+        else
+          JumpPos := FInstructions.Position;
+
+        BreakCount := BreakJumps.Count;
+        // Generate code for the statements.
+        SaveTable;
+        Statement(Offset);
+        RestoreTable(Offset);
+
+        if not Reverse then
+        begin
+          // For the normal version, we set the jXX-destination to the
+          // following instruction
+          GenCode(jmp(Backref));
+          TThoriumInstructionJMP(FInstructions.Instruction[JumpPos]^).NewAddress := FInstructions.Position;
+        end
+        else
+        begin
+          if not ExpectSymbol([tsWhile]) then
+            Exit;
+          Proceed;
+          // Evaluate the expression and jump back to the beginning if the test
+          // returns true.
+          if not ExpressionConditionalJump(JumpPos, THORIUM_JMP_INVALID, True, nil, nil) then
+            Exit;
+        end;
+        BreakJumps.FillAddresses(BreakCount, FInstructions.Position, FInstructions);
+      end;
+
+      procedure ForStatement;
+      // Compiles a for statement.
+      var
+        StartPos, EndJump: TThoriumInstructionAddress;
+        OldHook: Boolean;
+        OldHook1, OldHook2: PThoriumInstructionArray;
+        MyHook1: TThoriumInstructionArray;
+        TypeIdent, Ident: TThoriumQualifiedIdentifier;
+        Dummy: Integer;
+        RegID, CacheReg: TThoriumRegisterID;
+        Static: Boolean;
+        NeedClear: Boolean;
+      begin
+        Dummy := 0;
+        Proceed;
+        // The opening bracket of the For clause.
+        if not ExpectSymbol([tsOpenBracket]) then
+          Exit;
+        Proceed;
+        SaveTable;
+        if not ExpectSymbol([tsIdentifier]) then
+          Exit;
+        // Check if we find a type...
+        if not QualifyIdentifier(TypeIdent, [ikType], 0) then
+          Exit;
+        // And a name after that
+        if not QualifyIdentifier(Ident, [ikUndeclared, ikNoFar], 0) then
+          Exit;
+        if not GetFreeRegister(trEXP, RegID) then
+          Exit;
+        VariableDeclaration(TypeIdent, Ident, vsPrivate, Dummy, RegID);
+        if HasError then
+          Exit;
+        //Statement(Offset, [tskAssignment, tskDeclaration]);
+        // Save the position of the comparsion code.
+        // Generate code for the comparsion and save the position of the false
+        // jump.
+        if not GetFreeRegister(trEXP, CacheReg) then
+        begin
+          NeedClear := False;
+          StartPos := FInstructions.Position;
+          if not ExpressionConditionalJump(THORIUM_JMP_INVALID, 0, False, nil, @EndJump) then
+            Exit;
+          CacheReg := THORIUM_REGISTER_INVALID;
+        end
+        else
+        begin
+          NeedClear := ThoriumTypeNeedsClear(ConditionalExpressionRegisterCaching(THORIUM_JMP_INVALID, 0, CacheReg, @StartPos, @Static, nil, @EndJump));
+        end;
+        //if not ExpressionConditionalJump(THORIUM_JMP_INVALID, 0, False, nil, @EndJump) then
+        //  Exit;
+        // We need a extra semicolon because an expression does not have a
+        // own semicolon.
+        if not ExpectSymbol([tsSemicolon]) then
+          Exit;
+        Proceed;
+        // Save the position where the code for the end of one loop lies.
+        OldHook := CodeHook;
+        OldHook1 := CodeHook1;
+        OldHook2 := CodeHook2;
+        try
+          CodeHook := True;
+          CodeHook1 := @MyHook1;
+          CodeHook2 := nil;
+          Statement(Offset, [tskAssignment], False);
+        finally
+          CodeHook := OldHook;
+          CodeHook1 := OldHook1;
+          CodeHook2 := OldHook2;
+        end;
+        // And now the closing bracket.
+        if not ExpectSymbol([tsCloseBracket]) then
+          Exit;
+        Proceed;
+        // Parse the statement in the loop
+        Statement(Offset);
+        // Insert now the code which will be executed at the end of the loop
+        AppendCode(MyHook1);
+        // After the end-of-loop-code jump to the beginning again.
+        GenCode(jmp(StartPos));
+        // Enter the address of the code behind the for-loop.
+        TThoriumInstructionJMP(FInstructions.Instruction[EndJump]^).NewAddress := FInstructions.Position;
+
+        if CacheReg <> THORIUM_REGISTER_INVALID then
+        begin
+          if NeedClear then
+            GenCode(clr(CacheReg));
+          ReleaseRegister(CacheReg);
+        end;
+        ReleaseRegister(RegID);
+        RestoreTable(Offset);
+      end;
+
+      procedure SwitchStatement;
+      // Compiles a switch statement.
+      var
+        SwitchPos: TThoriumInstructionAddress;
+        JMPTPos: TThoriumInstructionAddress;
+        SwitchExpressionType, CaseExpressionType: TThoriumType;
+        HasDefault: Boolean;
+        DefaultPos: TThoriumInstructionAddress;
+        BreakCount: Integer;
+        ExpressionRegister, ValueRegister, ResultRegister: TThoriumRegisterID;
+      begin
+        BreakCount := BreakJumps.Count;
+        Proceed;
+        if not ExpectSymbol([tsOpenBracket]) then
+          Exit;
+        Proceed;
+        // Allocate the register in which the result of the expression
+        // will be stored and another one for the result of the comparsion.
+        if (not GetFreeRegister(trEXP, ExpressionRegister)) or
+          (not GetFreeRegister(trEXP, ResultRegister)) or
+          (not GetFreeRegister(trEXP, ValueRegister)) then
+          Exit;
+        // Get the expression in the brackets of the switch and store it's type
+        // in a variable
+        SwitchExpressionType := SimpleExpression(ExpressionRegister);
+        if HasError then Exit;
+        // Save the current instruction position to write the jump instructions
+        // there later
+        SwitchPos := FInstructions.Position;
+        if not ExpectSymbol([tsCloseBracket]) then
+          Exit;
+        Proceed;
+        if not ExpectSymbol([tsOpenCurlyBracket]) then
+          Exit;
+        Proceed;
+        // By default, there is no default directive.
+        HasDefault := False;
+        while CurrentSym in [tsCase, tsDefault] do
+        begin
+          if CurrentSym = tsDefault then
+          begin
+            if HasDefault then
+            begin
+              CompilerError('Default statement already defined.');
+              Exit;
+            end;
+            Proceed;
+            if not ExpectSymbol([tsColon]) then
+              Exit;
+            // Set the default flag and set the position of the default block.
+            HasDefault := True;
+            DefaultPos := FInstructions.Position;
+            // Register the default address in the instructions to make it
+            // change automatically when something is added before the default
+            // block
+            FInstructions.AddInstructionPointer(@DefaultPos);
+            Proceed;
+            // Get the instructions for the statement in the default block.
+            SaveTable;
+            Statement(Offset);
+            RestoreTable(Offset);
+          end
+          else
+          begin
+            Proceed;
+            // Go back to the switch-instructions
+            FInstructions.Position := SwitchPos;
+            // Evaluate the expression
+            CaseExpressionType := Expression(ValueRegister);
+            if HasError then Exit;
+            // Check if a comparsion between the case expression and the switch
+            // expression is possible.
+            if not NeedTypeOperation(SwitchExpressionType, CaseExpressionType, toCompare, CaseExpressionType) then
+              Exit;
+            // Write the comparsion code
+            GenCode(_cmpOperator(ExpressionRegister, ValueRegister, SwitchExpressionType, CaseExpressionType));
+            // Write the jump instruction and save it's position. Let it remove
+            // the top element on the stack.
+            JMPTPos := GenCode(je(0));
+            // Set the switch pos to the end of this switch instruction block
+            SwitchPos := FInstructions.Position;
+            // Go back to the end of the instructions
+            FInstructions.Position := FInstructions.Count;
+            // Set the jump address of the current switch case check to this
+            // position
+            TThoriumInstructionJMP(FInstructions.Instruction[JMPTPos]^).NewAddress := FInstructions.Position;
+            // And finally generate the code for the case statement.
+            if not ExpectSymbol([tsColon]) then
+              Exit;
+            Proceed;
+            SaveTable;
+            Statement(Offset);
+            RestoreTable(Offset);
+          end;
+        end;
+        // If we have a default...
+        if HasDefault then
+        begin
+          // ... add a final jump instruction to the switch block
+          FInstructions.Position := SwitchPos;
+          GenCode(JMP(DefaultPos));
+          FInstructions.Position := FInstructions.Count;
+          FInstructions.RemoveInstructionPointer(@DefaultPos);
+        end;
+        if not ExpectSymbol([tsCloseCurlyBracket]) then
+          Exit;
+        BreakJumps.FillAddresses(BreakCount, FInstructions.Position, FInstructions);
+        if ThoriumTypeNeedsClear(ExpressionType) then
+          GenCode(clr(ExpressionRegister));
+        ReleaseRegister(ExpressionRegister);
+        ReleaseRegister(ResultRegister);
+        ReleaseRegister(ValueRegister);
+        // In the end we pop the result of the expression of the switch block
+        // from the stack.
+        Proceed;
+      end;
+
+    var
+      Identifier1: String;
+      TableSize: Integer;
+      Entry1: TThoriumTableEntry;
+      Module1: Integer;
+      IdentInfo1, IdentInfo2: TThoriumQualifiedIdentifier;
+      Dummy: TThoriumType;
+      Sym: TThoriumSymbol;
+      NeedSemicolon: Boolean;
+      RegID1: TThoriumRegisterID;
+    begin
+      NeedSemicolon := False;
+      case CurrentSym of
+        tsOpenCurlyBracket:
+        begin
+          if not (tskBlock in AllowedStatements) then
+          begin
+            CompilerError('Blocks are not allowed here.');
+            Exit;
+          end;
+          Proceed;
+
+          // Early-out if we have a closing bracket immediately.
+          if CurrentSym = tsCloseCurlyBracket then
+          begin
+            Proceed;
+            Exit;
+          end;
+
+          SaveTable;
+          // Parse the first statement...
+          Statement(Offset);
+          while CurrentSym <> tsCloseCurlyBracket do
+          begin
+            // Leave if there is an error
+            if HasError then Exit;
+            // Another statement
+            Statement(Offset);
+          end;
+          RestoreTable(Offset);
+
+          if not ExpectSymbol([tsCloseCurlyBracket]) then
+            Exit;
+          Proceed;
+        end;
+        tsIf:
+        begin
+          if not (tskIf in AllowedStatements) then
+          begin
+            CompilerError('If statements are not allowed here.');
+            Exit;
+          end;
+          IfStatement;
+        end;
+        tsWhile:
+        begin
+          if not (tskWhile in AllowedStatements) then
+          begin
+            CompilerError('While statements are not allowed here.');
+            Exit;
+          end;
+          WhileStatement(False);
+        end;
+        tsDo:
+        begin
+          if not (tskDoWhile in AllowedStatements) then
+          begin
+            CompilerError('DoWhile statements are not allowed here.');
+            Exit;
+          end;
+          WhileStatement(True);
+        end;
+        tsSwitch:
+        begin
+          if not (tskSwitch in AllowedStatements) then
+          begin
+            CompilerError('Switch statements are not allowed here.');
+            Exit;
+          end;
+          SwitchStatement;
+        end;
+        tsFor:
+        begin
+          if not (tskFor in AllowedStatements) then
+          begin
+            CompilerError('If statements are not allowed here.');
+            Exit;
+          end;
+          ForStatement;
+        end;
+        tsBreak:
+        begin
+          if not (tskBreak in AllowedStatements) then
+          begin
+            CompilerError('Break statements are not allowed here.');
+            Exit;
+          end;
+          Proceed;
+          if not ExpectSymbol([tsSemicolon]) then
+            Exit;
+          Proceed;
+          BreakJumps.AddEntry(GenCode(JMP(0)));
+        end;
+        tsPlusPlus, tsMinusMinus:
+        begin
+          NeedSemicolon := True;
+          if not (tskAssignment in AllowedStatements) then
+          begin
+            CompilerError('Assignments are not allowed here.');
+            Exit;
+          end;
+          Sym := CurrentSym;
+          Proceed;
+          if not ExpectSymbol([tsIdentifier]) then
+            Exit;
+          Identifier1 := CurrentStr;
+          Proceed;
+          if not FindTableEntry(Identifier1, Entry1, Module1) then
+            Exit;
+          if Entry1._Type <> etVariable then
+          begin
+            CompilerError('Cannot assign to static variable or function.');
+            Exit;
+          end;
+          if Entry1.TypeSpec.ValueType <> vtBuiltIn then
+          begin
+            CompilerError('Cannot apply ++/-- on non-builtin types.');
+            Exit;
+          end;
+          if Module1 <> -1 then
+          begin
+            // Apply inc/dec depending on given type
+            case Sym of
+              tsPlusPlus:
+              begin
+                case Entry1.TypeSpec.BuiltInType of
+                  btInteger: GenCode(inci_s(Entry1.Scope, Entry1.Offset));
+                  btFloat: GenCode(incf_s(Entry1.Scope, Entry1.Offset));
+                else
+                  CompilerError('Cannot apply ++/-- operator on the given type.');
+                  Exit;
+                end;
+              end;
+              tsMinusMinus:
+              begin
+                case Entry1.TypeSpec.BuiltInType of
+                  btInteger: GenCode(deci_s(Entry1.Scope, Entry1.Offset));
+                  btFloat: GenCode(decf_s(Entry1.Scope, Entry1.Offset));
+                else
+                  CompilerError('Cannot apply ++/-- operator on the given type.');
+                  Exit;
+                end;
+              end;
+            end;
+          end
+          else
+          begin
+            case Sym of
+              tsPlusPlus:
+              begin
+                case Entry1.TypeSpec.BuiltInType of
+                  btInteger: GenCode(inci_fs(Module1, Entry1.Offset));
+                  btFloat: GenCode(incf_fs(Module1, Entry1.Offset));
+                else
+                  CompilerError('Cannot apply ++/-- operator on the given type.');
+                  Exit;
+                end;
+              end;
+              tsMinusMinus:
+              begin
+                case Entry1.TypeSpec.BuiltInType of
+                  btInteger: GenCode(deci_fs(Module1, Entry1.Offset));
+                  btFloat: GenCode(decf_fs(Module1, Entry1.Offset));
+                else
+                  CompilerError('Cannot apply ++/-- operator on the given type.');
+                  Exit;
+                end;
+              end;
+            end;
+          end;
+        end;
+        tsIdentifier:
+        begin
+          NeedSemicolon := True;
+          // Get the first identifier
+          if not GetFreeRegister(trEXP, RegID1, True) then
+            Exit;
+          if not QualifyIdentifier(IdentInfo1, [ikComplex, ikVariable, ikUndeclared, ikType, ikStatic], RegID1) then
+            Exit;
+          if HasError then Exit;
+          AddHostTypeUsages(IdentInfo1.UsedExtendedTypes);
+          AddLibraryPropertyUsages(IdentInfo1.UsedLibraryProps);
+          // Check if the next symbol can be valid
+          if not ExpectSymbol([tsAssign, tsIdentifier, tsAdditiveAssign, tsDivideAssign, tsSubtractiveAssign, tsMultiplicativeAssign, tsPlusPlus, tsMinusMinus, tsSemicolon]) then
+            Exit;
+          case CurrentSym of
+            tsIdentifier:
+            begin
+              // Check for declarations
+              if not (tskDeclaration in AllowedStatements) then
+              begin
+                CompilerError('Declarations are not allowed here.');
+                Exit;
+              end;
+              // Check if the first identifier is a type
+              if (IdentInfo1.Kind <> ikType) then
+              begin
+                CompilerError('Type identifier expected, but '+THORIUM_IDENTIFIER_KIND_NAMES[IdentInfo1.Kind]+' found.');
+                Exit;
+              end;
+
+              // Get the next identififer
+              if not QualifyIdentifier(IdentInfo2, [ikUndeclared, ikNoFar], 0) then
+                Exit;
+              // Parse the obvious variable declaration
+              VariableDeclaration(IdentInfo1, IdentInfo2, vsPrivate, Offset);
+              NeedSemicolon := False;
+            end;
+            tsAssign:
+            begin
+              // Check for assignments
+              if not (tskAssignment in AllowedStatements) then
+              begin
+                CompilerError('Assignments are not allowed here.');
+                Exit;
+              end;
+              // If the first identifier is static, we cannot proceed.
+              if IdentInfo1.IsStatic then
+              begin
+                CompilerError('Cannot assign to left side.');
+                Exit;
+              end;
+              Proceed;
+              // Parse the expression
+              ExpressionType := Expression(RegID1);
+              if HasError then Exit;
+              // Check if the assignment is available
+              if not NeedTypeOperation(IdentInfo1.FinalType, ExpressionType, toAssign, Dummy) then
+                Exit;
+              if not ThoriumCompareTypeEx(ExpressionType, IdentInfo1.FinalType) then
+                GenCode(_cast(RegID1, RegID1, ExpressionType, IdentInfo1.FinalType));
+              // And append the code
+              AppendCode(IdentInfo1.SetCode);
+            end;
+            tsPlusPlus, tsMinusMinus:
+            begin
+              // If we have a direct variable, we can operate on it
+              // directly which will have a performance gain.
+              if (IdentInfo1.FinalType.ValueType <> vtBuiltIn) then
+              begin
+                CompilerError('Cannot apply ++/-- operator on extended values or functions.');
+                Exit;
+              end
+              else if (not IsTypeOperationAvailable(IdentInfo1.FinalType, toINC_DEC, Dummy)) then
+              begin
+                CompilerError('Cannot apply ++/-- operator on the given type.');
+                Exit;
+              end;
+              // Direct access ability is forced, so we can access it directly.
+              case IdentInfo1.GetCode[0].Instruction of
+                tiCOPYS:
+                begin
+                  // Apply inc/dec depending on given type
+                  case CurrentSym of
+                    tsPlusPlus:
+                    begin
+                      case IdentInfo1.FinalType.BuiltInType of
+                        btInteger: GenCode(inci_s(TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Offset));
+                        btFloat: GenCode(incf_s(TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                    tsMinusMinus:
+                    begin
+                      case IdentInfo1.FinalType.BuiltInType of
+                        btInteger: GenCode(deci_s(TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Offset));
+                        btFloat: GenCode(decf_s(TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Scope, TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                  end;
+                end;
+                tiCOPYFS:
+                begin
+                  case CurrentSym of
+                    tsPlusPlus:
+                    begin
+                      case IdentInfo1.FinalType.BuiltInType of
+                        btInteger: GenCode(inci_fs(TThoriumInstructionCOPYFS(IdentInfo1.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Offset));
+                        btFloat: GenCode(incf_fs(TThoriumInstructionCOPYFS(IdentInfo1.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                    tsMinusMinus:
+                    begin
+                      case IdentInfo1.FinalType.BuiltInType of
+                        btInteger: GenCode(deci_fs(TThoriumInstructionCOPYFS(IdentInfo1.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Offset));
+                        btFloat: GenCode(decf_fs(TThoriumInstructionCOPYFS(IdentInfo1.GetCode[0]).ModuleIndex, TThoriumInstructionCOPYS(IdentInfo1.GetCode[0]).Offset));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                  end;
+                end;
+                tiCOPYR:
+                begin
+                  case CurrentSym of
+                    tsPlusPlus:
+                    begin
+                      case IdentInfo1.FinalType.BuiltInType of
+                        btInteger: GenCode(inci(TThoriumInstructionCOPYR(IdentInfo1.GetCode[0]).SRI));
+                        btFloat: GenCode(incf(TThoriumInstructionCOPYR(IdentInfo1.GetCode[0]).SRI));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                    tsMinusMinus:
+                    begin
+                      case IdentInfo1.FinalType.BuiltInType of
+                        btInteger: GenCode(deci(TThoriumInstructionCOPYR(IdentInfo1.GetCode[0]).SRI));
+                        btFloat: GenCode(decf(TThoriumInstructionCOPYR(IdentInfo1.GetCode[0]).SRI));
+                      else
+                        CompilerError('Cannot apply ++/-- operator on the given type.');
+                        Exit;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+              Proceed;
+            end;
+            tsSemicolon:
+            begin
+              AppendCode(IdentInfo1.GetCode);
+              if not ((IdentInfo1.FinalType.ValueType = vtBuiltIn) and (IdentInfo1.FinalType.BuiltInType <= btNil)) then
+              begin
+                // Discard result of operation
+                if ThoriumTypeNeedsClear(IdentInfo1.FinalType) then
+                  GenCode(clr(RegID1));
+              end;
+            end;
+          end;
+          ReleaseRegister(RegID1);
+        end;
+        tsReturn:
+        begin
+          Proceed;
+          NeedSemicolon := True;
+          // Check if the current function can have a return value.
+          if not ((CurrentReturnType.ValueType = vtBuiltIn) and (CurrentReturnType.BuiltInType <= btNil)) then
+          begin
+            TableSize := GetTableEntriesTo(CurrentFunctionTableStack);
+            if not GetFreeRegister(trEXP, RegID1) then
+              Exit;
+            // and exit on error
+            if HasError then Exit;
+            // Parse the expression
+            ExpressionType := Expression(RegID1);
+            // Check if an assignment between the return value type and the
+            // returning type of the expression is possible
+            if not NeedTypeOperation(CurrentReturnType, ExpressionType, toAssign, ExpressionType) then
+              Exit;
+            // Important: Kill the stack entries *after* having parsed the
+            // expression =)
+            if TableSize > 0 then
+              GenCode(pop_s(TableSize));
+            // And finally write the return code and add it to the FuncReturns
+            // list.
+            GenCode(mover_st(RegID1));
+            ReleaseRegister(RegID1);
+            GenCode(ret());
+          end
+          else
+          begin
+            // Pop the remaining stack entries
+            TableSize := GetTableEntriesTo(CurrentFunctionTableStack);
+            if TableSize > 0 then
+              GenCode(pop_s(TableSize));
+            // Write a return instruction. Any overflow of symbols will be
+            // handled by the semicolon check.
+            GenCode(ret());
+          end;
+        end;
+        tsSemicolon:
+        begin
+          NeedSemicolon := True;
+        end;
+      else
+        ExpectSymbol([]);
+      end;
+      if NeedSemicolon and ExpectSemicolon then
+      begin
+        ExpectSymbol([tsSemicolon]);
+        Proceed;
+      end;
+    end;
+
+    procedure FunctionDeclaration(TypeIdent, Ident: TThoriumQualifiedIdentifier;
+      VisibilityLevel: TThoriumVisibilityLevel; var Offset: Integer);
+    // Handles a declaration of a function. This can either be a prototyped
+    // declaration or a final one.
+
+    type
+      TParam = record
+        ParamName: String;
+        ParamType: TThoriumType;
+      end;
+      TParams = array of TParam;
+
+    var
+      IsImplementationOfPrototype: Boolean;
+
+      function PrototypedFunction: TThoriumFunction; inline;
+      // Handle the previously prototyped function.
+      var
+        ReturnType: TThoriumType;
+      begin
+        // First, set the corresponding flag.
+        IsImplementationOfPrototype := True;
+        // Get the function already declared
+        Result := Ident.FinalType.Func;
+        // Check if the function has any return values
+        if Result.FReturnValues.Count = 0 then
+          ReturnType := ThoriumNilTypeSpec
+        else
+          // If so, get the spec for it.
+          Result.FReturnValues.GetParameterSpec(0, ReturnType);
+        // Check if the type given is equal to the previously declared type.
+        if not ThoriumCompareType(ReturnType, TypeIdent.FinalType) then
+        begin
+          CompilerError('Function declaration differs from prototype (result).');
+          Exit;
+        end;
+        // Set the new entry point
+        Result.FEntryPoint := FInstructions.Count;
+        // Fill any adresses perhaps added
+        Result.FPrototypedCalls.FillAddresses(0, Result.FEntryPoint, FInstructions);
+        // Remove the prototyped flag.
+        Result.FPrototyped := False;
+        SaveTable;
+
+      end;
+
+    var
+      Func: TThoriumFunction;
+      GivenType: TThoriumType;
+      ParamTypeIdent: TThoriumQualifiedIdentifier;
+      ParamIdent: TThoriumQualifiedIdentifier;
+      ParamIndex: Integer;
+      LocalOffset: Integer;
+      Params: TParams;
+      I: Integer;
+    begin
+      if Ident.Kind = ikPrototypedFunction then
+        Func := PrototypedFunction
+      else
+      begin
+        IsImplementationOfPrototype := False;
+        // Create a new function entry.
+        Func := TThoriumFunction.Create(FModule);
+        // Check if the result type is not nil and save it.
+        CurrentReturnType := TypeIdent.FinalType;
+        if not ((TypeIdent.FinalType.ValueType = vtBuiltIn) and (TypeIdent.FinalType.BuiltInType <= btNil)) then
+          Func.FReturnValues.AddParameter^ := TypeIdent.FinalType;
+
+        // Set the entry point...
+        Func.FEntryPoint := FInstructions.Count;
+        // ... and function name
+        Func.FName := Ident.FullStr;
+        // Create a new table entry
+        Table.AddFunctionIdentifier(Ident.FullStr, Func);
+      end;
+      SaveTable;
+      // Parameters are not global
+      CurrentScope := THORIUM_STACK_SCOPE_PARAMETERS;
+      //CurrentFunction := Func;
+      Proceed;
+      ParamIndex := 1;
+      while CurrentSym in [tsIdentifier, tsComma] do
+      begin
+        // Check for the comma first
+        if ParamIndex > 1 then
+        begin
+          if not ExpectSymbol([tsComma]) then
+          begin
+            CurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+            Exit;
+          end;
+          Proceed;
+        end;
+        // Get type...
+        if not QualifyIdentifier(ParamTypeIdent, [ikType], 0) then
+        begin
+          CurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+          Exit;
+        end;
+        AddHostTypeUsages(ParamTypeIdent.UsedExtendedTypes);
+        // ... and name
+        if not QualifyIdentifier(ParamIdent, [ikUndeclared], 0) then
+        begin
+          CurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+          Exit;
+        end;
+        SetLength(Params, ParamIndex);
+        // If we implement a prototype
+        if IsImplementationOfPrototype then
+        begin
+          // Check if this parameter is given in the prototype
+          if Func.FParameters.Count < ParamIndex then
+          begin
+            CompilerError('Function declaration differs from prototype (parameters, '+IntToStr(ParamIndex-1)+').');
+            Exit;
+          end;
+          Func.FParameters.GetParameterSpec(ParamIndex-1, GivenType);
+          if not ThoriumCompareType(GivenType, ParamTypeIdent.FinalType) then
+          begin
+            CompilerError('Function declaration differs from prototype (parameters, '+IntToStr(ParamIndex-1)+').');
+            Exit;
+          end;
+        end
+        else
+        begin
+          // Add the parameter to the function list..
+          Func.FParameters.AddParameter^ := ParamTypeIdent.FinalType;
+          // ... and to the cache parameter list.
+          Params[ParamIndex-1].ParamName := ParamIdent.FullStr;
+          Params[ParamIndex-1].ParamType := ParamTypeIdent.FinalType;
+        end;
+        // Increase the index
+        Inc(ParamIndex);
+      end;
+      if not IsImplementationOfPrototype then
+      begin
+        // Now we have to add the table entries for the parameters to allow access
+        for I := High(Params) downto Low(Params) do
+          Table.AddConstantIdentifier(Params[I].ParamName, THORIUM_STACK_SCOPE_PARAMETERS, I-Length(Params), Params[I].ParamType, ThoriumCreateBuiltInValue(btUnknown));
+      end;
+      // Check for the closing bracket
+      if not ExpectSymbol([tsCloseBracket]) then
+      begin
+        CurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+        Exit;
+      end;
+      Proceed;
+
+      // Check if this is a prototype.
+      if CurrentSym = tsSemicolon then
+      begin
+        if IsImplementationOfPrototype then
+        begin
+          CompilerError('Duplicate function: '''+Ident.FullStr+'''.');
+          Exit;
+        end;
+        // Flag it as prototyped
+        Func.FPrototyped := True;
+        // And add it to the public functions if it is public
+        if VisibilityLevel > vsPrivate then
+          FPublicFunctions.Add(Func.Duplicate);
+        LocalOffset := 0;
+        RestoreTable(LocalOffset, False);
+        Proceed;
+        Exit;
+      end;
+
+      // Switch to the scope for local variables
+      CurrentScope := THORIUM_STACK_SCOPE_LOCAL;
+      // Save the return instruction count
+      //ReturnCount := FuncReturns.Count;
+      // Init the local offset
+      SaveTable;
+      CurrentFunctionTableStack := CurrentTableStackPos;
+      LocalOffset := 0;
+      // Parse the statement(s)
+      Statement(LocalOffset);
+      // Return to global mode
+      CurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+      // Exit on error
+      if HasError then
+        Exit;
+      // The global Offset MUST NOT be influenced and there MUST NOT be a
+      // POP instruction.
+      RestoreTable(LocalOffset, True);
+      RestoreTable(LocalOffset, False);
+      // Fill the parameter count in the given return instructions
+      //FuncReturns.FillParamCount(ReturnCount, Func.FParameters.Count, FInstructions);
+      // Add return code
+      if Func.FReturnValues.Count > 0 then
+        PushEmpty(CurrentReturnType);
+      GenCode(ret());
+
+      // If it's public, add it to the public list as a duplicate
+      if not IsImplementationOfPrototype then
+        if VisibilityLevel > vsPrivate then
+          FPublicFunctions.Add(Func.Duplicate);
+      //CurrentFunction := nil;
+    end;
+
+  var
+    LastJump: Integer;
+    HadDeclarations: Boolean;
+
+    procedure GenericDeclaration(Static: Boolean;
+      VisibilityLevel: TThoriumVisibilityLevel; var Offset: Integer);
+    // Switch between the three kinds of declarations
+    var
+      TypeIdent, Ident: TThoriumQualifiedIdentifier;
+      IsFunc: Boolean;
+      Pos: Integer;
+    begin
+      if not QualifyIdentifier(TypeIdent, [ikType], 0) then
+        Exit;
+      AddHostTypeUsages(TypeIdent.UsedExtendedTypes);
+
+      if not QualifyIdentifier(Ident, [ikUndeclared, ikPrototypedFunction], 0) then
+        Exit;
+      Pos := FInstructions.Count;
+      IsFunc := False;
+      if Static then
+        ConstantDeclaration(TypeIdent, Ident, VisibilityLevel, Offset)
+      else
+      begin
+        if CurrentSym = tsOpenBracket then
+        begin
+          IsFunc := True;
+          if HadDeclarations then
+          begin
+            LastJump := GenCode(JMP(THORIUM_JMP_EXIT));
+            HadDeclarations := False;
+          end;
+          FunctionDeclaration(TypeIdent, Ident, VisibilityLevel, Offset);
+        end
+        else
+        begin
+          VariableDeclaration(TypeIdent, Ident, VisibilityLevel, Offset);
+        end;
+      end;
+      HadDeclarations := HadDeclarations or (not IsFunc);
+      if (not IsFunc) and (LastJump <> -1) then
+      begin
+        TThoriumInstructionJMP(FInstructions.Instruction[LastJump]^).NewAddress := Pos;
+        LastJump := -1;
+      end;
+    end;
+
+    procedure Require(const Name: String);
+    // Handle a require statement.
+    var
+      NewModule: TThoriumModule;
+      I: Integer;
+    begin
+      if FThorium <> nil then
+      begin
+        NewModule := FThorium.FindModule(Name);
+        if NewModule = nil then
+        begin
+          CompilerError('Could not load module '''+Name+'''.');
+          Exit;
+        end;
+        if not NewModule.Compiled then
+        begin
+          CompilerError('Circular module require (or threading problem). Cannot import '''+Name+'''.');
+          Exit;
+        end;
+        I := FThorium.FModules.IndexOf(NewModule);
+        if I < 0 then
+        begin
+          CompilerError('Internal error: Loaded module not in list.');
+          Exit;
+        end;
+        FRequiredModules.AddEntry(I);
+      end
+      else
+      begin
+        CompilerError('Could not load module '''+Name+'''.');
+        Exit;
+      end;
+    end;
+
+    procedure LoadLibrary(const Name: String);
+    var
+      Lib: TThoriumLibrary;
+      I: Integer;
+    begin
+      if FThorium <> nil then
+      begin
+        Lib := FThorium.FindLibrary(Name);
+        if Lib = nil then
+        begin
+          CompilerError('Could not load library '''+Name+'''.');
+          Exit;
+        end;
+        I := FThorium.FHostLibraries.IndexOf(Lib);
+        if I < 0 then
+        begin
+          CompilerError('Internal error: Loaded library not in list.');
+          Exit;
+        end;
+        FRequiredLibraries.AddEntry(I);
+      end
+      else
+      begin
+        CompilerError('Could not load library '''+Name+'''.');
+        Exit;
+      end;
+    end;
+
+  var
+    VisibilityLevel: TThoriumVisibilityLevel;
+    Offset: Integer;
+  begin
+    // Set the initial scope
+    CurrentScope := THORIUM_STACK_SCOPE_MODULEROOT;
+    Offset := 0;
+    // While we have a declaration, do this loop. When we exit it, it should be
+    // either a compiler error or the end of file, otherwise a new compiler
+    // error is created.
+    LastJump := GenCode(JMP(THORIUM_JMP_EXIT));
+    HadDeclarations := False;
+    while (CurrentSym in [tsPublic, tsPrivate, tsStatic, tsIdentifier, tsLoadModule, tsLoadLibrary]) and (not HasError) do
+    begin
+      case CurrentSym of
+        tsPublic, tsPrivate: // There is a visibility directive
+        begin
+          if CurrentSym = tsPublic then
+            VisibilityLevel := vsPublic
+          else
+            VisibilityLevel := vsPrivate;
+          Proceed;
+          // Check if the following symbol is valid (this means, identifier or
+          // static)
+          if not ExpectSymbol([tsIdentifier, tsStatic]) then
+            Exit;
+          // If it's static ...
+          if CurrentSym = tsStatic then
+          begin
+            Proceed;
+            // ... proceed to a static generic declaration.
+            GenericDeclaration(True, VisibilityLevel, Offset);
+          end
+          else
+            // ... otherwise proceed to a non-static declaration.
+            GenericDeclaration(False, VisibilityLevel, Offset);
+        end;
+        tsStatic:
+        begin
+          Proceed;
+          // Proceed to a static declaration, which is by default private.
+          GenericDeclaration(True, vsPrivate, Offset);
+        end;
+        tsIdentifier:
+        begin
+          // ooh, how sad. neither static, nor private, nor public, so we assume
+          // a non-static, private declaration.
+          GenericDeclaration(False, vsPrivate, Offset);
+        end;
+        tsLoadModule:
+        begin
+          // Okay, include another module. First, we have to get the module
+          // name.
+          Proceed;
+          if not ExpectSymbol([tsStringValue]) then
+            Exit;
+          Require(CurrentStr);
+          if HasError then
+            Exit;
+          Proceed;
+          while CurrentSym in [tsComma] do
+          begin
+            Proceed;
+            if not ExpectSymbol([tsStringValue]) then
+              Exit;
+            Require(CurrentStr);
+            if HasError then
+              Exit;
+            Proceed;
+          end;
+          {if not ExpectSymbol([tsSemicolon]) then
+            Exit;
+          Proceed;   }
+        end;
+        tsLoadLibrary:
+        begin
+          // Use a host library. Get the library name.
+          Proceed;
+          if not ExpectSymbol([tsStringValue]) then
+            Exit;
+          LoadLibrary(CurrentStr);
+          if HasError then
+            Exit;
+          Proceed;
+          while CurrentSym in [tsComma] do
+          begin
+            Proceed;
+            if not ExpectSymbol([tsStringValue]) then
+              Exit;
+            LoadLibrary(CurrentStr);
+            if HasError then
+              Exit;
+            Proceed;
+          end;
+          {if not ExpectSymbol([tsSemicolon]) then
+            Exit;
+          Proceed;   }
+        end;
+      end;
+    end;
+    if (CurrentSym = tsError) then
+      CompilerError('Parser error: '+CurrentStr)
+    else if (CurrentSym <> tsNone) and (not HasError) then
+      ExpectSymbol([tsNone]);
+  end;
+
+begin
+  // Clear all previous data
+  if not (cfAppend in Flags) then
+    FModule.ClearAll;
+  Result := True;
+  // Initialize the scanner
+  Scanner := TThoriumScanner.Create(SourceStream);
+  try
+    FSourceHash := Scanner.FInputHash;
+    FSourceLength := Scanner.FInputSize;
+    CodeHook := False;
+    CodeHook1 := nil;
+    CodeHook2 := nil;
+    FillByte(RegisterUsage, THORIUM_REGISTER_MASK_SIZE * SizeOf(TThoriumRegisterMaskBlock), 0);
+    // Initialize the table and table stack, and also the break jump list.
+    Table := TThoriumIdentifierTable.Create;
+    BreakJumps := TThoriumJumpList.Create;
+    Jumps := TThoriumJumpList.Create;
+    TableSizes := TThoriumIntStack.Create;
+    //FuncReturns := TThoriumReturnList.Create;
+    FInstructions.RegisterAddressList(BreakJumps);
+    FInstructions.RegisterAddressList(Jumps);
+    //FInstructions.RegisterAddressList(FuncReturns);
+    try
+      // Select the first symbol
+      Proceed;
+      // Parse the module
+      Module;
+    finally
+      // Free the table, the table stack and the break jump list.
+      if Result then
+      begin
+        FInstructions.Finish;
+        if cfOptimize in Flags then
+          OptimizeCode;
+        FInstructions.Finish;
+        FindRelocationTargets;
+      end;
+      //FInstructions.UnRegisterAddressList(FuncReturns);
+      FInstructions.UnRegisterAddressList(BreakJumps);
+      FInstructions.UnRegisterAddressList(Jumps);
+      //FuncReturns.Free;
+      TableSizes.Free;
+      Jumps.Free;
+      BreakJumps.Free;
+      Table.Free;
+    end;
+  finally
+    Scanner.Free;
+    Result := not HasError;
+    // If the compilation failed, clear all.
+    if (not Result) and not (cfAppend in Flags) then
+      FModule.ClearAll;
+  end;
 end;
 
 {%ENDREGION}
@@ -11176,7 +17139,7 @@ var
       begin
         FRegisters[THORIUM_REGISTER_C1] := FRegisters[ERI];
         FRegisters[ERI] := FRegisters[THORIUM_REGISTER_C1].Extended.TypeClass.GetField(FRegisters[ERI], ID);
-        ThoriumFreeValue(FRegisters[THORIUM_REGISTER_C1]);
+        //ThoriumFreeValue(FRegisters[THORIUM_REGISTER_C1]);
       end
       else
       begin
@@ -11250,6 +17213,27 @@ var
       ThoriumFreeValue(FRegisters[IRI]);
       ThoriumFreeValue(FRegisters[VRI]);
       {$ifdef Timecheck}EndTimecheck('xiset');{$endif}
+    end;
+  end;
+
+  procedure xpget; inline;
+  begin
+    with TThoriumInstructionXPGET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      TThoriumLibraryProperty(Prop).GetValue(@FRegisters[TRI]);
+      {$ifdef Timecheck}EndTimecheck('xpset');{$endif}
+    end;
+  end;
+
+  procedure xpset; inline;
+  begin
+    with TThoriumInstructionXPSET(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      TThoriumLibraryProperty(Prop).SetValue(@FRegisters[SRI]);
+      ThoriumFreeValue(FRegisters[SRI]);
+      {$ifdef Timecheck}EndTimecheck('xpset');{$endif}
     end;
   end;
 
@@ -11744,7 +17728,7 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       TThoriumHostMethodBase(MethodRef).CallFromVirtualMachine(TObject(FRegisters[RTTIValueRegister].Extended.Value), Self);
-      ThoriumFreeValue(FRegisters[RTTIValueRegister]);
+      // ThoriumFreeValue(FRegisters[RTTIValueRegister]);
       {$ifdef Timecheck}EndTimecheck('ecall');{$endif}
     end;
   end;
@@ -11900,6 +17884,8 @@ begin
     tiXFSET: xfset;
     tiXIGET: xiget;
     tiXISET: xiset;
+    tiXPGET: xpget;
+    tiXPSET: xpset;
     tiXCT: xct;
     tiVASTART: vastart;
     tiVASTART_T: vastart_t;
@@ -11982,10 +17968,13 @@ begin
       Write('$', IntToHex(FCurrentInstructionIdx, 8), ': ');
       {$endif}
       {$ifdef InstructionDump}
-      {$ifndef Stackdump}Write('$', IntToHex(FCurrentInstructionIdx, 8), ': '); WriteLn{$else}Write{$endif}(ThoriumInstructionToStr(FCurrentInstruction^), ' ');
+      {$ifndef Stackdump}Write('$', IntToHex(FCurrentInstructionIdx, 8), ': '); {$endif}WriteLn(ThoriumInstructionToStr(FCurrentInstruction^));
       {$endif}
       ExecuteInstruction;
       {$ifdef Stackdump}
+        {$ifdef InstructionDump}
+        Write('  ');
+        {$endif}
       DumpStack;
       WriteLn;
       //ReadLn;
@@ -12119,10 +18108,13 @@ begin
       {$endif}
       {$ifdef InstructionDump}
       {$ifndef Stackdump}
-      Write('$', IntToHex(FCurrentInstructionIdx, 8), ': '); WriteLn{$else}Write{$endif}(ThoriumInstructionToStr(FCurrentInstruction^), ' ');
+      Write('$', IntToHex(FCurrentInstructionIdx, 8), ': ');{$endif}Write(ThoriumInstructionToStr(FCurrentInstruction^), ' ');
       {$endif}
       ExecuteInstruction;
       {$ifdef Stackdump}
+        {$ifdef InstructionDump}
+        Write('  ');
+        {$endif}
       DumpStack;
       WriteLn;
       //ReadLn;
@@ -12292,7 +18284,7 @@ var
   I: Integer;
   List: PPointerList;
 begin
-  LowName := ThoriumCase(Name);
+  LowName := LowerCase(Name);
   List := FHostLibraries.List;
   for I := 0 to FHostLibraries.Count - 1 do
   begin

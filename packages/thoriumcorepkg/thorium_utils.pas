@@ -30,9 +30,6 @@ unit Thorium_Utils;
 
 {$mode objfpc}{$H+}
 
-// Switch whether Thorium should be case-aware or not
-{.$define CaseAware}
-
 interface
 
 uses
@@ -56,10 +53,6 @@ function UTF8Chr(Value: Cardinal): String;
 
 (* Calculate the offset of AField in ARec. *)
 function Offset(var ARec; var AField): ptruint;
-
-(* Handle the casing of identifiers. *)
-function ThoriumCase(const Input: String): String;
-function ThoriumCase(const Input: Char): Char;
 
 implementation
 
@@ -119,24 +112,6 @@ end;
 function Offset(var ARec; var AField): ptruint;
 begin
   Result := ptruint(@AField) - ptruint(@ARec);
-end;
-
-function ThoriumCase(const Input: String): String;
-begin
-  {$ifdef CaseAware}
-  Result := Input;
-  {$else}
-  Result := LowerCase(Input);
-  {$endif}
-end;
-
-function ThoriumCase(const Input: Char): Char;
-begin
-  {$ifdef CaseAware}
-  Result := Input;
-  {$else}
-  Result := LowerCase(Input);
-  {$endif}
 end;
 
 end.
