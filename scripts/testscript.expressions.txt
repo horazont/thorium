@@ -40,6 +40,15 @@ private void printflt(float value, string name)
 {
   printf("%s = %.4f\n", name, value);
 }
+
+// Test case reported by wilson
+private float wilson_test()
+{
+  // Should return 2.0, not 2
+  return 2;
+}
+// End test case reported by wilson
+
 private void test_int()
 {
   int a = 10; int b = 20;
@@ -77,6 +86,8 @@ private void test_float()
   printflt(c, "b / a");
   c = a / b;
   printflt(c, "a / b");
+  
+  printflt(wilson_test(), "wilson_test");
 }
 
 private void test_str()

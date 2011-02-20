@@ -505,7 +505,7 @@ begin
           Time := GetTickCount;
           {$endif}
           {$endif}
-          if not Module.CompileFromStream(Test) then
+          if not Module.CompileFromStream(Test, []) then
           begin
             raise Exception.Create('Compilation failed: "'+Module.LastCompilerError+'"');
           end;

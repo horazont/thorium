@@ -4989,7 +4989,7 @@ begin
     Exit;
   end;
   case AssignType1.ValueType of
-    vtBuiltIn: Result := AssignType1.BuiltInType = ToType2.BuiltInType;
+    vtBuiltIn: Result := (AssignType1.BuiltInType = ToType2.BuiltInType);
     vtExtendedType:
     begin
       if (not (AssignType1.Extended is TThoriumRTTIObjectType)) or (not (ToType2.Extended is TThoriumRTTIObjectType)) then
@@ -13683,7 +13683,7 @@ var
     procedure Statement(var Offset: Integer; AllowedStatements: TThoriumStatementKinds = THORIUM_ALL_STATEMENTS; ExpectSemicolon: Boolean = True);
     // This function compiles all statements which can occur.
     var
-      ExpressionType: TThoriumType;
+      OrigExpressionType, ExpressionType: TThoriumType;
 
       (*function ConditionalExpression(TargetRegister: TThoriumRegisterID): Boolean; inline;
       // Just a helper function which checks for a expression in brackets
@@ -14017,7 +14017,8 @@ var
       Dummy: TThoriumType;
       Sym: TThoriumSymbol;
       NeedSemicolon: Boolean;
-      RegID1: TThoriumRegisterID;
+      RegID1, RegID2: TThoriumRegisterID;
+
     begin
       NeedSemicolon := False;
       case CurrentSym of
@@ -14376,8 +14377,16 @@ var
             ExpressionType := Expression(RegID1);
             // Check if an assignment between the return value type and the
             // returning type of the expression is possible
-            if not NeedTypeOperation(CurrentReturnType, ExpressionType, toAssign, ExpressionType) then
-              Exit;
+            if not ThoriumCompareTypeEx(ExpressionType, CurrentReturnType) then
+            begin
+              OrigExpressionType := ExpressionType;
+              if not NeedTypeOperation(CurrentReturnType, OrigExpressionType, toAssign, ExpressionType) then
+                Exit;
+              GetFreeRegister(trEXP, RegID2);
+              GenCode(_cast(RegID1, RegID2, OrigExpressionType, CurrentReturnType));
+              ReleaseRegister(RegID1);
+              RegID1 := RegID2;
+            end;
             // Important: Kill the stack entries *after* having parsed the
             // expression =)
             if TableSize > 0 then
