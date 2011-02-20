@@ -1133,13 +1133,14 @@ begin
   end;
 end;
 
-function x2n(ATRI: Word): TThoriumInstruction;
+function x2n(ATRI: Word; AHostType: PTypeInfo): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionX2N(Result) do
   begin
     Instruction := tiX2N;
     TRI := ATRI;
+    HostType := AHostType;
     CodeLine := 0;
   end;
 end;

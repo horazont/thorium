@@ -33,7 +33,7 @@ unit Thorium_Globals;
 interface
 
 uses
-  Classes, SysUtils;
+  Classes, SysUtils, typinfo;
 
 {%REGION 'Versioning'}
 const
@@ -1705,7 +1705,18 @@ type
   TThoriumInstructionX2N = record
     Instruction: TThoriumInstructionCode;
     TRI: Word;
-    Reserved: array [0..10] of Word;
+    {$ifdef ENDIAN_BIG}
+    {$ifndef CPU64}
+    HostTypeOverhead: LongInt;
+    {$endif}
+    {$endif}
+    HostType: PTypeInfo;
+    {$ifdef ENDIAN_LITTLE}
+    {$ifndef CPU64}
+    HostTypeOverhead: LongInt;
+    {$endif}
+    {$endif}
+    Reserved: array [0..6] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
