@@ -2140,7 +2140,7 @@ const
 
   opReflexive = [opIncrement, opDecrement, opBitNot, opLogicalNot, opNegate,
     opCall, opEvaluate, opDevolatile, opVolatile, opLen, opString, opDeref,
-    opClone];
+    opClone, opToNative, opFromNative, opFreeNative];
 {%ENDREGION}
 
 (*

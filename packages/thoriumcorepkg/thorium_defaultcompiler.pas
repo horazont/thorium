@@ -1996,6 +1996,8 @@ var
     ParamType: TThoriumType;
     DynIdx: Integer;
     NeedsNativeData: Boolean;
+    Operation: TThoriumOperationDescription;
+    ParamTypeInfo: PTypeInfo;
   begin
     // Prefilter
     I := Entries.Count - 1;
@@ -2144,7 +2146,12 @@ var
         if NeedsNativeData then
         begin
           // ParameterRegIDs has been modified before
-          GetInstruction(ParameterCastLocations[I]+2)^ := x2n(ParameterRegIDs[I], HostCallable.GetHostParameters().Parameters[I]);
+          Operation.Operation := opToNative;
+          ParamTypeInfo := HostCallable.GetHostParameters().Parameters[I];
+          if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation, nil, '', ParamTypeInfo) then
+            CompilerError(Format('Cannot convert ''%s'' to native data of type ''%s''.', [Entry^.Entry.TypeSpec.Name, ParamTypeInfo^.Name]));
+          Operation.OperationInstruction.Instruction.Reserved[Operation.OperationInstruction.TargetRIOffset] := ParameterRegIDs[I];
+          GetInstruction(ParameterCastLocations[I]+2)^ := TThoriumInstruction(Operation.OperationInstruction.Instruction);
         end;
       end;
 
@@ -2161,8 +2168,14 @@ var
       begin
         for I := 0 to Parameters.Count - 1 do
         begin
-          GenCodeToOperation(Solution^.GetCode, clrn(ParameterRegIDs[I]));
-          GenCodeToOperation(Solution^.SetCode, clrn(ParameterRegIDs[I]));
+          Operation.Operation := opFreeNative;
+          if Entry^.Entry.TypeSpec.CanPerformOperation(Operation) then
+          begin
+            // Ignore if nothing can be done here. This may be on purpose.
+            Operation.OperationInstruction.Instruction.Reserved[Operation.OperationInstruction.TargetRIOffset] := ParameterRegIDs[I];
+            GenCodeToOperation(Solution^.GetCode, TThoriumInstruction(Operation.OperationInstruction.Instruction));
+            GenCodeToOperation(Solution^.SetCode, TThoriumInstruction(Operation.OperationInstruction.Instruction));
+          end;
         end;
       end;
       for I := 0 to DynamicParameterList.Count - 1 do
