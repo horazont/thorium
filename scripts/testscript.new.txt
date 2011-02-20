@@ -1,13 +1,13 @@
 loadlibrary thorium;
 
-private int testfunc(int param, string test) {
+private int testfunc(int param) {
   return param + 10;
 }
 
 public void main()
 {
   int test = 10, test2 = 20;
-  test = testfunc(10, "meow");
+  test = testfunc(10);
   if (test == test2) and (test == 20) {
     test2 = 40;
   }

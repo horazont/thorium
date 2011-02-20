@@ -1988,7 +1988,6 @@ var
     I, J: Integer;
     Scores: array of Integer;
     Callable: IThoriumCallable;
-    NativeCallable: IThoriumNativeCallCompatible;
     CallableParameters: TThoriumParameters;
     Assignment: TThoriumAssignmentDescription;
     HighestScore: Integer;
@@ -2111,8 +2110,6 @@ var
       Entry := Entries[0];
       Solution := Solutions[0];
       Entry^.Entry.TypeSpec.QueryInterface(IThoriumCallable, Callable);
-      NativeCallable := nil;
-      Entry^.Entry.TypeSpec.QueryInterface(IThoriumNativeCallCompatible, NativeCallable);
 
       CallableParameters := Callable.GetParameters;
 
@@ -2139,7 +2136,7 @@ var
             DynamicParameterList.AddEntry(CastRegID);
           ParameterRegIDs[I] := CastRegID;
         end;
-        if NativeCallable <> nil then
+        if Callable.NeedsNativeData then
         begin
           // ParameterRegIDs has been modified before
           GetInstruction(ParameterCastLocations[I]+2)^ := x2n(ParameterRegIDs[I]);
@@ -2155,7 +2152,7 @@ var
       AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, GetHighestRegisterInUse));
 
 
-      if NativeCallable <> nil then
+      if Callable.NeedsNativeData then
       begin
         for I := 0 to Parameters.Count - 1 do
         begin

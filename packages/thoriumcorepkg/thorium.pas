@@ -57,7 +57,7 @@ unit Thorium;
 {$define DebugToConsole}
 {$ifdef DebugToConsole}
   // Produce a Thorium stackdump after each instruction.
-  {.$define Stackdump}
+  {$define Stackdump}
   // Output the name of each instruction before it gets executed.
   {$define InstructionDump}
   // Produce a VM statedump after each instruction
@@ -583,9 +583,10 @@ type
     RefMode: TThoriumNativeCallRefMode;
   end;
 
-  IThoriumNativeCallCompatible = interface ['{02E24A87-41F3-4D0A-98D7-F889E3FE2394}']
+  {IThoriumNativeCallCompatible = interface ['{02E24A87-41F3-4D0A-98D7-F889E3FE2394}']
     function GetNativeCallSpecification(const HostType: PTypeInfo; out Spec: TThoriumNativeCallSpecification): Boolean;
-  end;
+    function GetParameterHostType(const I: Integer): PTypeInfo;
+  end;}
 
   IThoriumCallable = interface ['{C9317686-61BE-4D72-AF95-9E0FF25C752E}']
     function GetParameters: TThoriumParameters;
