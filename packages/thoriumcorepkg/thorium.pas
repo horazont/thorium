@@ -12727,6 +12727,36 @@ var
     end;
   end;
 
+  procedure x2n; inline;
+  begin
+    with TThoriumInstructionX2N(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI.DoToNative(FRegisters[TRI], HostType);
+      {$ifdef Timecheck}EndTimecheck('x2n');{$endif}
+    end;
+  end;
+
+  procedure n2x; inline;
+  begin
+    with TThoriumInstructionN2X(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI.DoFromNative(FRegisters[TRI]);
+      {$ifdef Timecheck}EndTimecheck('n2x');{$endif}
+    end;
+  end;
+
+  procedure clrn; inline;
+  begin
+    with TThoriumInstructionCLRN(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI.DoFreeNative(FRegisters[TRI]);
+      {$ifdef Timecheck}EndTimecheck('clrn');{$endif}
+    end;
+  end;
+
   procedure xiset; inline;
   begin
     with TThoriumInstructionXISET(FCurrentInstruction^) do
@@ -13393,6 +13423,9 @@ begin
     tiXPGET: xpget;
     tiXPSET: xpset;
     tiXCT: xct;
+    tiX2N: x2n;
+    tiN2X: n2x;
+    tiCLRN: clrn;
     tiVASTART: vastart;
     tiVASTART_T: vastart_t;
     tiVA_I8: va_i8;

@@ -337,8 +337,8 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="5706"/>
-        <CursorPos X="32" Y="5732"/>
+        <TopLine Value="12707"/>
+        <CursorPos X="56" Y="12755"/>
         <UsageCount Value="100"/>
         <Bookmarks Count="1">
           <Item0 X="5" Y="6537" ID="1"/>
@@ -355,7 +355,7 @@
       <Unit45>
         <Filename Value="packages\thoriumcorepkg\thorium_globals.pas"/>
         <UnitName Value="Thorium_Globals"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2115"/>
         <CursorPos X="52" Y="2143"/>
@@ -373,7 +373,7 @@
       <Unit47>
         <Filename Value="packages\thoriumlibpkg\thoriumlibstd.pas"/>
         <UnitName Value="ThoriumLibStd"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
         <TopLine Value="48"/>
         <CursorPos X="51" Y="81"/>
@@ -546,7 +546,7 @@
       <Unit71>
         <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
         <UnitName Value="Thorium_DefaultCompiler"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2146"/>
         <CursorPos X="113" Y="2184"/>
@@ -622,12 +622,10 @@
       <Unit80>
         <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\objpas\typinfo.pp"/>
         <UnitName Value="typinfo"/>
-        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="111"/>
         <CursorPos X="69" Y="167"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit80>
       <Unit81>
         <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\inc\variants.pp"/>
@@ -659,7 +657,7 @@
         <UsageCount Value="9"/>
       </Unit84>
     </Units>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="29" HistoryIndex="28">
       <Position1>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
         <Caret Line="599" Column="56" TopLine="579"/>
@@ -773,13 +771,9 @@
         <Caret Line="4972" Column="21" TopLine="4946"/>
       </Position28>
       <Position29>
-        <Filename Value="..\..\..\..\..\usr\share\fpcsrc\rtl\objpas\typinfo.pp"/>
-        <Caret Line="229" Column="52" TopLine="203"/>
-      </Position29>
-      <Position30>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
         <Caret Line="4984" Column="95" TopLine="4946"/>
-      </Position30>
+      </Position29>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
