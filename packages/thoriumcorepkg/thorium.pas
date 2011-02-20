@@ -1579,7 +1579,7 @@ type
     function NewNativeCallStaticFunction(const AName: String;
       const ACodePointer: Pointer;
       const AParameters: array of PTypeInfo;
-      const AReturnType: PTypeInfo = htNone;
+      const AReturnType: PTypeInfo = nil;
       const ACallingConvention: TThoriumNativeCallingConvention = ncRegister): TThoriumHostFunctionNativeCall;
   end;
 
@@ -2448,8 +2448,10 @@ function ThoriumIncRef(const AValue: TThoriumValue): TThoriumValue; inline;
 
 function HostRecordField(const AType: TThoriumHostTypeSpec;
   const AName: String; const AOffset: Cardinal): TThoriumHostRecordField;
+{
 function HostVarType(const AHostType: TThoriumHostType;
   const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumHostTypeSpec;
+}
 
 
 operator := (Input: TThoriumInstructionArray): TThoriumGenericOperation;
@@ -2910,10 +2912,12 @@ begin
 
 end;
 
+{
 procedure GenericCallbackPrecompile(var Instructions: Pointer; Parmeters: array of TThoriumHostType; ReturnType: TThoriumHostType);
 begin
 
 end;
+}
 
 {$ifdef CPU32}
 label
@@ -3822,6 +3826,7 @@ begin
   Result.Offset := AOffset;
 end;
 
+{
 function HostVarType(const AHostType: TThoriumHostType;
   const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumHostTypeSpec;
 begin
@@ -3836,6 +3841,7 @@ begin
   else
     Result.Storing := AStoring;*)
 end;
+}
 
 operator:=(Input: TThoriumInstructionArray): TThoriumGenericOperation;
 begin
@@ -7114,8 +7120,6 @@ begin
 end;
 
 procedure TThoriumHostRecordType.CalcHash;
-const
-  EntrySize = SizeOf(TThoriumHash) + SizeOf(TThoriumHostType);
 var
   I: Integer;
   Buffer: PByte;
@@ -8117,7 +8121,6 @@ var
   Signature: String;
   SigLength: Integer;
   Offset: Integer;
-  HostType: TThoriumHostType;
   I: Integer;
 begin
   (*SigLength := 8 + Length(FName);

@@ -116,79 +116,11 @@ const
 {%ENDREGION}
 
 (*
-   Region: Host types
-   Description: This section declares TThoriumHostType and all ht*-constants
-                which are used to represent the non-class types of the host
-                environment within the Thorium classes.
-                                                                              *)
-{%REGION 'Host types' /fold}
-const
-  ht8Bit = $1;      // xxxxx001
-  ht16Bit = $2;     // xxxxx010
-  ht32Bit = $3;     // xxxxx011
-  ht64Bit = $4;     // xxxxx100
-  ht80Bit = $5;     // xxxxx101
-
-
-  htIntS = $18;     // xx011xxx
-  htIntU = $10;     // xx010xxx
-  htFlt = $28;      // xx101xxx // float is always signed
-  htStr = $30;      // xx110000
-  htExt = $38;      // xx111000 // "signed str" is extended
-
-  htByRef = $40;    // x1xxxxxx
-  htArray = $80;    // 1xxxxxxx
-
-  htSizeSection = $07;  // 00000111
-  htTypeSection = $38;  // 00111000
-  htFlagSection = $C0;  // 11000000
-
-  htIntU8 = ht8Bit or htIntU;
-  htIntS8 = ht8Bit or htIntS;
-  htIntU16 = ht16Bit or htIntU;
-  htIntS16 = ht16Bit or htIntS;
-  htIntU32 = ht32Bit or htIntU;
-  htIntS32 = ht32Bit or htIntS;
-  htIntU64 = ht64Bit or htIntU;
-  htIntS64 = ht64Bit or htIntS;
-
-  {$ifdef CPU32}
-  htPtrUInt = ht32Bit or htIntU;
-  htPtrInt = ht32Bit or htIntS;
-  {$else}
-  htPtrUInt = ht64Bit or htIntU;
-  htPtrInt = ht64Bit or htIntS;
-  {$endif}
-  htPointer = htPtrUInt;
-
-  htFlt32 = ht32Bit or htFlt;
-  htFlt64 = ht64Bit or htFlt;
-  htFlt80 = ht80Bit or htFlt;
-
-  htByte = htIntU8;
-  htShortInt = htIntS8;
-  htWord = htIntU16;
-  htSmallInt = htIntS16;
-  htDWord = htIntU32;
-  htLongInt = htIntS32;
-  htQWord = htIntU64;
-  htInt64 = htIntS64;
-  htSingle = htFlt32;
-  htDouble = htFlt64;
-  htString = htStr;
-
-  htNone = 0;
-  htAny = htSizeSection or htTypeSection;
-
-type
-  TThoriumHostType = Byte;
-{%ENDREGION}
-
-(*
    Region: Native call types
    Description: These types are used by the native call implementation.
                                                                               *)
 {%REGION 'Native call types' /fold}
+type
   {$PACKENUM 2}
   TThoriumNativeCallInstructionCode = (
     ccSkipRegister,
