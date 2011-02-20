@@ -336,11 +336,11 @@
         <UnitName Value="Thorium"/>
         <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="6021"/>
-        <CursorPos X="20" Y="6023"/>
+        <TopLine Value="6015"/>
+        <CursorPos X="21" Y="6051"/>
         <UsageCount Value="100"/>
         <Bookmarks Count="1">
-          <Item0 X="5" Y="6541" ID="1"/>
+          <Item0 X="5" Y="6552" ID="1"/>
         </Bookmarks>
         <Loaded Value="True"/>
       </Unit43>
@@ -356,8 +356,8 @@
         <UnitName Value="Thorium_Globals"/>
         <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="122"/>
-        <CursorPos X="3" Y="171"/>
+        <TopLine Value="377"/>
+        <CursorPos X="1" Y="364"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit45>
@@ -376,7 +376,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="48"/>
         <CursorPos X="51" Y="81"/>
-        <UsageCount Value="34"/>
+        <UsageCount Value="35"/>
         <Loaded Value="True"/>
       </Unit47>
       <Unit48>
@@ -548,8 +548,8 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="641"/>
-        <CursorPos X="54" Y="665"/>
+        <TopLine Value="2155"/>
+        <CursorPos X="27" Y="2172"/>
         <ExtraEditorCount Value="1"/>
         <ExtraEditor1>
           <WindowIndex Value="0"/>
@@ -668,119 +668,127 @@
         <Loaded Value="True"/>
       </Unit85>
     </Units>
-    <JumpHistory Count="28" HistoryIndex="27">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="testlibs\thoriumtestnativecall.pas"/>
-        <Caret Line="30" Column="22" TopLine="1"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="7541" Column="20" TopLine="7539"/>
       </Position1>
       <Position2>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="1791" Column="53" TopLine="1762"/>
+        <Caret Line="7546" Column="93" TopLine="7519"/>
       </Position2>
       <Position3>
-        <Filename Value="testlibs\thoriumtestnativecall.pas"/>
-        <Caret Line="24" Column="22" TopLine="1"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="7674" Column="49" TopLine="7663"/>
       </Position3>
       <Position4>
-        <Filename Value="testlibs\thoriumtestnativecall.pas"/>
-        <Caret Line="16" Column="46" TopLine="1"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="8370" Column="18" TopLine="8368"/>
       </Position4>
       <Position5>
         <Filename Value="testlibs\thoriumtestnativecall.pas"/>
-        <Caret Line="32" Column="31" TopLine="1"/>
+        <Caret Line="18" Column="38" TopLine="1"/>
       </Position5>
       <Position6>
-        <Filename Value="testlibs\thoriumtestnativecall.pas"/>
-        <Caret Line="40" Column="26" TopLine="1"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="4973" Column="31" TopLine="4950"/>
       </Position6>
       <Position7>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="1790" Column="77" TopLine="1775"/>
+        <Caret Line="4974" Column="1" TopLine="4950"/>
       </Position7>
       <Position8>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="1759" Column="32" TopLine="1747"/>
+        <Caret Line="5991" Column="1" TopLine="5965"/>
       </Position8>
       <Position9>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="7537" Column="23" TopLine="7518"/>
+        <Caret Line="4974" Column="1" TopLine="4948"/>
       </Position9>
       <Position10>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="7550" Column="27" TopLine="7511"/>
+        <Caret Line="6003" Column="108" TopLine="5979"/>
       </Position10>
       <Position11>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="7549" Column="28" TopLine="7524"/>
+        <Caret Line="6006" Column="123" TopLine="5980"/>
       </Position11>
       <Position12>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="1747" Column="32" TopLine="1721"/>
+        <Caret Line="6017" Column="71" TopLine="5984"/>
       </Position12>
       <Position13>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="7541" Column="20" TopLine="7539"/>
+        <Caret Line="6441" Column="100" TopLine="6413"/>
       </Position13>
       <Position14>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="7546" Column="93" TopLine="7519"/>
+        <Caret Line="5997" Column="1" TopLine="5971"/>
       </Position14>
       <Position15>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="7674" Column="49" TopLine="7663"/>
+        <Caret Line="917" Column="34" TopLine="890"/>
       </Position15>
       <Position16>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="8370" Column="18" TopLine="8368"/>
+        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
+        <Caret Line="17" Column="103" TopLine="1"/>
       </Position16>
       <Position17>
-        <Filename Value="testlibs\thoriumtestnativecall.pas"/>
-        <Caret Line="18" Column="38" TopLine="1"/>
+        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
+        <Caret Line="665" Column="54" TopLine="641"/>
       </Position17>
       <Position18>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="4973" Column="31" TopLine="4950"/>
+        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
+        <Caret Line="667" Column="1" TopLine="641"/>
       </Position18>
       <Position19>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="4974" Column="1" TopLine="4950"/>
+        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
+        <Caret Line="661" Column="1" TopLine="641"/>
       </Position19>
       <Position20>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="5991" Column="1" TopLine="5965"/>
+        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
+        <Caret Line="2263" Column="16" TopLine="2239"/>
       </Position20>
       <Position21>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="4974" Column="1" TopLine="4948"/>
+        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
+        <Caret Line="1922" Column="48" TopLine="1890"/>
       </Position21>
       <Position22>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="6003" Column="108" TopLine="5979"/>
+        <Caret Line="899" Column="32" TopLine="890"/>
       </Position22>
       <Position23>
-        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="6006" Column="123" TopLine="5980"/>
+        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
+        <Caret Line="1916" Column="65" TopLine="1896"/>
       </Position23>
       <Position24>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="6017" Column="71" TopLine="5984"/>
+        <Caret Line="5734" Column="77" TopLine="5703"/>
       </Position24>
       <Position25>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="6441" Column="100" TopLine="6413"/>
+        <Caret Line="5736" Column="102" TopLine="5703"/>
       </Position25>
       <Position26>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="5997" Column="1" TopLine="5971"/>
+        <Caret Line="5743" Column="92" TopLine="5703"/>
       </Position26>
       <Position27>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
-        <Caret Line="917" Column="34" TopLine="890"/>
+        <Caret Line="5737" Column="73" TopLine="5703"/>
       </Position27>
       <Position28>
-        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
-        <Caret Line="17" Column="103" TopLine="1"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="4979" Column="106" TopLine="4961"/>
       </Position28>
+      <Position29>
+        <Filename Value="packages\thoriumcorepkg\thorium_defaultcompiler.pas"/>
+        <Caret Line="2151" Column="1" TopLine="2127"/>
+      </Position29>
+      <Position30>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="6041" Column="1" TopLine="6015"/>
+      </Position30>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>

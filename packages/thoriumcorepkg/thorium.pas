@@ -4973,18 +4973,18 @@ begin
       begin
         Assert(ExType <> nil);
         if ExType^.Kind in [tkInteger,tkChar,tkEnumeration,tkWChar,tkSet,tkInt64,tkQWord] then
-          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), 0, -1, -1)
+          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0)
         else
           Exit(False);
         Exit;
       end;
       opFromNative:
       begin
-        Operation.OperationInstruction := OperationInstructionDescription(n2x(0), 0, -1, -1);
+        Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0);
       end;
       opFreeNative:
       begin
-        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), 0, -1, -1);
+        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), -1, -1, 0);
       end;
       opEvaluate:
       begin
@@ -5384,18 +5384,18 @@ begin
       opToNative:
       begin
         if ExType^.Kind in [tkFloat] then
-          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), 0, -1, -1)
+          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0)
         else
           Exit(False);
         Exit;
       end;
       opFromNative:
       begin
-        Operation.OperationInstruction := OperationInstructionDescription(n2x(0), 0, -1, -1);
+        Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0);
       end;
       opFreeNative:
       begin
-        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), 0, -1, -1);
+        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), -1, -1, 0);
       end;
     else
       Result := inherited;
@@ -5733,18 +5733,18 @@ begin
       opToNative:
       begin
         if ExType^.Kind in [tkAString] then
-          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), 0, -1, -1)
+          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0)
         else
           Exit(False);
         Exit;
       end;
       opFromNative:
       begin
-        Operation.OperationInstruction := OperationInstructionDescription(n2x(0), 0, -1, -1);
+        Operation.OperationInstruction := OperationInstructionDescription(n2x(0), -1, -1, 0);
       end;
       opFreeNative:
       begin
-        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), 0, -1, -1);
+        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), -1, -1, 0);
       end;
     else
       Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
@@ -6038,7 +6038,18 @@ function TThoriumTypeHostFunction.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
   const ExName: String; const ExType: PTypeInfo): Boolean;
 begin
-  Result := False;
+  case Operation.Operation of
+    opCall:
+    begin
+      Operation.Casts[0].Needed := False;
+      Operation.Casts[1].Needed := False;
+      Operation.OperationInstruction := OperationInstructionDescription(xcall(0, 0), 1, -1, 0);
+      Operation.ResultType := FReturnType;
+      Result := True;
+    end;
+  else
+    Result := False;
+  end;
 end;
 
 function TThoriumTypeHostFunction.GetParameters: TThoriumParameters;

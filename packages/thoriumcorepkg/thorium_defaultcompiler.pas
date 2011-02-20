@@ -2148,7 +2148,7 @@ var
           // ParameterRegIDs has been modified before
           Operation.Operation := opToNative;
           ParamTypeInfo := HostCallable.GetHostParameters().Parameters[I];
-          if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation, nil, '', ParamTypeInfo) then
+          if not Parameters[I].CanPerformOperation(Operation, nil, '', ParamTypeInfo) then
             CompilerError(Format('Cannot convert ''%s'' to native data of type ''%s''.', [Entry^.Entry.TypeSpec.Name, ParamTypeInfo^.Name]));
           Operation.OperationInstruction.Instruction.Reserved[Operation.OperationInstruction.TargetRIOffset] := ParameterRegIDs[I];
           GetInstruction(ParameterCastLocations[I]+2)^ := TThoriumInstruction(Operation.OperationInstruction.Instruction);
@@ -2169,7 +2169,7 @@ var
         for I := 0 to Parameters.Count - 1 do
         begin
           Operation.Operation := opFreeNative;
-          if Entry^.Entry.TypeSpec.CanPerformOperation(Operation) then
+          if Parameters[I].CanPerformOperation(Operation) then
           begin
             // Ignore if nothing can be done here. This may be on purpose.
             Operation.OperationInstruction.Instruction.Reserved[Operation.OperationInstruction.TargetRIOffset] := ParameterRegIDs[I];
