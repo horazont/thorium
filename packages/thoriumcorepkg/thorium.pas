@@ -914,6 +914,7 @@ type
   TThoriumTypeHostFunction = class (TThoriumType, IThoriumCallable, IThoriumHostCallable)
   public
     constructor Create(const AThorium: TThorium; const AHostFunction: TThoriumHostCallableBase);
+    destructor Destroy; override;
   private
     FHostFunction: TThoriumHostCallableBase;
     FParameters: TThoriumParameters;
@@ -1756,8 +1757,8 @@ type
   protected
     procedure AddDependency(const ALibName: String);
     procedure AddDependency(const ALib: TThoriumLibrary); virtual;
+    procedure CreatePrototypes;
     procedure InitializeLibrary; virtual;
-    class function GetName: String; virtual; abstract;
     procedure RaiseRTTIRequired(const AStr: String);
     procedure SetupPropertyDirect(const AInstance: TThoriumLibraryPropertyDirect;
       const AName: String;
@@ -1834,6 +1835,7 @@ type
     procedure DeepLookupIdentifier(const AName: String; var Entries: TThoriumTableEntryResults);
     function FindType(const AName: String): TThoriumType;
     function FindTypeForHostType(const AType: PTypeInfo): TThoriumType;
+    class function GetName: String; virtual; abstract;
     procedure LookupIdentifier(const AName: String; var Entries: TThoriumTableEntryResults);
   end;
 
@@ -4653,7 +4655,7 @@ var
   Dummy: TThoriumOperationDescription;
 begin
   Dummy.Operation := opCall;
-  Result := CanPerformOperation(Dummy, nil, '');
+  Result := CanPerformOperation(Dummy);
 end;
 
 function TThoriumType.CanCreate(const InitialData: TThoriumInitialData;
@@ -4969,6 +4971,7 @@ begin
         IntOp(negi(0));
       opToNative:
       begin
+        Assert(ExType <> nil);
         if ExType^.Kind in [tkInteger,tkChar,tkEnumeration,tkWChar,tkSet,tkInt64,tkQWord] then
           Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), 0, -1, -1)
         else
@@ -5978,6 +5981,7 @@ var
 begin
   inherited Create(AThorium);
   FHostFunction := AHostFunction;
+  FParameters := TThoriumParameters.Create;
   for I := 0 to AHostFunction.FParameters.Count - 1 do
   begin
     TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(AHostFunction.FParameters.GetParameter(I));
@@ -5986,14 +5990,11 @@ begin
     if AHostFunction.NeedsNativeData then
     begin;
       Op.Operation := opToNative;
-      if not TypeSpec.CanPerformOperation(Op) then
-        raise EThoriumException.CreateFmt('''%s'' cannot be passed to a native call function (opToNative not supported).', [TypeSpec.Name]);
+      if not TypeSpec.CanPerformOperation(Op, nil, '', AHostFunction.FParameters.Parameters[I]) then
+        raise EThoriumException.CreateFmt('''%s'' cannot be passed to this native call function (opToNative not supported for ''%s'').', [TypeSpec.Name, AHostFunction.FParameters.GetParameter(I)^.Name]);
       Op.Operation := opFromNative;
       if not TypeSpec.CanPerformOperation(Op) then
         raise EThoriumException.CreateFmt('''%s'' cannot be passed to a native call function (opFromNative not supported).', [TypeSpec.Name]);
-      Op.Operation := opFreeNative;
-      if not TypeSpec.CanPerformOperation(Op) then
-        raise EThoriumException.CreateFmt('''%s'' cannot be passed to a native call function (opFreeNative not supported).', [TypeSpec.Name]);
     end;
     FParameters.Add(TypeSpec);
   end;
@@ -6001,23 +6002,26 @@ begin
   begin
     TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(AHostFunction.FReturnType.HostType);
     if TypeSpec = nil then
-      raise EThoriumException.CreateFmt('Cannot find respective thorium type for %s.', [AHostFunction.FParameters.GetParameter(I)^.Name]);
+      raise EThoriumException.CreateFmt('Cannot find respective thorium type for %s.', [AHostFunction.ReturnType.HostType^.Name]);
     if AHostFunction.NeedsNativeData then
     begin;
       Op.Operation := opToNative;
-      if not TypeSpec.CanPerformOperation(Op) then
-        raise EThoriumException.CreateFmt('''%s'' cannot be return type of a native call function (opToNative not supported).', [TypeSpec.Name]);
+      if not TypeSpec.CanPerformOperation(Op, nil, '', AHostFunction.ReturnType.HostType) then
+        raise EThoriumException.CreateFmt('''%s'' cannot be return type of this native call function (opToNative not supported for ''%s'').', [TypeSpec.Name, AHostFunction.ReturnType.HostType^.Name]);
       Op.Operation := opFromNative;
       if not TypeSpec.CanPerformOperation(Op) then
         raise EThoriumException.CreateFmt('''%s'' cannot be return type of a native call function (opFromNative not supported).', [TypeSpec.Name]);
-      Op.Operation := opFreeNative;
-      if not TypeSpec.CanPerformOperation(Op) then
-        raise EThoriumException.CreateFmt('''%s'' cannot be return type of a native call function (opFreeNative not supported).', [TypeSpec.Name]);
     end;
     FReturnType := TypeSpec;
   end
   else
     FReturnType := nil;
+end;
+
+destructor TThoriumTypeHostFunction.Destroy;
+begin
+  FParameters.Free;
+  inherited Destroy;
 end;
 
 function TThoriumTypeHostFunction.GetHasReturnValue: Boolean;
@@ -7527,8 +7531,17 @@ begin
   FRequiredLibraries.Add(ALib);
 end;
 
+procedure TThoriumLibrary.CreatePrototypes;
+var
+  I: Integer;
+begin
+  for I := 0 to FHostCallables.Count - 1 do
+    FHostCallables[I].CreatePrototype;
+end;
+
 procedure TThoriumLibrary.InitializeLibrary;
 begin
+  CreatePrototypes;
   Freeze;
 end;
 
@@ -8166,6 +8179,7 @@ end;
 
 constructor TThoriumHostCallableBase.Create(ALibrary: TThoriumLibrary);
 begin
+  FLibrary := ALibrary;
   FName := '';
   FParameters := TThoriumHostParameters.Create;
   FReturnType.HostType := nil;

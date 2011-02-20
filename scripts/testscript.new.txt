@@ -1,4 +1,5 @@
 loadlibrary thorium;
+loadlibrary test.nativecall;
 
 private int testfunc(int param) {
   return param + 10;
@@ -11,4 +12,5 @@ public void main()
   if (test == test2) and (test == 20) {
     test2 = 40;
   }
+  nctest(10, 20);
 }
