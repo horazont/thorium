@@ -232,7 +232,7 @@ type
 
   (* This record completely defines a type of the host environment, including
      host class types. *)
-  TThoriumHostTypeSpec = record
+  TThoriumHostType = record
     HostType: PTypeInfo;
 
     (* If storing is true, the script will call EnableHostControl when the
@@ -242,11 +242,11 @@ type
 
   (* A pointer to a record which completely defines a type of the host
      environment. *)
-  PThoriumHostTypeSpec = ^TThoriumHostTypeSpec;
+  PThoriumHostType = ^TThoriumHostType;
 
   (* This record defines a field of an host environmental record. *)
   TThoriumHostRecordField = record
-    FieldType: TThoriumHostTypeSpec;
+    FieldType: TThoriumHostType;
     FieldName: String;
     Offset: Cardinal;
   end;
@@ -595,7 +595,7 @@ type
 
   IThoriumHostCallable = interface ['{14B6F0DA-D255-4A73-87E8-FC1AC5CA83A1}']
     function GetHostParameters: TThoriumHostParameters;
-    function GetHostReturnType: TThoriumHostTypeSpec;
+    function GetHostReturnType: TThoriumHostType;
     function NeedsNativeData: Boolean;
   end;
 
@@ -923,7 +923,7 @@ type
     function GetParameters: TThoriumParameters;
     function GetHostParameters: TThoriumHostParameters;
     function GetReturnType: TThoriumType;
-    function GetHostReturnType: TThoriumHostTypeSpec;
+    function GetHostReturnType: TThoriumHostType;
     function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
     function NeedsNativeData: Boolean;
   published
@@ -1306,8 +1306,8 @@ type
   private
     FCapacity: Integer;
     FCount: Integer;
-    FParams: PThoriumHostTypeSpec;
-    function GetParameterInfo(Index: Integer): PThoriumHostTypeSpec;
+    FParams: PThoriumHostType;
+    function GetParameterInfo(Index: Integer): PThoriumHostType;
     function GetParameter(Index: Integer): PTypeInfo;
     function GetStoring(Index: Integer): Boolean;
     procedure SetParameter(Index: Integer; const AValue: PTypeInfo);
@@ -1340,7 +1340,7 @@ type
     FLibrary: TThoriumLibrary;
     FName: String;
     FParameters: TThoriumHostParameters;
-    FReturnType: TThoriumHostTypeSpec;
+    FReturnType: TThoriumHostType;
     FPrototype: TThoriumTypeHostFunction;
     function GetPrototype: TThoriumTypeHostFunction;
   protected
@@ -1351,7 +1351,7 @@ type
   public
     property Parameters: TThoriumHostParameters read FParameters;
     property Prototype: TThoriumTypeHostFunction read GetPrototype;
-    property ReturnType: TThoriumHostTypeSpec read FReturnType write FReturnType;
+    property ReturnType: TThoriumHostType read FReturnType write FReturnType;
     property ReturnTypeStoring: Boolean read FReturnType.Storing write FReturnType.Storing;
     property Name: String read FName write FName;
   end;
@@ -2446,7 +2446,7 @@ procedure ThoriumReleaseValue(var AValue: TThoriumValue); inline;
 function ThoriumDuplicateValue(const AValue: TThoriumValue): TThoriumValue; inline;
 function ThoriumIncRef(const AValue: TThoriumValue): TThoriumValue; inline;
 
-function HostRecordField(const AType: TThoriumHostTypeSpec;
+function HostRecordField(const AType: TThoriumHostType;
   const AName: String; const AOffset: Cardinal): TThoriumHostRecordField;
 {
 function HostVarType(const AHostType: TThoriumHostType;
@@ -2569,7 +2569,7 @@ end;
 
 (* Generates NativeCall subscript code which can later be used to call a native
 function without knowing its signature at (program) compile time. *)
-(*procedure GenericPrecompile(var AInstructions: Pointer; var AVAOffset: Integer; Parameters: TThoriumHostParameters; ReturnType: TThoriumHostTypeSpec; HasData: Boolean; CallingConvention: TThoriumNativeCallingConvention);
+(*procedure GenericPrecompile(var AInstructions: Pointer; var AVAOffset: Integer; Parameters: TThoriumHostParameters; ReturnType: TThoriumHostType; HasData: Boolean; CallingConvention: TThoriumNativeCallingConvention);
 var
   Instructions: array of TThoriumNativeCallInstruction;
   Capacity: Integer;
@@ -2906,7 +2906,7 @@ end;    *)
 
 procedure GenericPrecompile(var AInstructions: Pointer;
     AParameters: TThoriumHostParameters; AThParameters: TThoriumParameters;
-    AReturnType: TThoriumHostTypeSpec; AThReturnType: TThoriumType; HasData: Boolean;
+    AReturnType: TThoriumHostType; AThReturnType: TThoriumType; HasData: Boolean;
     CallingConvention: TThoriumNativeCallingConvention);
 begin
 
@@ -3818,7 +3818,7 @@ end;
 
 {%REGION 'Thorium helper funtions' /fold}
 
-function HostRecordField(const AType: TThoriumHostTypeSpec;
+function HostRecordField(const AType: TThoriumHostType;
   const AName: String; const AOffset: Cardinal): TThoriumHostRecordField;
 begin
   Result.FieldType := AType;
@@ -3828,7 +3828,7 @@ end;
 
 {
 function HostVarType(const AHostType: TThoriumHostType;
-  const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumHostTypeSpec;
+  const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumHostType;
 begin
   raise EThoriumException.Create('needs to be reimplemented.');
 (*  Result.HostType := AHostType;
@@ -5991,7 +5991,7 @@ begin
   Result := FReturnType;
 end;
 
-function TThoriumTypeHostFunction.GetHostReturnType: TThoriumHostTypeSpec;
+function TThoriumTypeHostFunction.GetHostReturnType: TThoriumHostType;
 begin
   Result := HostFunction.ReturnType;
 end;
@@ -7966,7 +7966,7 @@ begin
 end;
 
 function TThoriumHostParameters.GetParameterInfo(Index: Integer
-  ): PThoriumHostTypeSpec;
+  ): PThoriumHostType;
 begin
   if (Index < 0) or (Index >= FCount) then
     raise EListError.CreateFmt('Parameter index out of bounds (%d must be in [0..%d])', [Index, FCount-1]);
@@ -8015,7 +8015,7 @@ begin
   if AValue < FCapacity then
     Exit;
   FCapacity := AValue;
-  ReAllocMem(FParams, FCapacity * SizeOf(TThoriumHostTypeSpec));
+  ReAllocMem(FParams, FCapacity * SizeOf(TThoriumHostType));
 end;
 
 function TThoriumHostParameters.Add(const AType: PTypeInfo;
@@ -8050,7 +8050,7 @@ begin
     Exit;
   end;
   GetParameterInfo(AIndex);
-  Move(FParams[AIndex+1], FParams[AIndex], SizeOf(TThoriumHostTypeSpec) * (FCount - (AIndex+1)));
+  Move(FParams[AIndex+1], FParams[AIndex], SizeOf(TThoriumHostType) * (FCount - (AIndex+1)));
 end;
 
 function TThoriumHostParameters.IndexOf(const AType: PTypeInfo;
@@ -8075,7 +8075,7 @@ end;
 procedure TThoriumHostParameters.Insert(const AIndex: Integer;
   const AType: PTypeInfo; const IsStoring: Boolean);
 var
-  Info: PThoriumHostTypeSpec;
+  Info: PThoriumHostType;
 begin
   ForceUnfrozen;
   if AIndex = FCount then
@@ -8086,7 +8086,7 @@ begin
   if FCount = FCapacity then
     Expand;
   Info := GetParameterInfo(AIndex);
-  Move(FParams[AIndex], FParams[AIndex+1], SizeOf(TThoriumHostTypeSpec) * (FCount - AIndex));
+  Move(FParams[AIndex], FParams[AIndex+1], SizeOf(TThoriumHostType) * (FCount - AIndex));
   with Info^ do
   begin
     HostType := AType;
