@@ -15751,7 +15751,9 @@ function TThoriumModule.FindPublicFunction(const AName: String
 var
   List: PPointerList;
   I: Integer;
+  UpName: String;
 begin
+  UpName := UpperCase(AName);
   List := FPublicFunctions.List;
   for I := 0 to FPublicFunctions.Count - 1 do
   begin
@@ -15766,7 +15768,9 @@ function TThoriumModule.IndexOfPublicFunction(const AName: String): Integer;
 var
   List: PPointerList;
   I: Integer;
+  UpName: String;
 begin
+  UpName := UpperCase(AName);
   List := FPublicFunctions.List;
   for I := 0 to FPublicFunctions.Count - 1 do
     if TThoriumFunction(List^[I]).FName = AName then
