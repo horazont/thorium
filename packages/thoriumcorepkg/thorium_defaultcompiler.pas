@@ -1184,7 +1184,7 @@ begin
     // Thats tricky. This must only be parsed as logical not if it is followed
     // by an opening bracket. In the other case, we MUST jump back one step in
     // the parser, as it needs to be taken as bitwise not otherwise.
-    CompilerError('For that we need a parser stack.');
+    CompilerError('Internal error: This construct needs a parser stack.');
   end;
 
   JumpingLogicalTerm(TrueJumps, FalseJumps);
@@ -1231,7 +1231,7 @@ begin
     // Thats tricky. This must only be parsed as logical not if it is followed
     // by an opening bracket. In the other case, we MUST jump back one step in
     // the parser, as it needs to be taken as bitwise not otherwise.
-    CompilerError('For that we need a parser stack.');
+    CompilerError('Internal error: This construct needs a parser stack.');
   end;
 
   if FCurrentSym = tsOpenBracket then
@@ -1988,6 +1988,7 @@ var
     I, J: Integer;
     Scores: array of Integer;
     Callable: IThoriumCallable;
+    NativeCallable: IThoriumNativeCallCompatible;
     CallableParameters: TThoriumParameters;
     Assignment: TThoriumAssignmentDescription;
     HighestScore: Integer;
@@ -2110,6 +2111,8 @@ var
       Entry := Entries[0];
       Solution := Solutions[0];
       Entry^.Entry.TypeSpec.QueryInterface(IThoriumCallable, Callable);
+      NativeCallable := nil;
+      Entry^.Entry.TypeSpec.QueryInterface(IThoriumNativeCallCompatible, NativeCallable);
 
       CallableParameters := Callable.GetParameters;
 
@@ -2123,7 +2126,7 @@ var
           Assignment.Cast.Instruction.SRI := ParameterRegIDs[I];
           Assignment.Cast.Instruction.TRI := CastRegID;
           GetInstruction(ParameterCastLocations[I])^ := TThoriumInstruction(Assignment.Cast.Instruction);
-          TThoriumInstructionMOVER_ST(GetInstruction(ParameterCastLocations[I]+2)^).SRI := CastRegID;
+          TThoriumInstructionMOVER_ST(GetInstruction(ParameterCastLocations[I]+3)^).SRI := CastRegID;
           DynIdx := DynamicParameterList.FindValue(ParameterRegIDs[I]);
           if DynIdx >= 0 then
           begin
@@ -2134,6 +2137,12 @@ var
             ReleaseRegister(CastRegID)
           else
             DynamicParameterList.AddEntry(CastRegID);
+          ParameterRegIDs[I] := CastRegID;
+        end;
+        if NativeCallable <> nil then
+        begin
+          // ParameterRegIDs has been modified before
+          GetInstruction(ParameterCastLocations[I]+2)^ := x2n(ParameterRegIDs[I]);
         end;
       end;
 
@@ -2144,6 +2153,21 @@ var
 
       AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, GetHighestRegisterInUse));
       AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, GetHighestRegisterInUse));
+
+
+      if NativeCallable <> nil then
+      begin
+        for I := 0 to Parameters.Count - 1 do
+        begin
+          GenCodeToOperation(Solution^.GetCode, clrn(ParameterRegIDs[I]));
+          GenCodeToOperation(Solution^.SetCode, clrn(ParameterRegIDs[I]));
+        end;
+      end;
+      for I := 0 to DynamicParameterList.Count - 1 do
+      begin
+        GenCodeToOperation(Solution^.GetCode, clr(DynamicParameterList[I]));
+        GenCodeToOperation(Solution^.SetCode, clr(DynamicParameterList[I]));
+      end;
 
       if Entry^.Entry.TypeSpec.NeedsClear then
       begin

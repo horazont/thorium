@@ -471,6 +471,7 @@ type
     tiXFGET, tiXFSET, tiXSFGET, tiXSFSET,
     tiXIGET, tiXISET,
     tiXCT,
+    tiX2N, tiN2X, tiCLRN,
     tiVASTART, tiVA_I8, tiVA_I16, tiVA_I32, tiVA_I64,
     tiVA_I8S, tiVA_I16S, tiVA_I32S, tiVA_I64S,
     tiVA_F32, tiVA_F64, tiVA_F80, tiVA_S, tiVA_X,
@@ -1701,6 +1702,30 @@ type
     CodeLine: Cardinal;
   end;
 
+  TThoriumInstructionX2N = record
+    Instruction: TThoriumInstructionCode;
+    TRI: Word;
+    Reserved: array [0..10] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionN2X = record
+    Instruction: TThoriumInstructionCode;
+    TRI: Word;
+    Reserved: array [0..10] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCLRN = record
+    Instruction: TThoriumInstructionCode;
+    TRI: Word;
+    Reserved: array [0..10] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
   TThoriumInstructionVASTART = record
     Instruction: TThoriumInstructionCode;
     Length: Cardinal;
@@ -2108,6 +2133,7 @@ const
     'xfget', 'xfset', 'xsfget', 'xsfset',
     'xiget', 'xiset',
     'xct',
+    'x2n', 'n2x', 'clrn',
     'vastart', 'va.i8', 'va.i16', 'va.i32', 'va.i64',
     'va.i8s', 'va.i16s', 'va.i32s', 'va.i64s', 'va.f32', 'va.f64', 'va.f80', 'va.s', 'va.x',
     'vastart.t', 'vat.f', 'vat.i', 'vat.s', 'vat.x', 'vafinish',

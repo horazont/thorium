@@ -1133,6 +1133,39 @@ begin
   end;
 end;
 
+function x2n(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionX2N(Result) do
+  begin
+    Instruction := tiX2N;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function n2x(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionN2X(Result) do
+  begin
+    Instruction := tiN2X;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
+function clrn(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCLRN(Result) do
+  begin
+    Instruction := tiCLRN;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
 function vastart(ALength: Cardinal; AIsPointerBased: Boolean): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);

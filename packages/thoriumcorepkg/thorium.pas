@@ -57,7 +57,7 @@ unit Thorium;
 {$define DebugToConsole}
 {$ifdef DebugToConsole}
   // Produce a Thorium stackdump after each instruction.
-  {$define Stackdump}
+  {.$define Stackdump}
   // Output the name of each instruction before it gets executed.
   {$define InstructionDump}
   // Produce a VM statedump after each instruction
