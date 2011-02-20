@@ -269,7 +269,8 @@ type
 
   TThoriumNativeData = record
     ForType: PTypeInfo;
-    Data: Pointer;
+    AlignedSize: Word; // Size of data rounded up to full stack slot sizes, i.e. 4 byte on 32bit and 8 byte on 64bit
+    Data: Pointer; // Size of data must be stack slot size aligned
   end;
 
 {%ENDREGION}
@@ -583,6 +584,12 @@ type
     RefMode: TThoriumNativeCallRefMode;
   end;
 
+  TThoriumNativeMetadata = record
+    AlignedSize: Word;
+    RegisterTarget: TThoriumNativeRegisterTarget;
+    ForceStack: Boolean;
+  end;
+
   {IThoriumNativeCallCompatible = interface ['{02E24A87-41F3-4D0A-98D7-F889E3FE2394}']
     function GetNativeCallSpecification(const HostType: PTypeInfo; out Spec: TThoriumNativeCallSpecification): Boolean;
     function GetParameterHostType(const I: Integer): PTypeInfo;
@@ -652,6 +659,7 @@ type
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; virtual; abstract;
     function DuplicateValue(const Input: TThoriumValue): TThoriumValue; virtual;
     function Equals(Obj: TObject): boolean; override;
+    function GetNativeMetadata(const ForType: PTypeInfo): TThoriumNativeMetadata; virtual; abstract;
     function HasFieldAccess: Boolean; virtual;
     function HasIndexedAccess: Boolean; virtual;
     (*function GetClassType: TClass;*)
@@ -739,6 +747,8 @@ type
        const TheObject: TThoriumType=nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
+    function GetNativeMetadata(const ForType: PTypeInfo
+       ): TThoriumNativeMetadata; override;
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
        override;
@@ -804,6 +814,8 @@ type
        const TheObject: TThoriumType=nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
+    function GetNativeMetadata(const ForType: PTypeInfo
+       ): TThoriumNativeMetadata; override;
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
          override;
@@ -852,6 +864,8 @@ type
        const TheObject: TThoriumType=nil; const ExName: String='';
        const ExType: PTypeInfo = nil): Boolean; override;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
+    function GetNativeMetadata(const ForType: PTypeInfo
+       ): TThoriumNativeMetadata; override;
     function HasIndexedAccess: Boolean; override;
     function HasFieldAccess: Boolean; override;
     function NeedsClear: Boolean; override;
@@ -2918,6 +2932,8 @@ procedure GenericPrecompile(var AInstructions: Pointer;
     AReturnType: TThoriumHostType; AThReturnType: TThoriumType; HasData: Boolean;
     CallingConvention: TThoriumNativeCallingConvention);
 begin
+  // Redesign made all data available as pointers. So we should have a way
+  // easier process of appliance now.
 
 end;
 
@@ -5109,6 +5125,17 @@ begin
   Result.Int := PThoriumInteger(Ptr)^;
 end;
 
+function TThoriumTypeInteger.GetNativeMetadata(const ForType: PTypeInfo
+  ): TThoriumNativeMetadata;
+begin
+  if ForType^.Kind in [tkInt64, tkQWord] then
+    Result.AlignedSize := CPU_SIZE_FACTOR
+  else
+    Result.AlignedSize := 1;
+  Result.ForceStack := False;
+  Result.RegisterTarget := rtInt;
+end;
+
 function TThoriumTypeInteger.DoAddition(const AValue, BValue: TThoriumValue
   ): TThoriumValue;
 begin
@@ -5300,6 +5327,7 @@ procedure TThoriumTypeInteger.DoToNative(var AValue: TThoriumValue;
   const AType: PTypeInfo);
 begin
   AValue.NativeData.ForType := nil;
+  AValue.NativeData.AlignedSize := 1 * CPU_SIZE_FACTOR;
   AValue.NativeData.Data := @AValue.Int;
 end;
 
@@ -5457,6 +5485,27 @@ begin
   Result.Float := PThoriumFloat(Ptr)^;
 end;
 
+function TThoriumTypeFloat.GetNativeMetadata(const ForType: PTypeInfo
+  ): TThoriumNativeMetadata;
+begin
+  Result.ForceStack := False;
+  Result.RegisterTarget := rtXMM;
+  case GetTypeData(ForType)^.FloatType of
+    ftSingle:
+      Result.AlignedSize := 1;
+    ftDouble:
+      Result.AlignedSize := CPU_SIZE_FACTOR;
+    ftExtended:
+      Result.AlignedSize := StackSlotCount(SizeOf(Extended));
+    ftComp:
+      Result.AlignedSize := StackSlotCount(SizeOf(Comp));
+    ftCurrency:
+      Result.AlignedSize := StackSlotCount(SizeOf(Currency));
+  else
+    raise EThoriumException.CreateFmt('Invalid float type: ''%s''.', [ForType^.Name]);
+  end;
+end;
+
 function TThoriumTypeFloat.DoAddition(const AValue, BValue: TThoriumValue
   ): TThoriumValue;
 begin
@@ -5605,27 +5654,32 @@ begin
   case GetTypeData(AType)^.FloatType of
     ftSingle:
     begin
-      AValue.NativeData.Data := GetMem(SizeOf(Single));
+      AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Single)));
+      AValue.NativeData.AlignedSize := 1;
       PSingle(AValue.NativeData.Data)^ := AValue.Float;
     end;
     ftDouble:
     begin
       AValue.NativeData.ForType := nil;
+      AValue.NativeData.AlignedSize := 1 * CPU_SIZE_FACTOR;
       AValue.NativeData.Data := @AValue.Float;
     end;
     ftExtended:
     begin
-      AValue.NativeData.Data := GetMem(SizeOf(Extended));
+      AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Extended)));
+      AValue.NativeData.AlignedSize := ceil(SizeOf(Extended) / STACK_SLOT_SIZE);
       PExtended(AValue.NativeData.Data)^ := AValue.Float;
     end;
     ftComp:
     begin
-      AValue.NativeData.Data := GetMem(SizeOf(Comp));
+      AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Comp)));
+      AValue.NativeData.AlignedSize := ceil(SizeOf(Comp) / STACK_SLOT_SIZE);
       PComp(AValue.NativeData.Data)^ := AValue.Float;
     end;
     ftCurr:
     begin
-      AValue.NativeData.Data := GetMem(SizeOf(Currency));
+      AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Currency)));
+      AValue.NativeData.AlignedSize := ceil(SizeOf(Currency) / STACK_SLOT_SIZE);
       PCurrency(AValue.NativeData.Data)^ := AValue.Float;
     end;
   end;
@@ -5787,6 +5841,14 @@ begin
   Result.Str^ := PThoriumString(Ptr)^;
 end;
 
+function TThoriumTypeString.GetNativeMetadata(const ForType: PTypeInfo
+  ): TThoriumNativeMetadata;
+begin
+  Result.RegisterTarget := rtInt;
+  Result.AlignedSize := 1;
+  Result.ForceStack := False;
+end;
+
 function TThoriumTypeString.HasIndexedAccess: Boolean;
 begin
   Result := True;
@@ -5891,6 +5953,7 @@ end;
 procedure TThoriumTypeString.DoToNative(var AValue: TThoriumValue;
   const AType: PTypeInfo);
 begin
+  AValue.NativeData.AlignedSize := 1;
   AValue.NativeData.Data := AValue.Str;
 end;
 

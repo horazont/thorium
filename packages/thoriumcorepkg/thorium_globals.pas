@@ -113,6 +113,8 @@ const
   THORIUM_TYPE_NAME_INTEGER = 'int';
   THORIUM_TYPE_NAME_STRING = 'string';
   THORIUM_TYPE_NAME_FLOAT = 'float';
+
+  CPU_SIZE_FACTOR = {$ifdef CPU32}2{$else}{$ifdef CPU64}1{$else}{$error Unknown CPU}{$endif}{$endif};
 {%ENDREGION}
 
 (*
@@ -123,42 +125,12 @@ const
 type
   {$PACKENUM 2}
   TThoriumNativeCallInstructionCode = (
-    ccSkipRegister,
-    ccIncStrRef,
-    ccDecStrRef,
-    {$ifndef CPU64}ccVARev, {$endif}
     ccData,
-    ccVA,
-    ccIntDeref,
-    ccInt64Deref,
-    ccDoubleDeref,
-    ccSingleDeref,
-    ccExtendedDeref,
-    ccStringDeref,
-    ccInt,
-    ccInt64,
-    ccDouble,
-    ccSingle,
-    ccExtended,
-    ccString,
-    ccIntRef,
-    ccInt64Ref,
-    ccDoubleRef,
-    ccSingleRef,
-    ccExtendedRef,
-    ccStringRef,
-    ccCall,
-    ccCallRetInt,
-    ccCallRetInt64,
-    ccCallRetDouble,
-    ccCallRetSingle,
-    ccCallRetExtended,
-    ccCallRetString,
-    ccDecStack,
-    ccRevSingle,
-    ccRevExtended,
-    ccExit,
+    ccPutRef, ccPutRefRef, ccPutDataReg, ccPutDataStack, ccPutLargeDataStack,
+    ccCall, ccRetRef, ccRetRefRef, ccClearStack,
     ccNone);
+
+  TThoriumNativeRegisterTarget = (rtInt, rtXMM, rtMMX);
 const
   ccPointerDeref = {$ifdef CPU32}ccIntDeref{$else}ccInt64Deref{$endif};
   ccPointer = {$ifdef CPU32}ccInt{$else}ccInt64{$endif};

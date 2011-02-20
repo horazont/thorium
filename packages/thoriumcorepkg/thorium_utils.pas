@@ -36,7 +36,10 @@ unit Thorium_Utils;
 interface
 
 uses
-  Classes, SysUtils; 
+  Classes, SysUtils, Math;
+
+const
+  STACK_SLOT_SIZE = {$ifdef CPU32}4{$else}{$ifdef CPU64}8{$else}{$error Unknown CPU}{$endif}{$endif};
   
 type
   (* A record used to convert Double values bytewise to an Int64. *)
@@ -56,6 +59,9 @@ type
     Len: SizeInt;
   end;
   PThoriumFPCArrayHeader = ^TThoriumFPCArrayHeader;
+
+function FitStackSize(const Size: SizeUInt): SizeUInt;
+function StackSlotCount(const Size: SizeUInt): SizeUInt;
 
 (* This function converts a Cardinal value to a UTF-8 encoded string. *)
 function UTF8Chr(Value: Cardinal): String;
@@ -95,6 +101,21 @@ implementation
 //    Block 2: g-l $80 or ((Value shr 6) and $3F)
 //    Block 3: m-r $80 or ((Value shr 12) and $3F)
 //    Block 4: s-u $F0 or ((Value shr 15) and $07)
+
+function FitStackSize(const Size: SizeUInt): SizeUInt;
+var
+  D, M: Integer;
+begin
+  DivMod(Size, STACK_SLOT_SIZE, D, M);
+  if D = 0 then
+    Exit(Size);
+  Exit(Size + (STACK_SLOT_SIZE-M));
+end;
+
+function StackSlotCount(const Size: SizeUInt): SizeUInt;
+begin
+  Result := ceil(Size / STACK_SLOT_SIZE);
+end;
 
 function UTF8Chr(Value: Cardinal): String;
 // Converts a char code to UTF-8
