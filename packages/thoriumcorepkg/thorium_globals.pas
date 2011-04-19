@@ -126,7 +126,8 @@ type
   {$PACKENUM 2}
   TThoriumNativeCallInstructionCode = (
     ccData,
-    ccPutRef, ccPutRefRef, ccPutDataReg, ccPutDataStack, ccPutLargeDataStack,
+    ccPutRef, ccPutRefRef, ccPutDataRegInt, ccPutDataRegXMM, ccPutDataRegMMX,
+    ccPutDataStack, ccPutLargeDataStack,
     ccCall, ccRetRef, ccRetRefRef, ccClearStack,
     ccNone);
 
@@ -137,15 +138,12 @@ const
   ccPointerRef = {$ifdef CPU32}ccIntRef{$else}ccInt64Ref{$endif};
   ccCallRetPointer = {$ifdef CPU32}ccCallRetInt{$else}ccCallRetInt64{$endif};
 
-(*const
-  DEREF_OFFSET = 5;*)
 type
   TThoriumNativeCallingConvention = (ncRegister, ncStdCall, ncCDecl);
 
   TThoriumNativeCallInstruction = packed record
     Instruction: TThoriumNativeCallInstructionCode;
-    Offset: SizeInt;
-    Mask: SizeInt;
+    Data1, Data2: SizeInt;
   end;
   TThoriumNativeCallInstructions = array of TThoriumNativeCallInstruction;
   PThoriumNativeCallInstruction = ^TThoriumNativeCallInstruction;
