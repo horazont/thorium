@@ -2524,7 +2524,7 @@ var
   // These offsets are needed by GenericPrecompile. Don't ask me why there is no
   // possibility to let the compiler do the work.
   STACKENTRY_TYPE_OFFSET: SizeUInt;
-  STACKENTRY_DATA_OFFSET: SizeUInt;
+  STACKENTRY_NATIVE_DATA_OFFSET: SizeUInt;
   STACKENTRY_VADATA_OFFSET: SizeUInt;
 
 
@@ -2931,10 +2931,229 @@ procedure GenericPrecompile(var AInstructions: Pointer;
     AParameters: TThoriumHostParameters; AThParameters: TThoriumParameters;
     AReturnType: TThoriumHostType; AThReturnType: TThoriumType; HasData: Boolean;
     CallingConvention: TThoriumNativeCallingConvention);
+
+const
+  NATIVE_REGISTER_COUNT = {$ifdef CPU64}6{$else}3{$endif};
+  NATIVE_DOUBLE_REGISTER_COUNT = {$ifdef CPU64}8{$else}0{$endif};
+
+var
+  Instructions: array of TThoriumNativeCallInstructions;
+  Count, Capacity: Integer;
+  NativeRegistersUsed: Integer;
+  NativeDoubleRegistersUsed: Integer;
+
+  function NewInstruction: PThoriumNativeCallInstruction;
+  begin
+    if Count = Capacity then
+    begin
+      Capacity += 16;
+      SetLength(Instructions, Capacity);
+    end;
+    Result := @Instructions[Count];
+    Result^.Data1 := 0;
+    Result^.Data2 := 0;
+    Inc(Count);
+  end;
+
+  function NewPutDataRegIntInstruction: PThoriumNativeCallInstruction;
+  begin
+    Result := NewInstruction;
+    if NativeRegistersUsed < NATIVE_REGISTER_COUNT then
+    begin
+      Result^.Instruction := ccPutDataRegInt;
+      Inc(NativeRegistersUsed);
+    end
+    else
+      Result^.Instruction := ccPutDataStack;
+  end;
+
+  function NewPutDataRegInt64Instruction: PThoriumNativeCallInstruction;
+  begin
+    Result := NewInstruction;
+    {$ifdef CPU64}
+    if NativeRegistersUsed < NATIVE_REGISTER_COUNT then
+    begin
+      Result^.Instruction := ccPutDataRegInt;
+      Inc(NativeRegistersUsed);
+    end
+    else
+      Result^.Instruction := ccPutDataStack;
+    {$else}
+    Result^.Instruction := ccPutLargeDataStack;
+    {$endif}
+  end;
+
+  function NewPutDataRegPtrInstruction: PThoriumNativeCallInstruction;
+  begin
+    Result := NewPutDataRegIntInstruction;
+  end;
+
+  function NewPutDataRegSingleInstruction: PThoriumNativeCallInstruction;
+  begin
+    Result := NewInstruction;
+    if NativeDoubleRegistersUsed < NATIVE_DOUBLE_REGISTER_COUNT then
+    begin
+      Result^.Instruction := ccPutDataRegXMM;
+      Inc(NativeDoubleRegistersUsed);
+    end
+    else
+      Result^.Instruction := ccPutDataStack;
+  end;
+
+  function NewPutDataRegDoubleInstruction: PThoriumNativeCallInstruction;
+  begin
+    Result := NewInstruction;
+    if NativeDoubleRegistersUsed < NATIVE_DOUBLE_REGISTER_COUNT then
+    begin
+      Result^.Instruction := ccPutDataRegXMM;
+      Inc(NativeDoubleRegistersUsed);
+    end
+    else
+    begin
+      {$ifdef CPU64}
+      Result^.Instruction := ccPutDataStack;
+      {$else}
+      Result^.Instruction := ccPutLargeDataStack;
+      {$endif}
+    end;
+  end;
+
+  function NewPutDataRegExtendedInstruction: PThoriumNativeCallInstruction;
+  begin
+    Result := NewInstruction;
+    Result^.Instruction := ccPutLargeDataStack;
+  end;
+
+  function NewPutLargeDataInstruction: PThoriumNativeCallInstruction;
+  begin
+    Result := NewInstruction;
+    Result^.Instruction := ccPutLargeDataStack;
+  end;
+
+  function BaseOffset(const StackOffset: Integer): SizeInt; inline;
+  begin
+    Exit(StackOffset * SizeOf(TThoriumStackEntry));
+  end;
+
+  function NativeDataOffset(const StackOffset: Integer): SizeInt; inline;
+  begin
+    Exit(BaseOffset(StackOffset) + STACKENTRY_NATIVE_DATA_OFFSET);
+  end;
+
+var
+  I: Integer;
+  ParamType: PTypeInfo;
+  ThParamType: TThoriumType;
+  TypeData: PTypeData;
+  Instruction: PThoriumNativeCallInstruction;
+  CurrStackOffset: Integer;
+  Metadata: TThoriumNativeMetadata;
 begin
+  NativeRegistersUsed := 0;
+  NativeDoubleRegistersUsed := 0;
+
+  if HasData then
+  begin
+    Inc(NativeRegistersUsed);
+    Instruction := NewInstruction;
+    Instruction^.Instruction := ccData;
+  end;
+
   // Redesign made all data available as pointers. So we should have a way
   // easier process of appliance now.
+  for I := 0 to AParameters.Count - 1 do
+  begin
+    CurrStackOffset := ParamCount - (I+1);
+    ParamType := AParameters[I];
+    ThParamType := AThParameters[I];
+    TypeData := GetTypeData(ParamType);
+    case ParamType^.Kind of
+      tkBool, tkInteger, tkEnumeration, tkSet, tkUChar, tkWChar, tkChar:
+      begin
+        // These are all 32bits or less
+        Instruction := NewPutDataRegIntInstruction;
+        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+      end;
 
+      tkFloat:
+      begin
+        case TypeData^.FloatType of
+          ftSingle:
+          begin
+            Instruction := NewPutDataRegSingleInstruction;
+            Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+          end;
+          ftDouble:
+          begin
+            Instruction := NewPutDataRegDoubleInstruction;
+            Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+          end;
+          ftExtended:
+          begin
+            Instruction := NewPutDataRegExtendedInstruction;
+            Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+          end;
+        else
+          raise EThoriumCompilerException.CreateFmt('Unsupported NativeCall float type: %d (%s).', [Ord(TypeData^.FloatType), GetEnumName(TypeInfo(TFloatType), Ord(TypeData^.FloatType))]);
+        end;
+      end;
+
+      tkSString, tkWString, tkUString:
+      begin
+        raise EThoriumCompilerException.CreateFmt('Unsupported NativeCall string type: %d (%s).', [Ord(ParamType^.Kind), GetEnumName(TypeInfo(TTypeKind), Ord(ParamType^.Kind))]);
+      end;
+
+      tkAString:
+      begin
+        Instruction := NewPutDataRegPtrInstruction;
+        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+      end;
+
+      tkInt64, tkQWord:
+      begin
+        Instruction := NewPutDataRegInt64Instruction;
+        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+      end;
+
+      tkUnknown:
+      begin
+        Metadata := ThParamType.GetNativeMetadata(ParamType);
+        if (Metadata.AlignedSize <= SizeOf(Pointer)) and (Metadata.AlignedSize > 0) then
+          Instruction := NewPutDataRegIntInstruction
+        else
+          Instruction := NewPutLargeDataInstruction;
+        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+      end;
+    else
+      raise EThoriumCompilerException.CreateFmt('Unsupported NativeCall type: %d (%s).', [Ord(ParamType^.Kind), GetEnumName(TypeInfo(TTypeKind), Ord(ParamType^.Kind))]);
+    end;
+  end;
+
+  Instruction := NewInstruction;
+  Instruction^.Instruction := ccCall;
+
+  {ParamType := AReturnType.HostType;
+  ThParamType := AThReturnType;
+  if ParamType <> nil then
+  begin
+    case ParamType^.Kind of
+      tkBool, tkInteger, tkEnumeration, tkSet, tkUChar, tkWChar, tkChar:
+      begin
+        // These are all 32bits or less
+        Instruction := NewInstruction;
+        Instruction^.Instruction := cc
+        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+      end;
+    end;
+  end
+  else
+  begin
+  end;}
+
+  Instruction := NewInstruction;
+  Instruction^.Instruction := ccExit;
+  AInstructions := GetMem(SizeOf(TThoriumNativeCallInstruction) * Count);
+  Move(Instructions[0], AInstructions^, SizeOf(TThoriumNativeCallInstruction) * Count);
 end;
 
 {
@@ -14404,7 +14623,7 @@ var
 initialization
 // See the comment about the variables in the Native call helpers region.
 STACKENTRY_TYPE_OFFSET := Offset(TestEntry, TestEntry.Value.RTTI);
-STACKENTRY_DATA_OFFSET := Offset(TestEntry, TestEntry.Value.Int);
+STACKENTRY_NATIVE_DATA_OFFSET := Offset(TestEntry, TestEntry.Value.NativeData);
 STACKENTRY_VADATA_OFFSET := Offset(TestEntry, TestEntry.VarargsBuffer.DataOrigin);
 
 {$ifdef HookSIGUSR1}

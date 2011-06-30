@@ -129,14 +129,10 @@ type
     ccPutRef, ccPutRefRef, ccPutDataRegInt, ccPutDataRegXMM, ccPutDataRegMMX,
     ccPutDataStack, ccPutLargeDataStack,
     ccCall, ccRetRef, ccRetRefRef, ccClearStack,
+    ccExit,
     ccNone);
 
   TThoriumNativeRegisterTarget = (rtInt, rtXMM, rtMMX);
-const
-  ccPointerDeref = {$ifdef CPU32}ccIntDeref{$else}ccInt64Deref{$endif};
-  ccPointer = {$ifdef CPU32}ccInt{$else}ccInt64{$endif};
-  ccPointerRef = {$ifdef CPU32}ccIntRef{$else}ccInt64Ref{$endif};
-  ccCallRetPointer = {$ifdef CPU32}ccCallRetInt{$else}ccCallRetInt64{$endif};
 
 type
   TThoriumNativeCallingConvention = (ncRegister, ncStdCall, ncCDecl);
@@ -153,7 +149,7 @@ type
   TThoriumNativeCallFloatMode = (fmAsDouble, fmAsSingle, fmAsExtended);
   TThoriumNativeCallDirection = (ncdPass, ncdReturn);
 
-const
+(*const
   NativeCallInstruction : array [TThoriumNativeCallValueMode, TThoriumNativeCallRefMode, TThoriumNativeCallDirection] of TThoriumNativeCallInstructionCode = (
                 {rmRef}                     {rmNormal}                      {rmDeref}
     {vmInt32}   ((ccIntRef, ccNone),        (ccInt, ccCallRetInt),          (ccIntDeref, ccNone)),
@@ -162,6 +158,7 @@ const
     {vmFloat}   ((ccDoubleRef, ccNone),     (ccDouble, ccCallRetDouble),    (ccDoubleDeref, ccNone)),
     {vmString}  ((ccStringRef, ccNone),     (ccString, ccCallRetString),    (ccStringDeref, ccNone))
   );
+*)
 
 {%ENDREGION}
 
