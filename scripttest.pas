@@ -38,7 +38,7 @@ program scripttest;
   {$define UseTestModule}
 {$endif}
 
-{.$define HeapTrc}
+{$define HeapTrc}
 
 uses
   {$ifdef HeapTrc}Heaptrc, {$endif}Classes, SysUtils, thorium, thorium_utils,

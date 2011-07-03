@@ -432,7 +432,7 @@ const
   NATIVE_DOUBLE_REGISTER_COUNT = {$ifdef CPU64}8{$else}0{$endif};
 
 var
-  Instructions: array of TThoriumNativeCallInstructions;
+  Instructions: array of TThoriumNativeCallInstruction;
   Count, Capacity: Integer;
   NativeRegistersUsed: Integer;
   NativeDoubleRegistersUsed: Integer;
@@ -445,6 +445,7 @@ var
       SetLength(Instructions, Capacity);
     end;
     Result := @Instructions[Count];
+    Result^.Instruction := ccNone;
     Result^.Data1 := 0;
     Result^.Data2 := 0;
     Inc(Count);
@@ -546,6 +547,8 @@ var
 begin
   NativeRegistersUsed := 0;
   NativeDoubleRegistersUsed := 0;
+  Capacity := 0;
+  Count := 0;
 
   if HasData then
   begin
