@@ -624,14 +624,12 @@ begin
     end;
   end;
 
-  Instruction := NewInstruction;
-  Instruction^.Instruction := ccCall;
-
-  {ParamType := AReturnType.HostType;
+  ParamType := AReturnType.HostType;
   ThParamType := AThReturnType;
   if ParamType <> nil then
   begin
-    case ParamType^.Kind of
+    raise EThoriumCompilerException.CreateFmt('Unsupported NativeCall return type: %d (%s).', [Ord(ParamType^.Kind), GetEnumName(TypeInfo(TTypeKind), Ord(ParamType^.Kind))]);
+    {case ParamType^.Kind of
       tkBool, tkInteger, tkEnumeration, tkSet, tkUChar, tkWChar, tkChar:
       begin
         // These are all 32bits or less
@@ -639,11 +637,14 @@ begin
         Instruction^.Instruction := cc
         Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
       end;
-    end;
+
+    end;}
   end
   else
   begin
-  end;}
+    Instruction := NewInstruction;
+    Instruction^.Instruction := ccCallNone;
+  end;
 
   Instruction := NewInstruction;
   Instruction^.Instruction := ccExit;
@@ -660,7 +661,7 @@ label
   irRDI, irRSI, irRDX, irRCX, irR8, irR9, irPush,
   frXMM0, frXMM1, frXMM2, frXMM3, frXMM4, frXMM5, frXMM6, frXMM7, frPush,
 
-  lLoop;
+  lLoop, lLargeDataStackLoop;
 const
   InstrMap: array [TThoriumNativeCallInstructionCode] of Pointer = (
     @lccData, @lccPutRef, @lccPutRefRef, @lccPutDataRegInt, @lccPutDataRegXMM,
@@ -741,8 +742,9 @@ lccPutDataRegInt:
       movq (%r14), %r14
       jmp (%r11)
 lccPutDataRegXMM:
+      // note that, due to the nature of the movlps instruction, no second
+      // dereferentiation is possible
       addq $8, %r12
-      movq (%r14), %r14
       movq (%r14), %r14
       jmp (%r11)
 lccPutDataStack:
@@ -758,10 +760,11 @@ lccPutLargeDataStack:
       shrq $3, %rax // divide by stack slot size (shr by 3 == div by 8)
       movq (%r14), %r14
   lLargeDataStackLoop:
-      test %rax
-      jz %rbx
+      test %rax, %rax
+      jz lLoop
       pushq (%r14)
       addq $8, %r14
+      jmp lLargeDataStackLoop
 lccCallNone:
       addq $8, %r12
       xorq %rax, %rax
@@ -796,6 +799,9 @@ lccCallRetExtended:
       movq (%r14), %r14
       fstpl (%r14)
       jmp %rbx
+lccClearStack:
+      // not implemented in x64
+      jmp %rbx
 irRDI:
       movq %r14, %rdi
       addq $8, %r11
@@ -819,6 +825,44 @@ irR8:
 irR9:
       movq %r14, %r9
       addq $8, %r11
+      jmp %rbx
+irPush:
+      pushq %r14
+      jmp %rbx
+frXMM0:
+      movlps (%r14), %xmm0
+      addq $8, %r15
+      jmp %rbx
+frXMM1:
+      movlps (%r14), %xmm1
+      addq $8, %r15
+      jmp %rbx
+frXMM2:
+      movlps (%r14), %xmm2
+      addq $8, %r15
+      jmp %rbx
+frXMM3:
+      movlps (%r14), %xmm3
+      addq $8, %r15
+      jmp %rbx
+frXMM4:
+      movlps (%r14), %xmm4
+      addq $8, %r15
+      jmp %rbx
+frXMM5:
+      movlps (%r14), %xmm5
+      addq $8, %r15
+      jmp %rbx
+frXMM6:
+      movlps (%r14), %xmm6
+      addq $8, %r15
+      jmp %rbx
+frXMM7:
+      movlps (%r14), %xmm7
+      addq $8, %r15
+      jmp %rbx
+frPush:
+      pushq (%r14)
       jmp %rbx
 lccExit:
       movq RAX, %rax

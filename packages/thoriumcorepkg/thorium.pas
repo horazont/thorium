@@ -628,7 +628,7 @@ type
 
   { TThoriumType }
 
-  TThoriumType = class (TThoriumHashableObject, IUnknown)
+  TThoriumType = class abstract (TThoriumHashableObject, IUnknown)
   public
     constructor Create(AThorium: TThorium);
   private

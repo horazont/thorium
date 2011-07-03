@@ -128,7 +128,7 @@ type
     ccData,
     ccPutRef, ccPutRefRef, ccPutDataRegInt, ccPutDataRegXMM, {ccPutDataRegMMX,}
     ccPutDataStack, ccPutLargeDataStack,
-    ccCallNone, ccCallValue, ccCallRetRef, ccCallRetRefRef, ccCallRetMMX, ccCallRetExtended,
+    ccCallNone, ccCallRetValue, ccCallRetRef, ccCallRetRefRef, ccCallRetMMX, ccCallRetExtended,
     ccClearStack,
     ccExit,
     ccNone);
