@@ -132,16 +132,19 @@ type
     ccClearStack,
     ccExit,
     ccNone);
+  {$PACKENUM DEFAULT}
 
   TThoriumNativeRegisterTarget = (rtInt, rtXMM, rtMMX);
 
 type
   TThoriumNativeCallingConvention = (ncRegister, ncStdCall, ncCDecl);
 
-  TThoriumNativeCallInstruction = packed record
+  {$PACKRECORDS 2}
+  TThoriumNativeCallInstruction = record
     Instruction: TThoriumNativeCallInstructionCode;
     Data1, Data2: SizeInt;
   end;
+  {$PACKRECORDS DEFAULT}
   TThoriumNativeCallInstructions = array of TThoriumNativeCallInstruction;
   PThoriumNativeCallInstruction = ^TThoriumNativeCallInstruction;
 

@@ -267,10 +267,18 @@ type
   (* A pointer to a record which represents an array of values. *)
   PThoriumSimpleVarargs = ^TThoriumSimpleVarargs;
 
-  TThoriumNativeData = record
+  TThoriumNativeData = packed record
+    // Order is assumed to be exactly like this in NativeCall asm code
+
+    (* Size of data must be stack slot size aligned. *)
+    Data: Pointer;
+
+    (* Size of data in units of stack slot size (i.e. Ceil(Size / 4) on 32 bit
+       systems) *)
+    AlignedSize: SizeInt;
+
+
     ForType: PTypeInfo;
-    AlignedSize: SizeInt; // Size of data rounded up to full stack slot sizes, i.e. 4 byte on 32bit and 8 byte on 64bit
-    Data: Pointer; // Size of data must be stack slot size aligned
   end;
 
 {%ENDREGION}
@@ -2793,6 +2801,10 @@ begin
     tiXISET: with TThoriumInstructionXISET(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(VRI), ThoriumRegisterToStr(IRI), ThoriumRegisterToStr(ERI)]);
 
     tiXCT: with TThoriumInstructionXCT(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(ERI)]);
+
+    tiX2N: with TThoriumInstructionX2N(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
+    tiN2X: with TThoriumInstructionN2X(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
+    tiCLRN: with TThoriumInstructionCLRN(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
 
     tiVASTART: with TThoriumInstructionVASTART(AInstruction) do Result := Result + Format('$0x%.8x $%d', [Length, Pointers]);
     tiVASTART_T: with TThoriumInstructionVASTART_T(AInstruction) do Result := Result + Format('$0x%0.8x $0x%.8x', [Length, Floats]);
@@ -7459,7 +7471,8 @@ end;
 
 procedure TThoriumIdentifierTable.FreeEntry(var AEntry: TThoriumTableEntry);
 begin
-  ThoriumFreeValue(AEntry.Value);
+  if AEntry.ValidValue then
+    ThoriumFreeValue(AEntry.Value);
   Dispose(AEntry.Name);
   Finalize(AEntry);
 end;
@@ -7527,6 +7540,7 @@ begin
   Result^.Offset := Offset;
   Result^.TypeSpec := TypeSpec;
   Result^.Writable := False;
+  Result^.ValidValue := False;
   FillByte(Result^.Value, SizeOf(TThoriumValue), 0);
 end;
 

@@ -720,6 +720,7 @@ lLoop:
 
       movq %r10, %r14
       subq (%r12), %r14
+      subq $8, %r14
 
       addq $8, %r12
 
@@ -758,9 +759,8 @@ lccPutDataStack:
 lccPutLargeDataStack:
       addq $8, %r12
       movq %r14, %rax
-      subq $8, %rax
+      addq $8, %rax
       movq (%rax), %rax // get the size from the NativeValue data
-      shrq $3, %rax // divide by stack slot size (shr by 3 == div by 8)
       movq (%r14), %r14
   lLargeDataStackLoop:
       test %rax, %rax
