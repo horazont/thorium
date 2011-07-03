@@ -126,9 +126,10 @@ type
   {$PACKENUM 2}
   TThoriumNativeCallInstructionCode = (
     ccData,
-    ccPutRef, ccPutRefRef, ccPutDataRegInt, ccPutDataRegXMM, ccPutDataRegMMX,
+    ccPutRef, ccPutRefRef, ccPutDataRegInt, ccPutDataRegXMM, {ccPutDataRegMMX,}
     ccPutDataStack, ccPutLargeDataStack,
-    ccCall, ccRetRef, ccRetRefRef, ccClearStack,
+    ccCallNone, ccCallValue, ccCallRetRef, ccCallRetRefRef, ccCallRetMMX, ccCallRetExtended,
+    ccClearStack,
     ccExit,
     ccNone);
 

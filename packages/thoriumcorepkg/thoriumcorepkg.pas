@@ -7,7 +7,8 @@ unit thoriumcorepkg;
 interface
 
 uses
-    Thorium, Thorium_Globals, Thorium_Utils, Thorium_DefaultCompiler;
+  Thorium, Thorium_Globals, Thorium_Utils, Thorium_DefaultCompiler, 
+  Thorium_NativeCall;
 
 implementation
 
