@@ -4055,7 +4055,6 @@ begin
   AValue.NativeData.ForType := nil;
   AValue.NativeData.AlignedSize := 1 * CPU_SIZE_FACTOR;
   AValue.NativeData.Data := @AValue.Int;
-  EvilGlobalTestVariable := PtrInt(@AValue.Int);
 end;
 
 function TThoriumTypeInteger.DoToString(const AValue: TThoriumValue): String;
@@ -12079,8 +12078,6 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       { TODO : Honour HRI }
-      WriteLn(Format('%16.16x', [EvilGlobalTestVariable]));
-      WriteLn(Format('%d', [PInt64(EvilGlobalTestVariable)^]));
       FRegisters[SRI].HostFunc.CallFromVirtualMachine(Self);
       {$ifdef Timecheck}EndTimecheck('ecall');{$endif}
     end;

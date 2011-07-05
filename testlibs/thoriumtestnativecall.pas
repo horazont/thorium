@@ -19,10 +19,11 @@ type
 
 implementation
 
-procedure nctest(A: Int64; B: Integer);
+procedure nctest(A: Int64; B: Integer; C: Double);
 begin
   WriteLn('A = ', A);
   WriteLn('B = ', B);
+  WriteLn(Format('C = %.4f', [C]));
 end;
 
 { TTestNativeCall }
@@ -36,7 +37,7 @@ procedure TTestNativeCall.InitializeLibrary;
 begin
   AddDependency('thorium');
   RegisterNativeCallFunction('nctest', @nctest, [
-    TypeInfo(Int64), TypeInfo(Integer)
+    TypeInfo(Int64), TypeInfo(Integer), TypeInfo(Double)
   ], nil, ncRegister);
   inherited InitializeLibrary;
 end;
