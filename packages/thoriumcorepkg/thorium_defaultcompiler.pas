@@ -1982,9 +1982,9 @@ var
     Parameters: TThoriumTypes;
     ParameterRegIDs: TThoriumIntList;
     ParameterCastLocations, ParameterReadbackLocations: TThoriumIntList;
-    ParamRegID, CastRegID: TThoriumRegisterID;
+    ParamRegID, CastRegID, NativeRegID: TThoriumRegisterID;
     State: TThoriumValueState;
-    DynamicParameterList: TThoriumIntList;
+    DynamicParameterList, NativeParameterList: TThoriumIntList;
     I, J: Integer;
     Scores: array of Integer;
     Callable: IThoriumCallable;
@@ -2015,7 +2015,6 @@ var
     if Entries.Count = 0 then
       CompilerError('Cannot call this.');
 
-    GetFreeRegister(trEXP, ParamRegID);
     Parameters := TThoriumTypes.Create;
     DynamicParameterList := TThoriumIntList.Create;
     ParameterCastLocations := TThoriumIntList.Create;
@@ -2028,6 +2027,7 @@ var
           if FCurrentSym = tsComma then
             Proceed;
           EmbedHint('call:param');
+          GetFreeRegister(trEXP, ParamRegID);
           ParamType := RelationalExpression(ParamRegID, State);
           Parameters.Add(ParamType);
           ParameterRegIDs.AddEntry(ParamRegID);
@@ -2038,10 +2038,7 @@ var
           GenCode(noop(THORIUM_NOOPMARK_PLACEHOLDER, 0, 0, 0));
           GenCode(mover_st(ParamRegID));
           if (State = vsDynamic) and (ParamType.NeedsClear) then
-          begin
             DynamicParameterList.AddEntry(ParamRegID);
-            GetFreeRegister(trEXP, ParamRegID);
-          end;
         until FCurrentSym <> tsComma;
       end;
       ExpectSymbol([tsCloseBracket]);
@@ -2196,11 +2193,12 @@ var
       Solution^.FinalType := Callable.GetReturnType;
       Solution^.FullStr += '()';
     finally
+      for I := 0 to ParameterRegIDs.Count - 1 do
+        ReleaseRegister(ParameterRegIDs[I]);
       ParameterRegIDs.Free;
       ParameterCastLocations.Free;
       DynamicParameterList.Free;
       Parameters.Free;
-      ReleaseRegister(ParamRegID);
     end;
   end;
 

@@ -533,7 +533,7 @@ var
 
   function NativeDataOffset(const StackOffset: Integer): SizeInt; inline;
   begin
-    Exit(BaseOffset(StackOffset) + STACKENTRY_NATIVE_DATA_OFFSET);
+    Exit(BaseOffset(StackOffset) - STACKENTRY_NATIVE_DATA_OFFSET);
   end;
 
 var
@@ -544,6 +544,7 @@ var
   Instruction: PThoriumNativeCallInstruction;
   CurrStackOffset: Integer;
   Metadata: TThoriumNativeMetadata;
+  ParamCount: Integer;
 begin
   NativeRegistersUsed := 0;
   NativeDoubleRegistersUsed := 0;
@@ -559,7 +560,8 @@ begin
 
   // Redesign made all data available as pointers. So we should have a way
   // easier process of appliance now.
-  for I := 0 to AParameters.Count - 1 do
+  ParamCount := AParameters.Count;
+  for I := 0 to ParamCount - 1 do
   begin
     CurrStackOffset := ParamCount - (I+1);
     ParamType := AParameters[I];
@@ -667,9 +669,9 @@ label
   lLoop, lLargeDataStackLoop;
 const
   InstrMap: array [TThoriumNativeCallInstructionCode] of Pointer = (
-    @lccData, @lccPutRef, @lccPutDataRegInt, @lccPutDataRegXMM,
+    @lccData, @lccPutRefRef, @lccPutRef, @lccPutDataRegInt, @lccPutDataRegXMM,
     @lccPutDataStack, @lccPutLargeDataStack,
-    @lccCallNone, @lccCallRetValue, @lccCallRetRef, @lccCallRetMMX, @lccCallRetExtended,
+    @lccCallNone, @lccCallRetValue, @lccCallRetRefRef, @lccCallRetRef, @lccCallRetMMX, @lccCallRetExtended,
     @lccClearStack, @lccExit, nil
   );
 const
@@ -720,7 +722,7 @@ lLoop:
 
       movq %r10, %r14
       subq (%r12), %r14
-      addq $16, %r14
+      // addq $16, %r14
 
       addq $8, %r12
 
@@ -732,14 +734,19 @@ lccData:
       addq $8, %r12
       movq Data, %r14
       jmp (%r11)
+lccPutRefRef:
+      addq $8, %r12
+      jmp (%r11)
 lccPutRef:
       addq $8, %r12
       // %r14 contains the adress of the value (per def. of NativeData)
       // For some types, it may be the adress of a pointer, this needs to be
       // applied in the compilation though
+      movq (%r14), %r14
       jmp (%r11)
 lccPutDataRegInt:
       addq $8, %r12
+      movq (%r14), %r14
       movq (%r14), %r14
       jmp (%r11)
 lccPutDataRegXMM:
@@ -770,15 +777,23 @@ lccCallNone:
 lccCallRetValue:
       addq $8, %r12
       xorq %rax, %rax
+      movq (%r14), %r14
+      movq (%r14), %rax
       call Method
       movq %rax, (%r14)
       jmp %rbx
+lccCallRetRefRef:
+      addq $8, %r12
+      call Method
+      jmp %rbx
 lccCallRetRef:
       addq $8, %r12
+      movq (%r14), %r14
       call Method
       jmp %rbx
 lccCallRetMMX:
       addq $8, %r12
+      movq (%r14), %r14
       movlps (%r14), %xmm0
       call Method
       movlps %xmm0, (%r14)
@@ -786,6 +801,7 @@ lccCallRetMMX:
 lccCallRetExtended:
       addq $8, %r12
       call Method
+      movq (%r14), %r14
       fstpl (%r14)
       jmp %rbx
 lccClearStack:
