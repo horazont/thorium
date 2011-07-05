@@ -2505,6 +2505,9 @@ uses
 
 var FDebugMode: Boolean = {$ifdef DebugToConsole}True{$else}False{$endif};
 
+var
+  EvilGlobalTestVariable: Ptrint = 0;
+
 {$ifdef HookSIGUSR1}
 var
   SigCurrCompiler: TThoriumCustomCompiler;

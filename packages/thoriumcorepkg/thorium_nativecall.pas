@@ -667,9 +667,9 @@ label
   lLoop, lLargeDataStackLoop;
 const
   InstrMap: array [TThoriumNativeCallInstructionCode] of Pointer = (
-    @lccData, @lccPutRef, @lccPutRefRef, @lccPutDataRegInt, @lccPutDataRegXMM,
+    @lccData, @lccPutRef, @lccPutDataRegInt, @lccPutDataRegXMM,
     @lccPutDataStack, @lccPutLargeDataStack,
-    @lccCallNone, @lccCallRetValue, @lccCallRetRef, @lccCallRetRefRef, @lccCallRetMMX, @lccCallRetExtended,
+    @lccCallNone, @lccCallRetValue, @lccCallRetRef, @lccCallRetMMX, @lccCallRetExtended,
     @lccClearStack, @lccExit, nil
   );
 const
@@ -720,7 +720,7 @@ lLoop:
 
       movq %r10, %r14
       subq (%r12), %r14
-      subq $8, %r14
+      addq $16, %r14
 
       addq $8, %r12
 
@@ -734,26 +734,21 @@ lccData:
       jmp (%r11)
 lccPutRef:
       addq $8, %r12
-      // %r14 contains the adress of the pointer to the value (per def. of NativeData)
-      movq (%r14), %r14
-      jmp (%r11)
-lccPutRefRef:
-      addq $8, %r12
+      // %r14 contains the adress of the value (per def. of NativeData)
+      // For some types, it may be the adress of a pointer, this needs to be
+      // applied in the compilation though
       jmp (%r11)
 lccPutDataRegInt:
       addq $8, %r12
-      movq (%r14), %r14
       movq (%r14), %r14
       jmp (%r11)
 lccPutDataRegXMM:
       // note that, due to the nature of the movlps instruction, no second
       // dereferentiation is possible
       addq $8, %r12
-      movq (%r14), %r14
       jmp (%r11)
 lccPutDataStack:
       addq $8, %r12
-      movq (%r14), %r14
       pushq (%r14)
       jmp %rbx
 lccPutLargeDataStack:
@@ -761,7 +756,6 @@ lccPutLargeDataStack:
       movq %r14, %rax
       addq $8, %rax
       movq (%rax), %rax // get the size from the NativeValue data
-      movq (%r14), %r14
   lLargeDataStackLoop:
       test %rax, %rax
       jz lLoop
@@ -781,17 +775,10 @@ lccCallRetValue:
       jmp %rbx
 lccCallRetRef:
       addq $8, %r12
-      movq (%r14), %rax
-      call Method
-      jmp %rbx
-lccCallRetRefRef:
-      addq $8, %r12
-      movq %r14, %rax
       call Method
       jmp %rbx
 lccCallRetMMX:
       addq $8, %r12
-      movq (%r14), %r14
       movlps (%r14), %xmm0
       call Method
       movlps %xmm0, (%r14)
@@ -799,7 +786,6 @@ lccCallRetMMX:
 lccCallRetExtended:
       addq $8, %r12
       call Method
-      movq (%r14), %r14
       fstpl (%r14)
       jmp %rbx
 lccClearStack:
@@ -886,7 +872,7 @@ var
 initialization
 // See the comment about the variables in the Native call helpers region.
 STACKENTRY_TYPE_OFFSET := Offset(TestEntry, TestEntry.Value.RTTI);
-STACKENTRY_NATIVE_DATA_OFFSET := Offset(TestEntry, TestEntry.Value.NativeData);
+STACKENTRY_NATIVE_DATA_OFFSET := Offset(TestEntry, TestEntry.Value.NativeData.Data);
 STACKENTRY_VADATA_OFFSET := Offset(TestEntry, TestEntry.VarargsBuffer.DataOrigin);
 
 end.
