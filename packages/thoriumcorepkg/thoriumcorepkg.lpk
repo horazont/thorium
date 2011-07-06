@@ -43,7 +43,7 @@
     <Description Value="Core package of Thorium Scripting Language, containing the main engine and global constants."/>
     <License Value="MPL 1.1"/>
     <Version Major="1" Minor="1"/>
-    <Files Count="9">
+    <Files Count="10">
       <Item1>
         <Filename Value="thorium.pas"/>
         <UnitName Value="Thorium"/>
@@ -80,6 +80,10 @@
         <Filename Value="optimizer/thorium_optimizejumps.pas"/>
         <UnitName Value="Thorium_OptimizeJumps"/>
       </Item9>
+      <Item10>
+        <Filename Value="optimizer/thorium_optimizemovecopy.pas"/>
+        <UnitName Value="thorium_optimizemovecopy"/>
+      </Item10>
     </Files>
     <LazDoc Paths="/home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lazdoc"/>
     <RequiredPkgs Count="1">

@@ -8,7 +8,7 @@ interface
 
 uses
   Thorium, Thorium_Globals, Thorium_Utils, Thorium_DefaultCompiler, 
-  Thorium_NativeCall, Thorium_OptimizeJumps;
+  Thorium_NativeCall, Thorium_OptimizeJumps, Thorium_OptimizeMoveCopy;
 
 implementation
 

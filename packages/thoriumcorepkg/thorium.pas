@@ -2502,7 +2502,7 @@ property DebugMode: Boolean read GetDebugMode;
 implementation
 
 uses
-  Thorium_NativeCall, Thorium_OptimizeJumps;
+  Thorium_NativeCall, Thorium_OptimizeJumps, Thorium_OptimizeMoveCopy;
 
 var FDebugMode: Boolean = {$ifdef DebugToConsole}True{$else}False{$endif};
 
@@ -9055,6 +9055,8 @@ procedure TThoriumCustomCompiler.LoadOptimizerPatterns(
 begin
   Optimizer.AddPattern(TThoriumOptimizeConditionalJumps);
   Optimizer.AddPattern(TThoriumOptimizeJumps);
+  Optimizer.AddPattern(TThoriumOptimizeMoveRCopyX);
+  Optimizer.AddPattern(TThoriumOptimizeMoveXCopyR);
 end;
 
 procedure TThoriumCustomCompiler.OptimizeCode;
