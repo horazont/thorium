@@ -605,6 +605,9 @@ begin
 
       tkAString:
       begin
+        Instruction := NewInstruction;
+        Instruction^.Instruction := ccIncrStrRef;
+        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
         Instruction := NewPutDataRegPtrInstruction;
         Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
       end;
@@ -661,7 +664,8 @@ label
   lccData, lccPutRef, lccPutRefRef, lccPutDataRegInt, lccPutDataRegXMM,
   lccPutDataStack, lccPutLargeDataStack,
   lccCallNone, lccCallRetValue, lccCallRetRef, lccCallRetRefRef, lccCallRetMMX, lccCallRetExtended,
-  lccClearStack, lccExit,
+  lccClearStack, lccIncrStrRef, lccDecrStrRef,
+  lccExit,
 
   irRDI, irRSI, irRDX, irRCX, irR8, irR9, irPush,
   frXMM0, frXMM1, frXMM2, frXMM3, frXMM4, frXMM5, frXMM6, frXMM7, frPush,
@@ -672,7 +676,7 @@ const
     @lccData, @lccPutRefRef, @lccPutRef, @lccPutDataRegInt, @lccPutDataRegXMM,
     @lccPutDataStack, @lccPutLargeDataStack,
     @lccCallNone, @lccCallRetValue, @lccCallRetRefRef, @lccCallRetRef, @lccCallRetMMX, @lccCallRetExtended,
-    @lccClearStack, @lccExit, nil
+    @lccClearStack, @lccIncrStrRef, @lccDecrStrRef, @lccExit, nil
   );
 const
   IntReg : array [0..6] of Pointer = (
@@ -685,6 +689,7 @@ const
 procedure ExecuteNativeCall(Instructions: Pointer; StackTop: Pointer; Method: Pointer; Data: Pointer = nil);
 var
   RDI, RAX, RBX, R10, R11, R12, R13, R14, R15: QWord;
+  RDI2: QWord;
 begin
   // rax: buffer
   // rbx: back jump addr
@@ -805,7 +810,22 @@ lccCallRetExtended:
       fstpl (%r14)
       jmp %rbx
 lccClearStack:
+      addq $8, %r12
       // not implemented in x64
+      jmp %rbx
+lccIncrStrRef:
+      addq $8, %r12
+      movq (%r14), %r14
+      movq %rdi, RDI2
+      movq (%r14), %rdi
+      call ExtractedAnsiStrIncrRef
+      movq RDI2, %rdi
+      jmp %rbx
+lccDecrStrRef:
+      addq $8, %r12
+      movq (%r14), %r14
+      movq (%r14), %rdi
+      call ExtractedAnsiStrDecrRef
       jmp %rbx
 irRDI:
       movq %r14, %rdi

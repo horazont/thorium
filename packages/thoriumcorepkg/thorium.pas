@@ -4521,10 +4521,12 @@ begin
       opFromNative:
       begin
         Operation.OperationInstruction := OperationInstructionDescription(n2x(0), -1, -1, 0);
+        Exit;
       end;
       opFreeNative:
       begin
         Operation.OperationInstruction := OperationInstructionDescription(clrn(0), -1, -1, 0);
+        Exit;
       end;
     else
       Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
@@ -7192,7 +7194,7 @@ begin
   ExecuteNativeCall(FInstructions, Stack.GetTopStackEntry, FCodePointer, nil);
   if FVAOffset > 0 then
     Stack.Pop(2, True);
-  Stack.Pop(Parameters.Count - 1, False);
+  Stack.Pop(Parameters.Count, False);
 end;
 
 procedure TThoriumHostFunctionNativeCall.CreatePrototype;

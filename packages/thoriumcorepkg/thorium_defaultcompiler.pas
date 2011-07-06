@@ -2187,8 +2187,11 @@ var
         GenCodeToOperation(Solution^.SetCode, clr(ATargetRegister));
       end;
 
-      GenCodeToOperation(Solution^.GetCode, movest(ATargetRegister));
-      GenCodeToOperation(Solution^.SetCode, movest(ATargetRegister));
+      if Callable.GetReturnType <> nil then
+      begin;
+        GenCodeToOperation(Solution^.GetCode, movest(ATargetRegister));
+        GenCodeToOperation(Solution^.SetCode, movest(ATargetRegister));
+      end;
 
       Solution^.FinalType := Callable.GetReturnType;
       Solution^.FullStr += '()';
@@ -2673,6 +2676,8 @@ begin
         // Allocate a register for the RelationalExpression evaluation
         GetFreeRegister(trEXP, RegID2);
         ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
+        if ExpressionType = nil then
+          CompilerError('Cannot assign None type to anything.');
         // Allow casting
         Assignment.Casting := True;
         // Check whether the RelationalExpression result can be assigned to the ident

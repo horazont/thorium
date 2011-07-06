@@ -129,7 +129,7 @@ type
     ccPutRefRef, ccPutRef, ccPutDataRegInt, ccPutDataRegXMM, {ccPutDataRegMMX,}
     ccPutDataStack, ccPutLargeDataStack,
     ccCallNone, ccCallRetValue, ccCallRetRefRef, ccCallRetRef, ccCallRetMMX, ccCallRetExtended,
-    ccClearStack,
+    ccClearStack, ccIncrStrRef, ccDecrStrRef,
     ccExit,
     ccNone);
   {$PACKENUM DEFAULT}
