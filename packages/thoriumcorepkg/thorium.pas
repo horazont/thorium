@@ -1965,8 +1965,8 @@ type
   public
     constructor Create; virtual;
   public
-    function Handle(const CurrInstruction: PThoriumInstruction;
-      const Remaining: Integer; var Offset: Integer): Boolean; virtual; abstract;
+    function Handle(const Instructions: TThoriumInstructions; const CurrInstruction: PThoriumInstruction;
+      const StartIndex, Remaining: Integer; var Offset: Integer): Boolean; virtual; abstract;
   end;
   TThoriumOptimizerPatternClass = class of TThoriumCustomOptimizerPattern;
   TThoriumOptimizerPatterns = specialize TFPGList<TThoriumCustomOptimizerPattern>;
@@ -2118,9 +2118,11 @@ type
     function GetNextInstructionAddress: TThoriumInstructionAddress;
     function GetTableEntriesTo(StackPos: Integer): Integer;
     procedure FindRelocationTargets;
+    procedure HandleOffset(Sender: TObject; const Origin, Count: Integer; var Changed: Boolean);
     function HasError: Boolean;
     procedure LoadLibrary(const LibName: String);
     procedure LoadModule(const ModName: String);
+    procedure LoadOptimizerPatterns(const Optimizer: TThoriumOptimizer); virtual;
     procedure OptimizeCode;
     function PopBreakContext: TThoriumIntList;
     procedure PushBreakContext;
@@ -2501,7 +2503,7 @@ property DebugMode: Boolean read GetDebugMode;
 implementation
 
 uses
-  Thorium_NativeCall;
+  Thorium_NativeCall, Thorium_OptimizeJumps;
 
 var FDebugMode: Boolean = {$ifdef DebugToConsole}True{$else}False{$endif};
 
@@ -8084,7 +8086,7 @@ begin
       begin
         for J := 0 to FPatterns.Count - 1 do
         begin
-          DoneSomething := FPatterns[J].Handle(Instruction, Remaining, Offset);
+          DoneSomething := FPatterns[J].Handle(FInstructions, Instruction, I, Remaining, Offset);
           if DoneSomething then
           begin
             Result += Offset;
@@ -8982,6 +8984,24 @@ begin
   end;
 end;
 
+procedure TThoriumCustomCompiler.HandleOffset(Sender: TObject; const Origin,
+  Count: Integer; var Changed: Boolean);
+var
+  I: Integer;
+begin
+  for I := 0 to FPublicFunctions.Count - 1 do
+  begin
+    if FPublicFunctions[I].FEntryPoint >= Origin then
+      FPublicFunctions[I].FEntryPoint += Count;
+  end;
+  for I := 0 to FPrivateFunctions.Count - 1 do
+  begin
+    if FPrivateFunctions[I].FEntryPoint >= Origin then
+      FPrivateFunctions[I].FEntryPoint += Count;
+  end;
+  Changed := True;
+end;
+
 function TThoriumCustomCompiler.HasError: Boolean;
 begin
   Result := FError;
@@ -9030,669 +9050,22 @@ begin
     CompilerError('Could not load module "'+ModName+'". No Thorium context available.');
 end;
 
-procedure TThoriumCustomCompiler.OptimizeCode;
-
-var
-  Instruction: PThoriumInstruction;
-  Jumps: TThoriumJumpList;
-  I: Integer;
-  Remaining: Integer;
-  DoneSomething: Boolean;
-
-  (*function Opt_Expression_1_4: Integer;
-  // Optimizes following this pattern:
-  //   %iE %rA %**G
-  //   %iF %rB %**H
-  //   "mov" %rA %rC
-  //   "mov" %rB %rD
-  //
-  //   %E %C %G
-  //   %F %D %H
-  type
-    TThoriumInstructionSet1 = record
-      InstructionCode: TThoriumInstructionCode;
-      RegID: Word;
-      Other: array [0..10] of Word;
-      CodeLine: Cardinal;
-    end;
-    TThoriumInstructionSet2 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..2] of Word;
-      RegID: Word;
-      Other2: array [0..7] of Word;
-      CodeLine: Cardinal;
-    end;
-    TThoriumInstructionSet3 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..1] of Word;
-      RegID: Word;
-      Other2: array [0..8] of Word;
-      CodeLine: Cardinal;
-    end;
-  const
-    CompatibleInstructions = [tiREG_I, tiREG_E, tiREG_F, tiREG_L, tiMUL_R, tiADD_R, tiCMP_R, tiEXT_R, tiLIB_S];
-    Set1 = [tiREG_I, tiREG_E, tiREG_F];
-    Set2 = [tiMUL_R, tiADD_R, tiCMP_R, tiEXT_R, tiREG_L];
-    Set3 = [tiLIB_S];
-  var
-    Ass1, Ass2, Mov1, Mov2: PThoriumInstruction;
-    Reg1, Reg2: TThoriumRegisterID;
-  begin
-    Result := 0;
-    Ass1 := @Instruction[0];
-    Ass2 := @Instruction[1];
-    Mov1 := @Instruction[2];
-    Mov2 := @Instruction[3];
-    if not ((Ass1^.Instruction in CompatibleInstructions) and
-      (Ass2^.Instruction in CompatibleInstructions) and
-      (Mov1^.Instruction = tiMOV) and
-      (Mov2^.Instruction = tiMOV)) then
-      Exit;
-    if Ass1^.Instruction in Set1 then
-      Reg1 := TThoriumInstructionSet1(Ass1^).RegID
-    else if Ass1^.Instruction in Set2 then
-      Reg1 := TThoriumInstructionSet2(Ass1^).RegID
-    else
-      Reg1 := TThoriumInstructionSet3(Ass1^).RegID;
-    if Ass2^.Instruction in Set1 then
-      Reg2 := TThoriumInstructionSet1(Ass2^).RegID
-    else if Ass2^.Instruction in Set2 then
-      Reg2 := TThoriumInstructionSet2(Ass2^).RegID
-    else
-      Reg2 := TThoriumInstructionSet3(Ass2^).RegID;
-    if ((Reg1 = TThoriumInstructionMOV(Mov1^).SRI) and (Reg2 = TThoriumInstructionMOV(Mov2^).SRI)) then
-    begin
-      Result := -2;
-      DoneSomething := True;
-      if Ass1^.Instruction in Set1 then
-        TThoriumInstructionSet1(Ass1^).RegID := TThoriumInstructionMOV(Mov1^).TRI
-      else if Ass1^.Instruction in Set2 then
-        TThoriumInstructionSet2(Ass1^).RegID := TThoriumInstructionMOV(Mov1^).TRI
-      else
-        TThoriumInstructionSet3(Ass1^).RegID := TThoriumInstructionMOV(Mov1^).TRI;
-      if Ass2^.Instruction in Set1 then
-        TThoriumInstructionSet1(Ass2^).RegID := TThoriumInstructionMOV(Mov2^).TRI
-      else if Ass2^.Instruction in Set2 then
-        TThoriumInstructionSet2(Ass2^).RegID := TThoriumInstructionMOV(Mov2^).TRI
-      else
-        TThoriumInstructionSet3(Ass2^).RegID := TThoriumInstructionMOV(Mov2^).TRI;
-      FInstructions.DeleteInstructions(I + 2, 2);
-    end;
-  end;
-
-  function Opt_Expression_2_3: Integer;
-  // Optimizes following this pattern:
-  //   %iF %rB %**H
-  //   "mov" %rA %rC
-  //   "mov" %rB %rD
-  //
-  //   %F %D %H
-  //   "mov" %A %C
-  type
-    TThoriumInstructionSet1 = record
-      InstructionCode: TThoriumInstructionCode;
-      RegID: Word;
-      Other: array [0..10] of Word;
-      CodeLine: Cardinal;
-    end;
-    TThoriumInstructionSet2 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..2] of Word;
-      RegID: Word;
-      Other2: array [0..7] of Word;
-      CodeLine: Cardinal;
-    end;
-    TThoriumInstructionSet3 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..1] of Word;
-      RegID: Word;
-      Other2: array [0..8] of Word;
-      CodeLine: Cardinal;
-    end;
-  const
-    CompatibleInstructions = [tiREG_I, tiREG_E, tiREG_F, tiREG_L, tiMUL_R, tiADD_R, tiCMP_R, tiEXT_R, tiLIB_S];
-    Set1 = [tiREG_I, tiREG_E, tiREG_F];
-    Set2 = [tiMUL_R, tiADD_R, tiCMP_R, tiEXT_R, tiREG_L];
-    Set3 = [tiLIB_S];
-  var
-    Ass1, Mov1, Mov2: PThoriumInstruction;
-    Reg1: TThoriumRegisterID;
-  begin
-    Result := 0;
-    Ass1 := @Instruction[0];
-    Mov1 := @Instruction[1];
-    Mov2 := @Instruction[2];
-    if not ((Ass1^.Instruction in CompatibleInstructions) and
-      (Mov1^.Instruction = tiMOV) and
-      (Mov2^.Instruction = tiMOV)) then
-      Exit;
-    if Ass1^.Instruction in Set1 then
-      Reg1 := TThoriumInstructionSet1(Ass1^).RegID
-    else if Ass1^.Instruction in Set2 then
-      Reg1 := TThoriumInstructionSet2(Ass1^).RegID
-    else
-      Reg1 := TThoriumInstructionSet3(Ass1^).RegID;
-    if (Reg1 = TThoriumInstructionMOV(Mov2^).SRI) then
-    begin
-      Result := -1;
-      DoneSomething := True;
-      if Ass1^.Instruction in Set1 then
-        TThoriumInstructionSet1(Ass1^).RegID := TThoriumInstructionMOV(Mov2^).TRI
-      else if Ass1^.Instruction in Set2 then
-        TThoriumInstructionSet2(Ass1^).RegID := TThoriumInstructionMOV(Mov2^).TRI
-      else
-        TThoriumInstructionSet3(Ass1^).RegID := TThoriumInstructionMOV(Mov2^).TRI;
-      FInstructions.DeleteInstructions(I + 2, 1);
-    end;
-  end;   *)
-
-  function UsesRegister(const AInstruction: PThoriumInstruction; ARegister: Word): Boolean;
-  type
-    {$PACKRECORDS 2}
-    TThoriumInstructionSet1 = record
-      InstructionCode: TThoriumInstructionCode;
-      RegID: Word;
-      Other1: array [0..10] of Word;
-      CodeLine: Cardinal;
-    end;
-
-    TThoriumInstructionSet2 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: Word;
-      RegID: Word;
-      Other2: array [0..9] of Word;
-      CodeLine: Cardinal;
-    end;
-
-    TThoriumInstructionSet3 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..1] of Word;
-      RegID: Word;
-      Other2: array [0..8] of Word;
-      CodeLine: Cardinal;
-    end;
-
-    TThoriumInstructionSet4 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..2] of Word;
-      RegID: Word;
-      Other2: array [0..7] of Word;
-      CodeLine: Cardinal;
-    end;
-
-    TThoriumInstructionSet5 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..3] of Word;
-      RegID: Word;
-      Other2: array [0..6] of Word;
-      CodeLine: Cardinal;
-    end;
-
-    TThoriumInstructionSet6 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..4] of Word;
-      RegID: Word;
-      Other2: array [0..5] of Word;
-      CodeLine: Cardinal;
-    end;
-    {$PACKRECORDS DEFAULT}
-  const
-    InstructionSet1 = [tiINTB, tiSTR, tiCOPYR_ST,
-      tiCOPYR, tiMOVER_ST, tiMOVEST, tiCLR, tiCMPI, tiCMPIF,
-      tiCMPIE, tiCMPF, tiCMPFI, tiCMPFE, tiCMPS, tiCMPSE, tiCMPE, tiCMPEI,
-      tiCMPEF, tiCMPES, tiADDI, tiADDF, tiADDS, tiSUBI, tiSUBF, tiMULI,
-      tiMULF, tiDIVI, tiDIVF, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR,
-      tiXIGET, tiXCT];
-    InstructionSet2 = [tiCOPYR, tiMOVER, tiCMPI, tiCMPIF,
-      tiCMPIE, tiCMPF, tiCMPFI, tiCMPFE, tiCMPS, tiCMPSE, tiCMPE, tiCMPEI,
-      tiCMPEF, tiCMPES, tiADDI, tiADDF, tiADDS, tiSUBI, tiSUBF, tiMULI,
-      tiMULF, tiDIVI, tiDIVF, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR];
-    InstructionSet3 = [tiSTRL, tiADDI, tiADDF, tiADDS, tiSUBI, tiSUBF, tiMULI,
-      tiMULF, tiDIVI, tiDIVF, tiMOD, tiAND, tiOR, tiXOR, tiSHL, tiSHR];
-    InstructionSet4 = [];
-    InstructionSet5 = [tiINT, tiFLT, tiEXT, tiFNC, tiXFNC, tiXFGET,
-      tiXFSET];
-    InstructionSet6 = [tiXFSET, tiXFGET];
-  begin
-    Result := (AInstruction^.Instruction in InstructionSet1)
-      and (TThoriumInstructionSet1(AInstruction^).RegID = ARegister);
-    if Result then
-      Exit;
-    Result := (AInstruction^.Instruction in InstructionSet2)
-      and (TThoriumInstructionSet2(AInstruction^).RegID = ARegister);
-    if Result then
-      Exit;
-    Result := (AInstruction^.Instruction in InstructionSet3)
-      and (TThoriumInstructionSet3(AInstruction^).RegID = ARegister);
-    if Result then
-      Exit;
-    Result := (AInstruction^.Instruction in InstructionSet4)
-      and (TThoriumInstructionSet4(AInstruction^).RegID = ARegister);
-    if Result then
-      Exit;
-    Result := (AInstruction^.Instruction in InstructionSet5)
-      and (TThoriumInstructionSet5(AInstruction^).RegID = ARegister);
-    if Result then
-      Exit;
-    Result := (AInstruction^.Instruction in InstructionSet6)
-      and (TThoriumInstructionSet6(AInstruction^).RegID = ARegister);
-  end;
-
-  function Opt_Expression_1_x: Integer;
-  // Looks for a cast on a value which has been created just before and converts
-  // it hard coded to the correct type.
-  var
-    V1, Cast1: PThoriumInstruction;
-    Reg: Word;
-    Offset: Integer;
-  begin
-    Result := 0;
-    V1 := Instruction;
-    if V1^.Instruction <> tiINT then
-      Exit;
-    Reg := TThoriumInstructionINT(V1^).TRI;
-    Offset := 1;
-    while (Offset < Remaining) do
-    begin
-      Cast1 := @Instruction[Offset];
-      if Cast1^.Instruction = tiCASTIF then
-      begin
-        TThoriumInstructionINT(V1^).TRI := TThoriumInstructionCASTIF(Cast1^).TRI;
-        TThoriumInstructionINT(V1^).Instruction := tiFLT;
-        TThoriumInstructionFLT(V1^).Value := TThoriumInstructionINT(V1^).Value;
-        FInstructions.DeleteInstructions(I + Offset, 1);
-        Result := -1;
-        Break;
-      end
-      else if UsesRegister(Cast1, Reg) then
-        Break;
-      Inc(Offset);
-    end;
-  end;
-
-  function Opt_Expression_2_2: Integer;
-  // When a variable is created to a register and pushed to stack top after
-  // this, this gets optimized by this.
-  var
-    V, Push: PThoriumInstruction;
-  begin
-    Result := 0;
-    V := Instruction;
-    if not (V^.Instruction in [tiSTRL, tiINT, tiSTR, tiFLT]) then
-      Exit;
-    Push := @Instruction[1];
-    if Push^.Instruction <> tiMOVER_ST then
-      Exit;
-    if (TThoriumInstructionINT(V^).TRI <> TThoriumInstructionMOVER_ST(Push^).SRI) then
-      Exit;
-    case V^.Instruction of
-      tiSTRL:
-        V^.Instruction := tiSTRL_S;
-      tiSTR:
-        V^.Instruction := tiSTR_S;
-      tiINT:
-        V^.Instruction := tiINT_S;
-      tiFLT:
-        V^.Instruction := tiFLT_S;
-    end;
-    FInstructions.DeleteInstructions(I+1, 1);
-    Result -= 1;
-  end;
-
-  function Opt_Expression_4_2: Integer;
-  // When a value is moved to a register from stack and pushed to stack top
-  // immediately after this, this gets erased by this function.
-  var
-    Copy, Move: PThoriumInstruction;
-  begin
-    Result := 0;
-    Copy := Instruction;
-    Move := @Instruction[1];
-    if (Copy^.Instruction <> tiMOVEST) or (Move^.Instruction <> tiMOVER_ST) then
-      Exit;
-    if (TThoriumInstructionMOVEST(Copy^).TRI = TThoriumInstructionMOVER_ST(Move^).SRI) then
-    begin
-      FInstructions.DeleteInstructions(I, 2);
-      Result -= 2;
-    end;
-  end;
-
-  function Opt_RegVar_1_2: Integer;
-  // The compiler is at some places not really prepared to use register
-  // variables. So these functions are made to fix it ;)
-  var
-    Copy, Compare: PThoriumInstruction;
-  begin
-    Result := 0;
-    Copy := Instruction;
-    Compare := @Instruction[1];
-    if (Copy^.Instruction <> tiCOPYR) or not (Compare^.Instruction in [tiCMPE, tiCMPEF, tiCMPEI, tiCMPES, tiCMPF, tiCMPFE, tiCMPFI, tiCMPI, tiCMPIE, tiCMPIF, tiCMPS, tiCMPSE]) then
-      Exit;
-    if (TThoriumInstructionCOPYR(Copy^).TRI = TThoriumInstructionCMPI(Compare^).Op1) then
-    begin
-      TThoriumInstructionCMPI(Compare^).Op1 := TThoriumInstructionCOPYR(Copy^).SRI;
-      FInstructions.DeleteInstructions(I, 1);
-      Result -= 1;
-    end
-    else if (TThoriumInstructionCOPYR(Copy^).TRI = TThoriumInstructionCMPI(Compare^).Op2) then
-    begin
-      TThoriumInstructionCMPI(Compare^).Op2 := TThoriumInstructionCOPYR(Copy^).SRI;
-      FInstructions.DeleteInstructions(I, 1);
-      Result -= 1;
-    end;
-  end;
-
-  function Opt_RegVar_2_x: Integer;
-  // The compiler is at some places not really prepared to use register
-  // variables. So these functions are made to fix it ;)
-  var
-    Copy, Op: PThoriumInstruction;
-    Reg: Word;
-    Offset: Integer;
-  begin
-    Result := 0;
-    Copy := Instruction;
-    if Copy^.Instruction <> tiCOPYR then
-      Exit;
-    Reg := TThoriumInstructionCOPYR(Copy^).TRI;
-    Offset := 1;
-    while (Offset < Remaining) do
-    begin
-      Op := @Instruction[Offset];
-      if Op^.Instruction in [tiCMPI, tiCMPIF, tiCMPIE, tiCMPF, tiCMPFI,
-        tiCMPFE, tiCMPS, tiCMPSE, tiCMPE, tiCMPEI, tiCMPEF, tiCMPES, tiADDI,
-        tiADDF, tiADDS, tiSUBI, tiSUBF, tiMULI, tiMULF, tiDIVI, tiDIVF, tiMOD,
-        tiAND, tiOR, tiXOR, tiSHL, tiSHR] then
-      begin
-        if (TThoriumInstructionOperator(Op^).Op1 = Reg) then
-        begin
-          TThoriumInstructionOperator(Op^).Op1 := TThoriumInstructionCOPYR(Copy^).SRI;
-          FInstructions.DeleteInstructions(I, 1);
-          Result -= 1;
-          Exit;
-        end
-        else if (TThoriumInstructionOperator(Op^).Op2 = Reg) then
-        begin
-          TThoriumInstructionOperator(Op^).Op2 := TThoriumInstructionCOPYR(Copy^).SRI;
-          FInstructions.DeleteInstructions(I, 1);
-          Result -= 1;
-          Exit
-        end;
-      end
-      else if UsesRegister(Op, Reg) then
-        Break;
-      Inc(Offset);
-    end;
-  end;
-
-  (*function Opt_Expression_1_2: Integer;
-  // Optimizes the creation of variables which are casted to another type
-  // immediately after this.
-  type
-    TThoriumInstructionSet1 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..3] of Word;
-      RegID: Word;
-      Other2: array [0..6] of Word;
-      CodeLine: Cardinal;
-    end;
-
-    TThoriumInstructionCAST = record
-      Instruction: TThoriumInstructionCode;
-      SRI: Word;
-      TRI: Word;
-      Reserved: array [0..9] of Word;
-      // Debug infos
-      CodeLine: Cardinal;
-    end;
-  var
-    V1, Cast: PThoriumInstruction;
-    Reg: Word;
-    Match: Boolean;
-  begin
-    Result := 0;
-    V1 := @Instruction[0];
-    Cast := @Instruction[1];
-    if not (V1^.Instruction in [tiINT]) then
-      Exit;
-
-    if (Cast^.Instruction in [tiCASTIF]) and (TThoriumInstructionCASTIF(Cast^).SRI = TThoriumInstructionSet1(V1^).RegID) then
-    begin
-      V1^.Instruction := tiFLT;
-      TThoriumInstructionFLT(V1^).Value := TThoriumInstructionINT(V1^).Value;
-      TThoriumInstructionSet1(V1^).RegID := TThoriumInstructionCAST(Cast^).TRI;
-      Result := -1;
-      FInstructions.DeleteInstructions(I+1, 1);
-    end;
-  end;
-
-  function Opt_Expression_1_4: Integer;
-  // Optimizes the creation of variables which are casted to another type
-  // immediately after this.
-  type
-    TThoriumInstructionSet1 = record
-      InstructionCode: TThoriumInstructionCode;
-      Other1: array [0..3] of Word;
-      RegID: Word;
-      Other2: array [0..6] of Word;
-      CodeLine: Cardinal;
-    end;
-
-    TThoriumInstructionCAST = record
-      Instruction: TThoriumInstructionCode;
-      SRI: Word;
-      TRI: Word;
-      Reserved: array [0..9] of Word;
-      // Debug infos
-      CodeLine: Cardinal;
-    end;
-  var
-    V1, Cast1, V2, Cast2: PThoriumInstruction;
-    Reg: Word;
-    Match: Boolean;
-  begin
-    Result := 0;
-    V1 := @Instruction[0];
-    V2 := @Instruction[1];
-    Cast1 := @Instruction[2];
-    Cast2 := @Instruction[3];
-    if not (V1^.Instruction in [tiINT]) and not (V2^.Instruction in [tiINT]) then
-      Exit;
-
-    if (V1^.Instruction in [tiINT]) and (Cast1^.Instruction in [tiCASTIF]) and (TThoriumInstructionCASTIF(Cast1^).SRI = TThoriumInstructionSet1(V1^).RegID) then
-    begin
-      V1^.Instruction := tiFLT;
-      TThoriumInstructionFLT(V1^).Value := TThoriumInstructionINT(V1^).Value;
-      TThoriumInstructionSet1(V1^).RegID := TThoriumInstructionCAST(Cast1^).TRI;
-      FInstructions.DeleteInstructions(I+1, 1);
-      Result += -1;
-    end;
-
-    if (V2^.Instruction in [tiINT]) and (Cast2^.Instruction in [tiCASTIF]) and (TThoriumInstructionCASTIF(Cast2^).SRI = TThoriumInstructionSet1(V2^).RegID) then
-    begin
-      V2^.Instruction := tiFLT;
-      TThoriumInstructionFLT(V2^).Value := TThoriumInstructionINT(V2^).Value;
-      TThoriumInstructionSet1(V2^).RegID := TThoriumInstructionCAST(Cast2^).TRI;
-      FInstructions.DeleteInstructions(I+1+Result, 1);
-      Result += -1;
-    end;
-  end;      *)
-
-  function Opt_Jump_1: Integer;
-  // Looks for jumps which lead directly to the next instruction
-  var
-    Jmp: PThoriumInstruction;
-  begin
-    Result := 0;
-    Jmp := @Instruction[0];
-    if not (Jmp^.Instruction in [tiJMP, tiJE, tiJGE, tiJLE, tiJLT, tiJGT, tiJNE]) then
-      Exit;
-    if (TThoriumInstructionJMP(Jmp^).NewAddress = I+1) then
-    begin
-      FInstructions.DeleteInstructions(I, 1);
-      Jumps.DeleteEntry(Jumps.FindValue(I));
-      Result -= 1;
-    end;
-  end;
-
-  function Opt_Jump_2: Integer;
-  // Look for a jump which leads to a jump.
-  var
-    Jmp, Jmp2: PThoriumInstruction;
-  begin
-    Result := 0;
-    Jmp := @Instruction[0];
-    if not (Jmp^.Instruction in [tiJMP, tiJE, tiJGE, tiJLE, tiJLT, tiJGT, tiJNE]) then
-      Exit;
-    if (LongInt(TThoriumInstructionJMP(Jmp^).NewAddress) < 0) then
-      Exit;
-    Jmp2 := @Instruction[TThoriumInstructionJMP(Jmp^).NewAddress];
-    if Jmp2^.Instruction = tiJMP then
-      TThoriumInstructionJMP(Jmp^).NewAddress := TThoriumInstructionJMP(Jmp2^).NewAddress;
-  end;
-
-  function Opt_Jump_3: Integer;
-  // Look for a nonconditional jump which leads to a ret.
-  var
-    Jmp, Ret: PThoriumInstruction;
-  begin
-    Result := 0;
-    Jmp := @Instruction[0];
-    if not (Jmp^.Instruction in [tiJMP]) then
-      Exit;
-    if (LongInt(TThoriumInstructionJMP(Jmp^).NewAddress) < 0) then
-      Exit;
-    Ret := @Instruction[TThoriumInstructionJMP(Jmp^).NewAddress];
-    if Ret^.Instruction = tiRET then
-    begin
-      Jmp^.Instruction := Ret^.Instruction;
-      Jmp^.Parameter1 := Ret^.Parameter1;
-      Jmp^.Parameter2 := Ret^.Parameter2;
-      Jmp^.Parameter3 := Ret^.Parameter3;
-    end;
-  end;
-
-  function Opt_call_d_1_2x: Integer;
-  // Writes call.d instructions where it is possible.
-  var
-    Call, Pop, Ret: PThoriumInstruction;
-  begin
-    Result := 0;
-    Call := Instruction;
-    Pop := @Instruction[1];
-    if Pop^.Instruction = tiRET then
-    begin
-      Ret := @Instruction[1];
-      Pop := nil;
-    end
-    else
-    begin
-      if Remaining < 3 then
-        Exit;
-      Ret := @Instruction[2];
-    end;
-    if (Call^.Instruction <> tiCALL) or (Ret^.Instruction <> tiRET) or ((Pop <> nil) and (Pop^.Instruction <> tiPOP_S)) then
-      Exit;
-    Call^.Instruction := tiCALL_D;
-    TThoriumInstructionCALL_D(Call^).KeepResult := 0;
-    if Pop <> nil then
-    begin
-      TThoriumInstructionCALL_D(Call^).Pops := TThoriumInstructionPOP_S(Pop^).Amount;
-      FInstructions.DeleteInstructions(I+1, 2);
-      Result -= 2;
-    end
-    else
-    begin
-      TThoriumInstructionCALL_D(Call^).Pops := 0;
-      FInstructions.DeleteInstructions(I+1, 1);
-      Result -= 1;
-    end;
-  end;
-
-  function HandleOffset(Offset: Integer): Boolean;
-  var
-    I2: Integer;
-    Func: TThoriumFunction;
-  begin
-    FOptimizedInstructions -= Offset;
-    Result := False;
-    if Offset = 0 then
-      Exit;
-    Result := True;
-    DoneSomething := True;
-    Jumps.ChangeAddresses(Offset, I+1, FInstructions);
-    for I2 := 0 to FPublicFunctions.Count - 1 do
-    begin
-      Func := FPublicFunctions[I2];
-      if Func.FEntryPoint >= I+1 then
-        Func.FEntryPoint := Func.FEntryPoint + Offset;
-    end;
-  end;
-
+procedure TThoriumCustomCompiler.LoadOptimizerPatterns(
+  const Optimizer: TThoriumOptimizer);
 begin
-  FOptimizedInstructions := 0;
-  Jumps := TThoriumJumpList.Create;
+  Optimizer.AddPattern(TThoriumOptimizeConditionalJumps);
+end;
+
+procedure TThoriumCustomCompiler.OptimizeCode;
+var
+  Optimizer: TThoriumOptimizer;
+begin
+  Optimizer := TThoriumOptimizer.Create;
   try
-    Instruction := FInstructions.FInstructions;
-    for I := 0 to FInstructions.Count - 1 do
-    begin
-      //if Instruction^.Instruction in [tiJMP, tiJMP_F, tiJMP_T, tiCALL, tiCALL_F] then
-      if Instruction^.Instruction in [tiJMP, tiJE, tiJNE, tiJGE, tiJGT, tiJLE, tiJLT, tiCALL] then
-        Jumps.AddEntry(I);
-      Inc(Instruction);
-    end;
-
-    DoneSomething := True;
-    while DoneSomething do
-    begin
-      DoneSomething := False;
-      Instruction := FInstructions.FInstructions;
-      Remaining := FInstructions.Count;
-      for I := 0 to FInstructions.Count - 1 do
-      begin
-        if (Remaining >= 2) then
-          HandleOffset(Opt_Expression_1_x);
-        if DoneSomething then Break;
-        if (Remaining >= 2) then
-          HandleOffset(Opt_Expression_2_2);
-        if DoneSomething then Break;
-        if (Remaining >= 2) then
-          HandleOffset(Opt_Expression_4_2);
-        if DoneSomething then Break;
-        if (Remaining >= 1) then
-          HandleOffset(Opt_Jump_1);
-        if DoneSomething then Break;
-        if (Remaining >= 1) then
-          HandleOffset(Opt_Jump_2);
-        if DoneSomething then Break;
-        if (Remaining >= 1) then
-          HandleOffset(Opt_Jump_3);
-        if DoneSomething then Break;
-        if (Remaining >= 2) then
-          HandleOffset(Opt_RegVar_1_2);
-        if DoneSomething then Break;
-        if (Remaining >= 2) then
-          HandleOffset(Opt_RegVar_2_x);
-        if DoneSomething then Break;
-        //if (Remaining >= 2) then
-        //  HandleOffset(Opt_call_d_1_2x);
-        //if DoneSomething then Break;
-        (*if (Remaining >= 4) then
-        begin
-          HandleOffset(Opt_Expression_1_4);
-        end;
-        if (Remaining >= 3) then
-        begin
-          HandleOffset(Opt_Expression_2_3);
-        end;*)
-        Inc(Instruction);
-        Dec(Remaining);
-      end;
-    end;
+    LoadOptimizerPatterns(Optimizer);
+    FOptimizedInstructions := Optimizer.Optimize(FInstructions, @HandleOffset);
   finally
-    Jumps.Free;
-    FModule.FOptimizedInstructions := FOptimizedInstructions;
-
+    Optimizer.Free;
   end;
 end;
 

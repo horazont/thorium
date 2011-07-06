@@ -9,7 +9,8 @@ unit Thorium_DefaultCompiler;
 interface
 
 uses
-  Classes, SysUtils, Thorium, Thorium_Globals, Thorium_Utils, typinfo;
+  Classes, SysUtils, Thorium, Thorium_Globals, Thorium_Utils, typinfo,
+  Thorium_OptimizeJumps;
 
 {$ifdef DebugTokenLoop}
 const
@@ -3102,6 +3103,10 @@ begin
 
     end;
     FInstructions.Finish;
+    if cfOptimize in Flags then
+    begin
+      OptimizeCode;
+    end;
   finally
     FScanner.Free;
     Result := not HasError;

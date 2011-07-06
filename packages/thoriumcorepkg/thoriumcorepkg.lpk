@@ -1,11 +1,13 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Package Version="3">
+  <Package Version="4">
     <Name Value="thoriumcorepkg"/>
+    <AddToProjectUsesSection Value="True"/>
     <Author Value="Jonas Wielicki"/>
     <CompilerOptions>
       <Version Value="10"/>
       <SearchPaths>
+        <OtherUnitFiles Value="optimizer"/>
         <UnitOutputDirectory Value="$(PkgDir)/lib/$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Parsing>
@@ -42,7 +44,7 @@
     <Description Value="Core package of Thorium Scripting Language, containing the main engine and global constants."/>
     <License Value="MPL 1.1"/>
     <Version Major="1" Minor="1"/>
-    <Files Count="8">
+    <Files Count="9">
       <Item1>
         <Filename Value="thorium.pas"/>
         <UnitName Value="Thorium"/>
@@ -73,10 +75,14 @@
       </Item7>
       <Item8>
         <Filename Value="thorium_nativecall.pas"/>
-        <UnitName Value="thorium_nativecall"/>
+        <UnitName Value="Thorium_NativeCall"/>
       </Item8>
+      <Item9>
+        <Filename Value="optimizer/thorium_optimizejumps.pas"/>
+        <UnitName Value="Thorium_OptimizeJumps"/>
+      </Item9>
     </Files>
-    <LazDoc Paths="/home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lazdoc/"/>
+    <LazDoc Paths="/home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lazdoc"/>
     <RequiredPkgs Count="1">
       <Item1>
         <PackageName Value="FCL"/>
