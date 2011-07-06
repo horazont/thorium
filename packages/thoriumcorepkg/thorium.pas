@@ -2043,7 +2043,6 @@ type
     FLibPropRelocations: TFPList;
     FJumps: TThoriumIntList;
     FModule: TThoriumModule;
-    FOptimizedInstructions: LongInt;
     FPrivateFunctions: TThoriumFunctions;
     FPublicFunctions: TThoriumFunctions;
     FPublicVariables: TThoriumVariables;
@@ -8063,6 +8062,7 @@ var
   I, J: Integer;
   Offset: Integer;
 begin
+  FInstructions := AInstructions;
   Result := 0;
   Jumps := TThoriumJumpList.Create;
   try
@@ -8086,10 +8086,11 @@ begin
       begin
         for J := 0 to FPatterns.Count - 1 do
         begin
+          Offset := 0;
           DoneSomething := FPatterns[J].Handle(FInstructions, Instruction, I, Remaining, Offset);
           if DoneSomething then
           begin
-            Result += Offset;
+            Result -= Offset;
             DoHandleOffset(I, Offset);
             Break;
           end;
@@ -8124,7 +8125,6 @@ begin
   FLibPropUsage := ATarget.FLibPropUsage;
   FLibPropRelocations := ATarget.FLibPropRelocations;
   FModule := ATarget;
-  FOptimizedInstructions := ATarget.FOptimizedInstructions;
   FPrivateFunctions := ATarget.FPrivateFunctions;
   FPublicFunctions := ATarget.FPublicFunctions;
   FPublicVariables := ATarget.FPublicVariables;
@@ -9054,6 +9054,7 @@ procedure TThoriumCustomCompiler.LoadOptimizerPatterns(
   const Optimizer: TThoriumOptimizer);
 begin
   Optimizer.AddPattern(TThoriumOptimizeConditionalJumps);
+  Optimizer.AddPattern(TThoriumOptimizeJumps);
 end;
 
 procedure TThoriumCustomCompiler.OptimizeCode;
@@ -9063,7 +9064,7 @@ begin
   Optimizer := TThoriumOptimizer.Create;
   try
     LoadOptimizerPatterns(Optimizer);
-    FOptimizedInstructions := Optimizer.Optimize(FInstructions, @HandleOffset);
+    FModule.FOptimizedInstructions := Optimizer.Optimize(FInstructions, @HandleOffset);
   finally
     Optimizer.Free;
   end;
@@ -9108,6 +9109,7 @@ end;
 procedure TThoriumCustomCompiler.ResetState;
 begin
   FillByte(FRegisterUsage, SizeOf(TThoriumRegisterMask), 0);
+  FModule.FOptimizedInstructions := 0;
 end;
 
 procedure TThoriumCustomCompiler.RestoreTable(var Offset: Integer;

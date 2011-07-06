@@ -93,6 +93,8 @@ begin
       FS.Free;
     end;
 
+    if ParamStr(1) = '-c' then
+      Exit;
     Engine.InitializeVirtualMachine;
     try
       Engine.VirtualMachine.CallFunction(Engine.VirtualMachine.GetRuntimeFunction(Module.PublicFunction[0]), []);

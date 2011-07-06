@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Package Version="4">
+  <Package Version="3">
     <Name Value="thoriumcorepkg"/>
-    <AddToProjectUsesSection Value="True"/>
     <Author Value="Jonas Wielicki"/>
     <CompilerOptions>
       <Version Value="10"/>
