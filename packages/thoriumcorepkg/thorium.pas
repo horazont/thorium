@@ -1264,7 +1264,7 @@ type
     constructor Create(AModule: TThoriumModule; AName: String); override;
     destructor Destroy; override;
   private
-    FEntryPoint: Integer;
+    FEntryPoint: TThoriumInstructionAddress;
     FEventCapsules: TFPHashList;
     FNestingLevel: Integer;
     FPrototype: TThoriumTypeFunction;
@@ -1272,7 +1272,7 @@ type
     FPrototypedCalls: TThoriumJumpList;
     FVisibilityLevel: TThoriumVisibilityLevel;
   public
-    property EntryPoint: Integer read FEntryPoint;
+    property EntryPoint: TThoriumInstructionAddress read FEntryPoint;
     property NestingLevel: Integer read FNestingLevel;
     property Prototype: TThoriumTypeFunction read FPrototype;
     property Prototyped: Boolean read FPrototyped;
@@ -2082,6 +2082,7 @@ type
     procedure AppendOperation(var AOperations: TThoriumOperationArray; AOperation: TThoriumGenericOperation);
     procedure CompilerError(const Msg: String); virtual;
     procedure CompilerError(const Msg: String; X, Y: Integer); virtual;
+    procedure CompilerError(const MsgFmt: String; Args: array of const);
     procedure ClaimRegister(const ARegID: TThoriumRegisterID);
     procedure PopAndClearByTable(const TargetTableSize: Integer);
     procedure DumpState; virtual;
@@ -2473,6 +2474,7 @@ function ThoriumValueToStr(const Value: TThoriumValue): String;
 function ThoriumMakeOOPEvent(ACode: Pointer; Userdata: Pointer): TMethod;
 function ThoriumRegisterToStr(ARegisterID: TThoriumRegisterID): String;
 function ThoriumInstructionToStr(AInstruction: TThoriumInstruction): String;
+function ThoriumOperationToStr(AOperation: TThoriumOperation): String;
 procedure ThoriumFreeValue(var AValue: TThoriumValue); inline;
 procedure ThoriumReleaseValue(var AValue: TThoriumValue); inline;
 function ThoriumDuplicateValue(const AValue: TThoriumValue): TThoriumValue; inline;
@@ -2873,6 +2875,11 @@ begin
     raise EThoriumException.CreateFmt('Invalid value for VarType (%d) in ThoriumVarTypeToTypeSpec.', [VarType]);
   end;
 end;*)
+
+function ThoriumOperationToStr(AOperation: TThoriumOperation): String;
+begin
+  Exit(THORIUM_OPERATION_NAMES[AOperation]);
+end;
 
 procedure ThoriumFreeValue(var AValue: TThoriumValue);
 begin
@@ -4092,6 +4099,7 @@ function TThoriumTypeFloat.CanPerformOperation(
   begin
     if TheObject is TThoriumTypeFloat then
     begin
+      Result := True;
       Operation.ResultType := Self;
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := False;
@@ -4105,6 +4113,7 @@ function TThoriumTypeFloat.CanPerformOperation(
   begin
     if TheObject is TThoriumTypeInteger then
     begin
+      Result := True;
       Operation.ResultType := Self;
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := True;
@@ -8398,6 +8407,12 @@ begin
   FError := True;
 end;
 
+procedure TThoriumCustomCompiler.CompilerError(const MsgFmt: String;
+  Args: array of const);
+begin
+  CompilerError(Format(MsgFmt, Args));
+end;
+
 procedure TThoriumCustomCompiler.ClaimRegister(const ARegID: TThoriumRegisterID
   );
 begin
@@ -8990,7 +9005,7 @@ procedure TThoriumCustomCompiler.HandleOffset(Sender: TObject; const Origin,
 var
   I: Integer;
 begin
-  for I := 0 to FPublicFunctions.Count - 1 do
+  {for I := 0 to FPublicFunctions.Count - 1 do
   begin
     if FPublicFunctions[I].FEntryPoint >= Origin then
       FPublicFunctions[I].FEntryPoint += Count;
@@ -9000,7 +9015,7 @@ begin
     if FPrivateFunctions[I].FEntryPoint >= Origin then
       FPrivateFunctions[I].FEntryPoint += Count;
   end;
-  Changed := True;
+  Changed := True;}
 end;
 
 function TThoriumCustomCompiler.HasError: Boolean;
@@ -9136,6 +9151,7 @@ procedure TThoriumCustomCompiler.SetupFunction(AFunction: TThoriumFunction;
 begin
   AFunction.FEntryPoint := AEntryPoint;
   AFunction.FName := AName;
+  FInstructions.AddInstructionPointer(@AFunction.FEntryPoint);
 end;
 
 {%ENDREGION}
@@ -9996,7 +10012,7 @@ end;
 procedure TThoriumRuntimeModule.Init;
 var
   I: Integer;
-  Func: TThoriumRuntimeFunction;
+  F1, Func: TThoriumRuntimeFunction;
 begin
   SetLength(FGlobalValues, FCompiledModule.FGlobalValueCount);
   if FCompiledModule.FGlobalValueCount > 0 then

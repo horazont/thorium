@@ -2982,7 +2982,7 @@ begin
 
     Operation.Operation := SymbolToOperation(Sym);
     if not Result.CanPerformOperation(Operation, OperandType) then
-      CompilerError('Invalid operands for this operation.');
+      inherited CompilerError('Invalid operands (%s, %s) for this operation (%s).', [Result.Name, OperandType.Name, ThoriumOperationToStr(Operation.Operation)]);
 
     // Attempt to evaluate the RelationalExpression during compilation
     if (State1 = vsStatic) and (State2 = vsStatic) then

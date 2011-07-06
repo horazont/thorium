@@ -24,21 +24,22 @@ j.wielicki@sotecware.net
 // Subject: Test the expression compiler of Thorium in all its details
 //          At least I hope so ;)
 
-loadlibrary "core.std.io"
+// loadlibrary "core.std.io"
+loadlibrary thorium;
 
 private void printstr(string value, string name)
 {
-  printf("%s = \"%s\"\n", name, value);
+  // printf("%s = \"%s\"\n", name, value);
 }
 
 private void printint(int value, string name)
 {
-  printf("%s = %d\n", name, value);
+  // printf("%s = %d\n", name, value);
 }
 
 private void printflt(float value, string name)
 {
-  printf("%s = %.4f\n", name, value);
+  // printf("%s = %.4f\n", name, value);
 }
 private void test_int()
 {
