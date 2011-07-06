@@ -44,7 +44,7 @@ begin
   Move := @CurrInstruction[0];
   CopyMove := @CurrInstruction[1];
 
-  if not (Move^.Instruction in [tiMOVEFG, tiMOVEG, tiMOVEL, tiMOVEP, tiMOVER{, tiMOVEST}])
+  if not (Move^.Instruction in [tiMOVEFG, tiMOVEG, tiMOVEL, tiMOVEP, tiMOVER, tiMOVEST])
     or not (CopyMove^.Instruction in [tiCOPYR, tiMOVER]) then
     Exit(False);
 
@@ -90,14 +90,14 @@ begin
         Move^.Instruction := tiCOPYR;
       TThoriumInstructionMOVER(Move^).TRI := TThoriumInstructionCOPYR(CopyMove^).TRI;
     end;
-    {tiMOVEST:
+    tiMOVEST:
     begin
       if TThoriumInstructionMOVEST(Move^).TRI <> RegID then
         Exit(False);
       if CopyMove^.Instruction = tiCOPYR then
         Move^.Instruction := tiCOPYST;
       TThoriumInstructionMOVEST(Move^).TRI := TThoriumInstructionCOPYR(CopyMove^).TRI;
-    end;}
+    end;
   else
     raise EThoriumException.Create('Invalid instruction in optimizer.');
   end;

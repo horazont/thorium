@@ -2739,6 +2739,7 @@ begin
 
     tiCOPYR_ST: with TThoriumInstructionCOPYR_ST(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(SRI)]);
     tiCOPYR: with TThoriumInstructionCOPYR(AInstruction) do Result := Result + Format('%%%s %%%s', [ThoriumRegisterToStr(SRI), ThoriumRegisterToStr(TRI)]);
+    tiCOPYST: with TThoriumInstructionCOPYST(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
 
     tiMOVER_ST: with TThoriumInstructionMOVER_ST(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(SRI)]);
     tiMOVER: with TThoriumInstructionMOVER(AInstruction) do Result := Result + Format('%%%s %%%s', [ThoriumRegisterToStr(SRI), ThoriumRegisterToStr(TRI)]);
@@ -10475,6 +10476,18 @@ var
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       FRegisters[TRI] := ThoriumDuplicateValue(FRegisters[SRI]);
       {$ifdef Timecheck}EndTimecheck('copyr');{$endif}
+    end;
+  end;
+
+  procedure copyst; inline;
+  begin
+    with TThoriumInstructionMOVEST(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      _Operand1 := FStack.GetTop;
+      FRegisters[TRI] := ThoriumDuplicateValue(_Operand1^.Value);
+      FStack.Pop(1, False);
+      {$ifdef Timecheck}EndTimecheck('moves');{$endif}
     end;
   end;
 

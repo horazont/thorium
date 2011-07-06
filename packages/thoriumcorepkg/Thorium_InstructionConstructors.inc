@@ -366,6 +366,17 @@ begin
   end;
 end;
 
+function copyst(ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionCOPYST(Result) do
+  begin
+    Instruction := tiCOPYST;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
 function mover_st(ASRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);

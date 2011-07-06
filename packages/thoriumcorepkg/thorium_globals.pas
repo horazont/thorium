@@ -37,7 +37,7 @@ uses
 
 {%REGION 'Versioning'}
 const
-  THORIUM_FILE_VERSION = 19;
+  THORIUM_FILE_VERSION = 20;
 
   THORIUM_MAJOR_VERSION : Word = 1;
   THORIUM_MINOR_VERSION : Word = 0;
@@ -349,7 +349,7 @@ type
     tiMOVER_FG, tiCOPYR_FG, tiMOVEFG, tiCOPYFG,
     tiMOVER_L, tiCOPYR_L, tiMOVEL, tiCOPYL,
     tiMOVER_P, tiCOPYR_P, tiMOVEP, tiCOPYP,
-    tiCOPYR_ST, tiCOPYR,
+    tiCOPYR_ST, tiCOPYR, tiCOPYST,
     tiMOVER_ST, tiMOVER, tiMOVEST,
     tiPOP_S, tiSTACKHINT,
     tiCLR,
@@ -832,6 +832,14 @@ type
     Offset: LongInt;
     TRI: Word;
     Reserved: array [0..7] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionCOPYST = record
+    Instruction: TThoriumInstructionCode;
+    TRI: Word;
+    Reserved: array [0..10] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -2022,7 +2030,7 @@ const
     'mover.fg', 'copyr.fg', 'movefg', 'copyfg',
     'mover.l', 'copyr.l', 'movel', 'copyl',
     'mover.p', 'copyr.p', 'movep', 'copyp',
-    'copyr.st', 'copyr',
+    'copyr.st', 'copyr', 'copyst',
     'mover.st', 'mover', 'movest',
     'pop.s', '.stackhint',
     'clr',
