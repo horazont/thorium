@@ -662,7 +662,7 @@ end;
 
 label
   lccData, lccPutRef, lccPutRefRef, lccPutDataRegInt, lccPutDataRegXMM,
-  lccPutDataStack, lccPutLargeDataStack,
+  lccPutDataStack, lccPutLargeDataStack, lccPutLargeDataInt, lccPutLargeDataFloat,
   lccCallNone, lccCallRetValue, lccCallRetRef, lccCallRetRefRef, lccCallRetMMX, lccCallRetExtended,
   lccClearStack, lccIncrStrRef, lccDecrStrRef,
   lccExit,
@@ -670,11 +670,12 @@ label
   irRDI, irRSI, irRDX, irRCX, irR8, irR9, irPush,
   frXMM0, frXMM1, frXMM2, frXMM3, frXMM4, frXMM5, frXMM6, frXMM7, frPush,
 
-  lLoop, lLargeDataStackLoop;
+  lLoop, lLargeDataStackLoop, lLargeDataIntLoop, lLargeDataIntLoopEnd,
+  lLargeDataFloatLoop, lLargeDataFloatLoopEnd;
 const
   InstrMap: array [TThoriumNativeCallInstructionCode] of Pointer = (
     @lccData, @lccPutRefRef, @lccPutRef, @lccPutDataRegInt, @lccPutDataRegXMM,
-    @lccPutDataStack, @lccPutLargeDataStack,
+    @lccPutDataStack, @lccPutLargeDataStack, @lccPutLargeDataInt, @lccPutLargeDataFloat,
     @lccCallNone, @lccCallRetValue, @lccCallRetRefRef, @lccCallRetRef, @lccCallRetMMX, @lccCallRetExtended,
     @lccClearStack, @lccIncrStrRef, @lccDecrStrRef, @lccExit, nil
   );
@@ -768,12 +769,48 @@ lccPutLargeDataStack:
       movq %r14, %rax
       addq $8, %rax
       movq (%rax), %rax // get the size from the NativeValue data
+      movq (%r14), %r14
   lLargeDataStackLoop:
-      test %rax, %rax
-      jz lLoop
-      pushq (%r14)
-      addq $8, %r14
-      jmp lLargeDataStackLoop
+        test %rax, %rax
+        jz lLoop
+        decq %rax
+        pushq (%r14)
+        addq $8, %r14
+        jmp lLargeDataStackLoop
+lccPutLargeDataInt:
+      addq $8, %r12
+      movq %r14, %rax
+      addq $8, %rax
+      movq (%rax), %rax
+      leaq lLargeDataIntLoop, %rbx
+      movq (%r14), %r14
+      subq $8, %r14
+  lLargeDataIntLoop:
+        test %rax, %rax
+        jz lLargeDataIntLoopEnd
+        decq %rax
+        addq $8, %r14
+        jmp (%r11)
+  lLargeDataIntLoopEnd:
+      leaq lLoop, %rbx
+      jmp %rbx
+lccPutLargeDataFloat:
+      addq $8, %r12
+      movq %r14, %rax
+      addq $8, %rax
+      movq (%rax), %rax
+      leaq lLargeDataFloatLoop, %rbx
+      movq (%r14), %r14
+      subq $8, %r14
+  lLargeDataFloatLoop:
+        test %rax, %rax
+        jz lLargeDataFloatLoopEnd
+        decq %rax
+        addq $8, %r14
+        jmp (%r11)
+  lLargeDataFloatLoopEnd:
+      leaq lLoop, %rbx
+      jmp %rbx
 lccCallNone:
       addq $8, %r12
       xorq %rax, %rax
