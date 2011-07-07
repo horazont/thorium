@@ -127,6 +127,10 @@ begin
       tiMOVER_FG, tiMOVER_ST]) then
     Exit(False);
 
+  if (TThoriumInstructionMOVER(Move^).SRI >= THORIUM_REGISTER_C1)
+    and not (CopyMove^.Instruction in [tiMOVER, tiCOPYR]) then
+    Exit(False);
+
   RegID := TThoriumInstructionMOVER(Move^).TRI;
   case CopyMove^.Instruction of
     tiCOPYR, tiMOVER:

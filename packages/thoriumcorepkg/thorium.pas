@@ -206,6 +206,10 @@ type
       public
         property OriginalException: Exception read FOriginalException;
       end;
+
+        (* Used for exceptions which are raised when creation of stackdumps or
+           similar raise an exception. *)
+        EThoriumRuntimeExecutionDebugException = class (EThoriumRuntimeExecutionException);
     EThoriumDebuggerException = class (EThoriumException);
 
     (* Raised e.g. if a user tries to initalize a direct property with a
@@ -718,6 +722,7 @@ type
     procedure DoSetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue; const NewValue: TThoriumValue); virtual; abstract;
     procedure DoSetStaticField(const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
     function DoSubtraction(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    function DoToDebugString(const AValue: TThoriumValue): String; virtual;
     procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo); virtual; abstract;
     function DoToString(const AValue: TThoriumValue): String; virtual;
     class function PerformOperation(const AValue: TThoriumValue; const Operation: TThoriumOperationDescription; const BValue: PThoriumValue = nil): TThoriumValue;
@@ -872,6 +877,8 @@ type
        const TheObject: TThoriumType=nil; const ExName: String='';
        const ExType: PTypeInfo = nil): Boolean; override;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
+    function DuplicateValue(const Input: TThoriumValue): TThoriumValue;
+       override;
     function GetNativeMetadata(const ForType: PTypeInfo
        ): TThoriumNativeMetadata; override;
     function HasIndexedAccess: Boolean; override;
@@ -3486,6 +3493,11 @@ begin
 
 end;
 
+function TThoriumType.DoToDebugString(const AValue: TThoriumValue): String;
+begin
+  Exit(DoToString(AValue));
+end;
+
 function TThoriumType.DoToString(const AValue: TThoriumValue): String;
 begin
   Result := '(unsupported type: '+GetName+')';
@@ -4477,6 +4489,7 @@ function TThoriumTypeString.CanPerformOperation(
   begin
     if TheObject is TThoriumTypeString then
     begin
+      Result := True;
       Operation.ResultType := Self;
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := False;
@@ -4490,6 +4503,7 @@ function TThoriumTypeString.CanPerformOperation(
   begin
     if TheObject is TThoriumTypeInteger then
     begin
+      Result := True;
       Operation.ResultType := Self;
       Operation.Casts[0].Needed := False;
       Operation.Casts[1].Needed := False;
@@ -4578,6 +4592,14 @@ begin
   Result.RTTI := Self;
   New(Result.Str);
   Result.Str^ := PThoriumString(Ptr)^;
+end;
+
+function TThoriumTypeString.DuplicateValue(const Input: TThoriumValue
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  New(Result.Str);
+  Result.Str^ := Input.Str^;
 end;
 
 function TThoriumTypeString.GetNativeMetadata(const ForType: PTypeInfo
@@ -11439,7 +11461,7 @@ var
       Move(FRegisters[0], _NewEntry^.StackFrame.RegisterDumpData^, SizeOf(TThoriumValue)*(HRI+1));
 
       FCurrentStackFrame := FStack.FCount-1;
-      I := FRegisters[SRI].Func.FEntryPoint;
+      I := FRegisters[SRI].RuntimeFunc.FEntryPoint;
       Inc(FCurrentInstruction, (I-1) - FCurrentInstructionIdx);
       Inc(FCurrentInstructionIdx, (I-1) - FCurrentInstructionIdx);
       {$ifdef Timecheck}EndTimecheck('call');{$endif}
@@ -11688,8 +11710,6 @@ begin
     //Assert(False, 'Unknown opcode');
     raise EThoriumRuntimeException.CreateFmt('Unknown opcode: %d (%s)', [Ord(FCurrentInstruction^.Instruction), GetEnumName(TypeInfo(TThoriumInstructionCode), Ord(FCurrentInstruction^.Instruction))]);
   end;
-  Inc(FCurrentInstruction);
-  Inc(FCurrentInstructionIdx);
   //System.Inc(FCurrentInstructionIdx);
 end;
 
@@ -11787,16 +11807,30 @@ begin
       {$endif}
       ExecuteInstruction;
       {$ifdef Stackdump or StateDump}
-      {$ifdef StateDump}
-      DumpState;
+      try
+        {$ifdef StateDump}
+        DumpState;
+        {$endif}
+        {$ifdef Stackdump}
+        DumpStack;
+        {$endif}
+        WriteLn;
+      except
+        on E: Exception do
+        begin
+          AcquireExceptionObject;
+          raise EThoriumRuntimeExecutionDebugException.Create(FCurrentModule, FCurrentInstructionIdx, FCurrentInstruction, E);
+        end;
+      end;
       {$endif}
-      {$ifdef Stackdump}
-      DumpStack;
-      {$endif}
-      WriteLn;
-      {$endif}
+      Inc(FCurrentInstruction);
+      Inc(FCurrentInstructionIdx);
     until (FCurrentInstructionIdx < 0) or (FCurrentInstructionIdx >= FCurrentModule.FInstructions.Count);
   except
+    on E: EThoriumRuntimeExecutionDebugException do
+    begin
+      raise;
+    end;
     on E: Exception do
     begin
       // Tell the exception handling system that we want to free the current
@@ -11904,7 +11938,7 @@ begin
     else
       RelPos := '';
     case ThisEntry^._Type of
-      stValue: WriteLn(Format('  %4d %18s Value (%s) %s', [J, RelPos, ThisEntry^.Value.RTTI.Name, ThisEntry^.Value.RTTI.DoToString(ThisEntry^.Value)]));
+      stValue: WriteLn(Format('  %4d %18s Value (%s) %s', [J, RelPos, ThisEntry^.Value.RTTI.Name, ThisEntry^.Value.RTTI.DoToDebugString(ThisEntry^.Value)]));
       stStackFrame:
       begin
         if ThisEntry^.StackFrame.ReturnAddress = THORIUM_RETURN_EXIT then

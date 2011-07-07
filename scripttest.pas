@@ -75,7 +75,7 @@ begin
     FS := TFileStream.Create(MODULE_TEST_NAME, fmOpenread);
     try
       try
-        if Module.CompileFromStream(FS, TThoriumDefaultCompiler) then
+        if Module.CompileFromStream(FS, TThoriumDefaultCompiler, []) then
           WriteLn('Successfully compiled:')
         else
           WriteLn('Compilation failed (you should not see this as an exception should''ve been raised).');
@@ -97,7 +97,22 @@ begin
       Exit;
     Engine.InitializeVirtualMachine;
     try
-      Engine.VirtualMachine.CallFunction(Engine.VirtualMachine.GetRuntimeFunction(Module.PublicFunction[0]), []);
+      try
+        Engine.VirtualMachine.CallFunction(Engine.VirtualMachine.GetRuntimeFunction(Module.PublicFunction[0]), []);
+      except
+        on E: EThoriumRuntimeExecutionDebugException do
+        begin
+          WriteLn('== Debug exception == ', E.Message);
+          raise;
+        end;
+        on E: EThoriumRuntimeExecutionException do
+        begin
+          WriteLn('== Execution exception == ', E.Message);
+          raise;
+        end
+        else
+          raise;
+      end;
     finally
       Engine.ReleaseVirtualMachine;
     end;

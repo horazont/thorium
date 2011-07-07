@@ -527,7 +527,7 @@ begin
           '"':
           begin
             GetChar(Ch);
-            Exit;
+            Exit(True);
           end;
           '\':
           begin
