@@ -177,6 +177,8 @@ type
 const
   // The amount of cache registers must be at least 6 (currently). More won't
   // bring any benefit, less will bring up dragons.
+  // Cache registers are used internally, maybe without explicit reference in
+  // the script code. They are never saved during in-script function calls.
   THORIUM_REGISTER_C_COUNT = 6;
   // The amount of expression registers determine the maximum nesting level of
   // expressions. Each operator precedence level (+-, /*) and each nesting with
@@ -234,15 +236,10 @@ type
   TThoriumHash = array [0..7] of Word;
   PThoriumHash = ^TThoriumHash;
 
-  TThoriumBuiltInType = (btNil = 0, btUnknown = 1, btInteger = 2, btFloat = 3,
-    btString = 4, btArray = 5);
   TThoriumArrayKind = (akStatic, akDynamic);
   TThoriumRegisterID = Word;
   TThoriumRegisterKind = (trC, trEXP);
   TThoriumVisibilityLevel = (vsPrivate, vsPublic);
-  TThoriumValueType = (vtBuiltIn, vtExtendedType, vtFunction,
-    vtHostFunction, vtHostMethod);
-
 
   TThoriumTableEntryType = (ttGlobal, ttLocal, ttParameter,
     ttLocalRegisterVariable, ttGlobalCallable, ttHostCallable,

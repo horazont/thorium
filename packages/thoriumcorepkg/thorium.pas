@@ -1404,20 +1404,6 @@ type
   end;
   TThoriumHostFunctionBaseClass = class of TThoriumHostFunctionBase;
 
-  { TThoriumHostFunctionSimpleMethod }
-
-  (* This host function class is based on a specific callback which will be
-     called when the virtual machine calls the function. *)
-  TThoriumHostFunctionSimpleMethod = class (TThoriumHostFunctionBase)
-    constructor Create(ALibrary: TThoriumLibrary); override;
-  private
-    FMethod: TThoriumSimpleMethod;
-  protected
-    procedure CallFromVirtualMachine(AVirtualMachine: TThoriumVirtualMachine = nil); override;
-  public
-    property Method: TThoriumSimpleMethod read FMethod write FMethod;
-  end;
-
   { TThoriumHostFunctionNativeCall }
 
   (* This host function class is able to call any function of the host
@@ -1469,21 +1455,6 @@ type
     FHostObjectType: TThoriumHostObjectType;
   protected
     procedure CallFromVirtualMachine(OfObject: TObject; AVirtualMachine: TThoriumVirtualMachine=nil); virtual; abstract;
-  end;
-
-  { TThoriumHostMethodSimple }
-
-  (* This host method class is based on a specific callback which will be called
-     when the virtual machine calls the method. *)
-  TThoriumHostMethodSimple = class (TThoriumHostMethodBase)
-  public
-    constructor Create(ALibrary: TThoriumLibrary); override;
-  private
-    FClassMethod: TThoriumClassMethod;
-  protected
-    procedure CallFromVirtualMachine(OfObject: TObject; AVirtualMachine: TThoriumVirtualMachine=nil); override;
-  public
-    property ClassMethod: TThoriumClassMethod read FClassMethod write FClassMethod;
   end;
 
   { TThoriumHostMethodNativeCall }
@@ -1850,11 +1821,6 @@ type
       AMethodsCallback: TThoriumRTTIMethodsCallback;
       AStaticMethodsCallback: TThoriumRTTIStaticMethodsCallback;
       AbstractClass: Boolean = False): TThoriumRTTIObjectType;
-
-    function RegisterSimpleMethod(const AName: String;
-      const AFunction: TThoriumSimpleMethod;
-      const AParameters: array of PTypeInfo;
-      const AReturnType: PTypeInfo): TThoriumHostFunctionSimpleMethod;
 
     function RegisterType(const AName: String; const AInstance: TThoriumType;
       const ATypes: array of PTypeInfo): TThoriumType;
@@ -2583,23 +2549,6 @@ begin
   Result.Offset := AOffset;
 end;
 
-{
-function HostVarType(const AHostType: TThoriumHostType;
-  const AExtended: TThoriumHostObjectType = nil; const AStoring: Boolean = False): TThoriumHostType;
-begin
-  raise EThoriumException.Create('needs to be reimplemented.');
-(*  Result.HostType := AHostType;
-  Result.Extended := AExtended;
-  if Result.HostType and (htTypeSection or htSizeSection) <> htExt then
-  begin
-    Result.Extended := nil;
-    Result.Storing := False;
-  end
-  else
-    Result.Storing := AStoring;*)
-end;
-}
-
 operator:=(Input: TThoriumInstructionArray): TThoriumGenericOperation;
 begin
   Result.Kind := okCustom;
@@ -2857,31 +2806,6 @@ begin
     Result := 'error';
   end;
 end;
-
-(*procedure ThoriumVarTypeToTypeSpec(VarType: TThoriumHostType; var TypeSpec: TThoriumType);
-begin
-  case VarType and (htSizeSection or htTypeSection) of
-    htIntS8, htIntS16, htIntS32, htIntS64,
-    htIntU8, htIntU16, htIntU32, htIntU64:
-    begin
-      TypeSpec := TThoriumTypeInteger.Create();
-    end;
-    htFlt32, htFlt64, htFlt80:
-    begin
-      TypeSpec := TThoriumTypeFloat.Create();
-    end;
-    htStr:
-    begin
-      TypeSpec := TThoriumTypeString.Create();
-    end;
-    htExt:
-    begin
-      raise EThoriumException.Create('Cannot convert htExt types to internal type using ThoriumVarTypeToTypeSpec.');
-    end;
-  else
-    raise EThoriumException.CreateFmt('Invalid value for VarType (%d) in ThoriumVarTypeToTypeSpec.', [VarType]);
-  end;
-end;*)
 
 function ThoriumOperationToStr(AOperation: TThoriumOperation): String;
 begin
@@ -3531,12 +3455,6 @@ begin
       Result := B;
       AValue.RTTI.DoDecrement(Result);
     end;
-    (*opCmpEqual: Result := DoCmpEqual(A, B);
-    opCmpNotEqual: Result := DoCmpNotEqual(A, B);
-    opCmpGreater: Result := DoCmpGreater(A, B);
-    opCmpGreaterOrEqual: Result := DoCmpGreaterOrEqual(A, B);
-    opCmpLess: Result := DoCmpLess(A, B);
-    opCmpLessOrEqual: Result := DoCmpLessOrEqual(A, B);*)
 
     opAddition: Result := AValue.RTTI.DoAddition(A, B);
     opSubtraction: Result := AValue.RTTI.DoSubtraction(A, B);
@@ -5744,22 +5662,6 @@ begin
     begin
       Access.WriteAccess := AccessDescription(xfset(AFieldID, 0, 0), 5, -1, 4);
     end;
-(*    case Info^.PropType^.Kind of
-      tkInteger, tkEnumeration, tkSet, tkInt64, tkQWord, tkBool:
-        TypeSpec := TThoriumTypeInteger.Create;
-      tkFloat:
-        TypeSpec := TThoriumTypeFloat.Create;
-      tkSString, tkLString, tkAString, tkWString:
-        TypeSpec := TThoriumTypeString.Create;
-      tkClass:
-      begin
-        TypeData := GetTypeData(Info^.PropType);
-        ObjClass := TypeData^.ClassType;
-        ExtType := FLibrary.DeepFindHostTypeForType(ObjClass.ClassInfo);
-        if ExtType <> nil then
-          TypeSpec := ExtType;
-      end;
-    end;*)
     TypeSpec := FLibrary.DeepFindTypeForHostType(Info^.PropType);
   end;
 end;
@@ -6674,33 +6576,6 @@ begin
   FTypeMap.Add(AClass.ClassInfo, Result);
 end;
 
-function TThoriumLibrary.RegisterSimpleMethod(const AName: String;
-  const AFunction: TThoriumSimpleMethod;
-  const AParameters: array of PTypeInfo;
-  const AReturnType: PTypeInfo): TThoriumHostFunctionSimpleMethod;
-var
-  CasedName: String;
-  I: Integer;
-begin
-  ForceUnfrozen;
-  CasedName := ThoriumCase(AName);
-  Result := TThoriumHostFunctionSimpleMethod.Create(Self);
-  try
-    with Result do
-    begin
-      FName := CasedName;
-      FMethod := AFunction;
-      for I := 0 to High(AParameters) do
-        FParameters.Add(AParameters[I]);
-      FReturnType.HostType := AReturnType;
-    end;
-  except
-    FreeAndNil(Result);
-    raise;
-  end;
-  FHostCallables.Add(Result);
-end;
-
 function TThoriumLibrary.RegisterType(const AName: String;
   const AInstance: TThoriumType; const ATypes: array of PTypeInfo
   ): TThoriumType;
@@ -7083,125 +6958,6 @@ begin
   Result := False;
 end;
 
-{ TThoriumExternalFunctionSimple }
-
-constructor TThoriumHostFunctionSimpleMethod.Create(ALibrary: TThoriumLibrary);
-begin
-  inherited Create(ALibrary);
-  FMethod := nil;
-end;
-
-procedure TThoriumHostFunctionSimpleMethod.CallFromVirtualMachine(AVirtualMachine: TThoriumVirtualMachine = nil);
-(*var
-  VM: TThoriumVirtualMachine;
-  Stack: TThoriumStack;
-  I: Integer;
-  PC: Integer;
-  Params: array of Pointer;
-  VAData: TThoriumSimpleVarargs;
-  VAType: TThoriumHostType;
-  ReturnVal: TThoriumValue;
-  ST: PThoriumStackEntry;
-  ParamType: TThoriumHostType;
-  VAOffset: Integer;*)
-begin
-  raise Exception.Create('Reimplement');
-  (*// Check for the virtual machine
-  VM := AVirtualMachine;
-  Stack := VM.GetStack;
-  // Check if the method is valid
-  if FMethod = nil then
-    raise EThoriumRuntimeException.Create('Tried to call a nil method.');
-
-  VAData.Count := 0;
-  VAOffset := 0;
-  VAType := htNone;
-  // Store the parameter count to a local variable
-  PC := FParameters.FCount;
-  // Set the length of the variant array
-  SetLength(Params, PC);
-  for I := 0 to PC-1 do
-  begin
-    // Curr stack offset = I + VAOffset + 1
-    // Parameter array index = PC-(I+1)
-    ParamType := FParameters.GetParamType(PC-(I+1));
-    if ParamType and htArray = htArray then
-    begin
-      if VAType <> htNone then
-        raise EThoriumRuntimeException.Create('Cannot handle more than one vararg.');
-      // Get the current stack entry
-      ST := Stack.GetTop(I+VAOffset);
-      // Check if it is an integer
-      if (ST^.Value._Type <> vtBuiltIn) or (ST^.Value.BuiltIn._Type <> btInteger) then
-        raise EThoriumRuntimeException.Create('Compiler mistake: No count indicator for varargs');
-      // Determine the type for the varargs
-      VAType := FParameters.GetParamType(PC-(I+1)) and not (htFlagSection);
-      // Get the count from the stack
-      VAData.Count := ST^.Value.BuiltIn.Int;
-      if VAData.Count > 0 then
-      begin
-        Inc(VAOffset);
-        VAData.Data := Stack.GetTop(I+VAOffset)^.VADataOrigin;
-      end
-      else
-        VAData.Data := nil;
-      // Assign the varargs array to the current parameter slot
-      Params[PC-(I+1)] := @VAData;
-    end
-    else
-    begin
-      case ParamType of
-        htIntU8, htIntS8, htIntU16, htIntS16, htIntU32, htIntS32, htIntU64,
-        htIntS64:
-        begin
-          ST := Stack.GetTop(I+VAOffset);//VM.GetStack.GetStackEntry(THORIUM_STACK_SCOPE_FROMTOP, I+1);
-          Params[PC-(I+1)] := @ST^.Value.BuiltIn.Int;
-        end;
-        htFlt32, htFlt64, htFlt80:
-        begin
-          ST := Stack.GetTop(I+VAOffset);
-          Params[PC-(I+1)] := @ST^.Value.BuiltIn.Float;
-        end;
-        htString:
-        begin
-          Params[PC-(I+1)] := Stack.GetTop(I+VAOffset)^.Value.BuiltIn.Str;
-        end;
-        htExt:
-        begin
-          Params[PC-(I+1)] := Stack.GetTop(I+VAOffset)^.Value.Extended.Value;
-        end;
-      else
-        raise EThoriumRuntimeException.Create('Invalid parameter type.');
-      end;
-    end;
-  end;
-  // Call the method with the given parameters
-  if (FReturnType.HostType <> htNone) then
-  begin
-    // If a return value is given
-    FMethod(Params, @ReturnVal);
-    if VAType <> htNone then
-    begin
-      VM.FStack.Pop(2, True);
-      Dec(PC, 2);
-    end;
-    VM.FStack.Pop(PC, False);
-    ST := Stack.GetTopStackEntry;
-    ST^._Type := stValue;
-    ST^.Value := ReturnVal;
-  end
-  else
-  begin
-    FMethod(Params, nil);
-    if VAType <> htNone then
-    begin
-      VM.FStack.Pop(2, True);
-      Dec(PC, 2);
-    end;
-    VM.FStack.Pop(PC, False);
-  end;  *)
-end;
-
 { TThoriumHostFunctionNativeCall }
 
 constructor TThoriumHostFunctionNativeCall.Create(ALibrary: TThoriumLibrary);
@@ -7278,129 +7034,6 @@ constructor TThoriumHostMethodBase.Create(ALibrary: TThoriumLibrary);
 begin
   inherited Create(ALibrary);
   FHostObjectType := nil;
-end;
-
-{ TThoriumHostMethodSimple }
-
-constructor TThoriumHostMethodSimple.Create(ALibrary: TThoriumLibrary);
-begin
-  inherited Create(ALibrary);
-  FClassMethod := nil;
-end;
-
-procedure TThoriumHostMethodSimple.CallFromVirtualMachine(OfObject: TObject;
-  AVirtualMachine: TThoriumVirtualMachine);
-(*var
-  VM: TThoriumVirtualMachine;
-  Stack: TThoriumStack;
-  I: Integer;
-  PC: Integer;
-  Params: array of Pointer;
-  VAData: TThoriumSimpleVarargs;
-  VAType: TThoriumHostType;
-  VAOffset: Integer;
-  ReturnVal: TThoriumValue;
-  ST: PThoriumStackEntry;
-  ParamType: TThoriumHostType;*)
-begin
-  raise Exception.Create('Reimplement');
-
-  (*// Check for the virtual machine
-  VM := AVirtualMachine;
-  Stack := VM.GetStack;
-  // Check if the method is valid
-  if FClassMethod = nil then
-    raise EThoriumRuntimeException.Create('Tried to call a nil method.');
-
-  VAData.Count := 0;
-  VAOffset := 0;
-  VAType := htNone;
-  // Store the parameter count to a local variable
-  PC := FParameters.FCount;
-  // Set the length of the variant array
-  SetLength(Params, PC);
-  for I := 0 to PC-1 do
-  begin
-    // Curr stack offset = I + VAOffset + 1
-    // Parameter array index = PC-(I+1)
-    ParamType := FParameters.GetParamType(PC-(I+1));
-    if ParamType and htArray = htArray then
-    begin
-      if VAType <> htNone then
-        raise EThoriumRuntimeException.Create('Cannot handle more than one vararg.');
-      // Get the current stack entry
-      ST := Stack.GetTop(I+VAOffset);
-      // Check if it is an integer
-      if (ST^.Value._Type <> vtBuiltIn) or (ST^.Value.BuiltIn._Type <> btInteger) then
-        raise EThoriumRuntimeException.Create('Compiler mistake: No count indicator for varargs');
-      // Determine the type for the varargs
-      VAType := FParameters.GetParamType(PC-(I+1)) and not (htFlagSection);
-      // Get the count from the stack
-      VAData.Count := ST^.Value.BuiltIn.Int;
-      if VAData.Count > 0 then
-      begin
-        Inc(VAOffset);
-        VAData.Data := Stack.GetTop(I+VAOffset)^.VADataOrigin;
-      end
-      else
-        VAData.Data := nil;
-      // Assign the varargs array to the current parameter slot
-      Params[PC-(I+1)] := @VAData;
-    end
-    else
-    begin
-      case ParamType of
-        htIntU8, htIntS8, htIntU16, htIntS16, htIntU32, htIntS32, htIntU64,
-        htIntS64:
-        begin
-          ST := Stack.GetTop(I+VAOffset);//VM.GetStack.GetStackEntry(THORIUM_STACK_SCOPE_FROMTOP, I+1);
-          Params[PC-(I+1)] := @ST^.Value.BuiltIn.Int;
-        end;
-        htFlt32, htFlt64, htFlt80:
-        begin
-          ST := Stack.GetTop(I+VAOffset);
-          Params[PC-(I+1)] := @ST^.Value.BuiltIn.Float;
-        end;
-        htString:
-        begin
-          Params[PC-(I+1)] := Stack.GetTop(I+VAOffset)^.Value.BuiltIn.Str;
-        end;
-        htExt:
-        begin
-          Params[PC-(I+1)] := Stack.GetTop(I+VAOffset)^.Value.Extended.Value;
-        end;
-      else
-        raise EThoriumRuntimeException.Create('Invalid parameter type.');
-      end;
-    end;
-  end;
-  // Modify the method information
-  TMethod(FClassMethod).Data := OfObject;
-  // Call the method with the given parameters
-  if (FReturnType.HostType <> htNone) then
-  begin
-    // If a return value is given,
-    FClassMethod(Params, @ReturnVal);
-    if VAType <> htNone then
-    begin
-      VM.FStack.Pop(2, True);
-      Dec(PC, 2);
-    end;
-    VM.FStack.Pop(PC);
-    ST := VM.FStack.GetStackEntry(THORIUM_STACK_SCOPE_FROMTOP, 1);
-    ST^._Type := stValue;
-    ST^.Value := ReturnVal;
-  end
-  else
-  begin
-    FClassMethod(Params, nil);
-    if VAType <> htNone then
-    begin
-      VM.FStack.Pop(2, True);
-      Dec(PC, 2);
-    end;
-    VM.FStack.Pop(PC);
-  end;   *)
 end;
 
 { TThoriumHostMethodNativeCall }
@@ -7759,45 +7392,6 @@ begin
   end;
 end;
 
-(*function TThoriumInstructions.GenCode(InstructionCode: TThoriumInstructionCode;
-  Param1, Param2, Param3: Int64; CodeLine: Cardinal): Integer;
-// Adds a new instruction with the instruction code and the three parameters
-// given.
-var
-  InstructionRec: PThoriumInstruction;
-begin
-  if FCapacity < FCount + 1 then
-    Expand;
-  Assert(FPosition <= FCount, 'FPosition <= FCount in TThoriumInstructions.GenCode');
-  if FPosition = FCount then
-  begin
-    Inc(FCount);
-    InstructionRec := GetInstruction(FPosition);
-    InstructionRec^.Instruction := InstructionCode;
-    InstructionRec^.Parameter1 := Param1;
-    InstructionRec^.Parameter2 := Param2;
-    InstructionRec^.Parameter3 := Param3;
-    InstructionRec^.CodeLine := CodeLine;
-    Result := FPosition;
-    Inc(FPosition);
-  end
-  else
-  begin
-    Inc(FCount);
-    InstructionRec := PThoriumInstruction(ptrint(FInstructions)+FPosition*SizeOf(TThoriumInstruction));
-    Move(InstructionRec^,
-      PThoriumInstruction(ptrint(InstructionRec)+SizeOf(TThoriumInstruction))^,
-      SizeOf(TThoriumInstruction)*(FCount - FPosition));
-    InstructionRec^.Instruction := InstructionCode;
-    InstructionRec^.Parameter1 := Param1;
-    InstructionRec^.Parameter2 := Param2;
-    InstructionRec^.Parameter3 := Param3;
-    InstructionRec^.CodeLine := CodeLine;
-    Result := FPosition;
-    Inc(FPosition);
-  end;
-end; *)
-
 function TThoriumInstructions.AppendCode(AInstruction: TThoriumInstruction): Integer;
 // Adds a new instruction with the instruction code and the three parameters
 // given.
@@ -7852,36 +7446,6 @@ begin
   FCount := FCount - ACount;
   FixupAdresses(AIndex+ACount, -ACount)
 end;
-
-(*function TThoriumInstructions.InsertCodeAt(APosition: Integer;
-  InstructionCode: TThoriumInstructionCode; Param1, Param2, Param3: Int64;
-  CodeLine: Cardinal = 0): Integer;
-// Inserts a new instruction at a given position. The position is treated in a
-// way which allows you to use it with the Position field as parameter and get
-// the same result as if you would use GenCode directly.
-var
-  InstructionRec: PThoriumInstruction;
-begin
-  if APosition = FPosition then
-  begin
-    Result := GenCode(InstructionCode, Param1, Param2, Param3, CodeLine);
-    Exit;
-  end;
-  if FCapacity < FCount + 1 then
-    Expand;
-  Inc(FCount);
-  InstructionRec := PThoriumInstruction(ptrint(FInstructions)+APosition*SizeOf(TThoriumInstruction));
-  Move(InstructionRec^,
-    PThoriumInstruction(ptrint(InstructionRec)+SizeOf(TThoriumInstruction))^,
-    SizeOf(TThoriumInstruction)*(FCount - APosition));
-  InstructionRec^.Instruction := InstructionCode;
-  InstructionRec^.Parameter1 := Param1;
-  InstructionRec^.Parameter2 := Param2;
-  InstructionRec^.Parameter3 := Param3;
-  InstructionRec^.CodeLine := CodeLine;
-  Result := APosition;
-  Inc(FPosition);
-end;     *)
 
 procedure TThoriumInstructions.Finish;
 // If there is more memory reserved than instructions were added, the reserved
@@ -8521,126 +8085,6 @@ begin
   end;
 end;
 
-(*function TThoriumCustomCompiler.FindTableEntry(const Ident: String; out
-  Entry: TThoriumTableEntry; out Module: TThoriumModule; RaiseError: Boolean;
-  AllowFar: Boolean): Boolean; inline;
-// Searches all accessible tables for an value with the given identifier
-var
-  I: Integer;
-  VarI: Integer;
-  CurrVar: TThoriumVariable;
-  CurrFunc: TThoriumFunction;
-  CurrExternalFunc: TThoriumHostFunctionBase;
-  CurrConst: TThoriumLibraryConstant;
-  CurrProp: TThoriumLibraryProperty;
-  List: PPointerList;
-begin
-  Module := nil;
-  // First check the own module
-  Result := FTable.FindIdentifier(Ident, Entry);
-  // If we could not find anything in here and far access is allowed, we scan
-  // for the included modules.
-  if (not Result) and (AllowFar) and (FThorium <> nil) then
-  begin
-    for I := FRequiredModules.Count - 1 downto 0 do
-    begin
-      // First get the module index.
-      Module := FRequiredModules.Items[I];
-      // Check all function identifiers in the given module
-      List := PPointerList(Module.FPublicFunctions.List);
-      for VarI := Module.FPublicFunctions.Count - 1 downto 0 do
-      begin
-        // Get the function pointer
-        CurrFunc := TThoriumFunction(List^[VarI]);
-        // Check if it matches
-        if CurrFunc.FName = Ident then
-        begin
-          // And if so fill the entry record and return.
-          Entry.Name := nil;
-          Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-          Entry.Offset := -1;
-          Entry._Type := ttGlobalCallable;
-          Entry.TypeSpec := CurrFunc.PrototypeIntf;
-          Entry.Value.Func := CurrFunc;
-          Result := True;
-          Exit;
-        end;
-      end;
-      // Now check all variables of the module
-      List := PPointerList(Module.FPublicVariables.List);
-      for VarI := Module.FPublicVariables.Count - 1 downto 0 do
-      begin
-        // Get the variable pointer
-        CurrVar := TThoriumVariable(List^[VarI]);
-        // Check if the name matches
-        if CurrVar.FName = Ident then
-        begin
-          // And if so fill the entry record and return.
-          Entry.Name := nil;
-          Entry.Scope := THORIUM_STACK_SCOPE_MODULEROOT;
-          Entry.Offset := CurrVar.FStackPosition;
-          Entry.TypeSpec := CurrVar.FTypeSpec;
-          // The static field needs a special handling
-          if CurrVar.FIsStatic then
-            Entry._Type := etStatic
-          else
-            Entry._Type := etVariable;
-          Result := True;
-          Exit;
-        end;
-      end;
-    end;
-    // Now... No included module could serve us contents, so we look in the
-    // external functions
-    // Let it find us the function :P
-    CurrExternalFunc := FModule.FindHostFunction(Ident); // FThorium.FExternalFunctionRegistry.FindFunctionDirect(Ident);
-    if (CurrExternalFunc <> nil) then
-    begin
-      Entry.Name := nil;
-      Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-      Entry.Offset := -1;
-      Entry._Type := ttHostCallable;
-      Entry.TypeSpec := CurrExternalFunc.PrototypeIntf;
-      Entry.Value.HostFunc := CurrExternalFunc;
-      Result := True;
-      Exit;
-    end;
-    CurrProp := FModule.FindLibraryProperty(Ident);
-    if CurrProp <> nil then
-    begin
-      Entry.Name := nil;
-      Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-      Entry.Offset := -1;
-      Entry._Type := ttLibraryProperty;
-      Entry.TypeSpec := CurrProp.GetType;
-      Entry.Ptr := CurrProp;
-      Result := True;
-      Exit;
-    end;
-    // Well, no function, no variable in a module, nothing, so it can only
-    // be a constant then.
-    CurrConst := FModule.FindLibraryConstant(Ident);
-    if CurrConst <> nil then
-    begin
-      Entry.Name := nil;
-      Entry.Scope := THORIUM_STACK_SCOPE_NOSCOPE;
-      Entry.Offset := -1;
-      Entry._Type := ttLibraryConstant;
-      Entry.Value := CurrConst.FValue;
-      // Reimplement this
-      raise Exception.Create('Re-implement ExtractTypeSpec or replace with appropriate surrogate.');
-      //Entry.TypeSpec := ThoriumExtractTypeSpec(Entry.Value);
-      Entry.Ptr := CurrConst;
-      Result := True;
-      Exit;
-    end;
-  end;
-  // If we were not able to find anything and we are allowed to raise an error
-  // do so.
-  if (not Result) and (RaiseError) then
-    CompilerError('Undeclared identifier: '+Ident);
-end;         *)
-
 procedure TThoriumCustomCompiler.FindTableEntries(const Ident: String;
   var Entries: TThoriumTableEntryResults);
 
@@ -9024,20 +8468,8 @@ end;
 
 procedure TThoriumCustomCompiler.HandleOffset(Sender: TObject; const Origin,
   Count: Integer; var Changed: Boolean);
-var
-  I: Integer;
 begin
-  {for I := 0 to FPublicFunctions.Count - 1 do
-  begin
-    if FPublicFunctions[I].FEntryPoint >= Origin then
-      FPublicFunctions[I].FEntryPoint += Count;
-  end;
-  for I := 0 to FPrivateFunctions.Count - 1 do
-  begin
-    if FPrivateFunctions[I].FEntryPoint >= Origin then
-      FPrivateFunctions[I].FEntryPoint += Count;
-  end;
-  Changed := True;}
+
 end;
 
 function TThoriumCustomCompiler.HasError: Boolean;
