@@ -5,6 +5,7 @@ unit Thorium_DefaultCompiler;
 // If this is set, the parser will raise an exception when it encounters a
 // tsNone token.
 {$define DebugTokenLoop}
+{.$define DebugTokenizer}
 
 interface
 
@@ -709,8 +710,10 @@ function TThoriumDefaultCompiler.Proceed(ExpectMask: TThoriumDefaultSymbols;
   ThrowError: Boolean): Boolean;
 begin
   Result := FScanner.NextSymbol(FCurrentSym, FCurrentStr);
+  {$ifdef DebugTokenizer}
   Write('→ ');
   Debug_CurrentSym;
+  {$endif}
   {$ifdef DebugTokenLoop}
   if FCurrentSym = tsNone then
   begin
@@ -2407,7 +2410,6 @@ begin
     else
     begin
       Result := Solutions[0]^;
-      WriteLn(GetEnumName(TypeInfo(TThoriumQualifiedIdentifierKind), Ord(Result.Kind)));
     end;
 
     for I := 0 to Solutions.Count - 1 do

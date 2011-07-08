@@ -1758,6 +1758,7 @@ type
     procedure AddDependency(const ALibName: String);
     procedure AddDependency(const ALib: TThoriumLibrary); virtual;
     procedure CreatePrototypes;
+    procedure DumpTypes;
     procedure InitializeLibrary; virtual;
     procedure RaiseRTTIRequired(const AStr: String);
     procedure SetupPropertyDirect(const AInstance: TThoriumLibraryPropertyDirect;
@@ -4315,6 +4316,8 @@ end;
 
 procedure TThoriumTypeFloat.DoToNative(var AValue: TThoriumValue;
   const AType: PTypeInfo);
+var
+  Size: SizeUInt;
 begin
   AValue.NativeData.ForType := AType;
   case GetTypeData(AType)^.FloatType of
@@ -4322,6 +4325,9 @@ begin
     begin
       AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Single)));
       AValue.NativeData.AlignedSize := 1;
+      {$ifdef CPU64}
+      PDWord(AValue.NativeData.Data)[1] := 0;
+      {$endif}
       PSingle(AValue.NativeData.Data)^ := AValue.Float;
     end;
     ftDouble:
@@ -4330,11 +4336,20 @@ begin
       AValue.NativeData.AlignedSize := 1 * CPU_SIZE_FACTOR;
       AValue.NativeData.Data := @AValue.Float;
     end;
+{ TODO : Fix passing of Extended float type. }
+    {
     ftExtended:
     begin
-      AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Extended)));
-      AValue.NativeData.AlignedSize := ceil(SizeOf(Extended) / STACK_SLOT_SIZE);
-      PExtended(AValue.NativeData.Data)^ := AValue.Float;
+      Size := FitStackSize(SizeOf(Extended));
+      AValue.NativeData.Data := GetMem(Size);
+      FillDWord(AValue.NativeData.Data^, Size shr 2, 0);
+      AValue.NativeData.AlignedSize := Size shr ({$ifdef CPU64}3{$else}2{$endif});
+      PWord(AValue.NativeData.Data)[3] := PWord(@AValue.Float)[0];
+      PWord(AValue.NativeData.Data)[4] := PWord(@AValue.Float)[1];
+      PWord(AValue.NativeData.Data)[5] := PWord(@AValue.Float)[2];
+      PWord(AValue.NativeData.Data)[6] := PWord(@AValue.Float)[3];
+      PWord(AValue.NativeData.Data)[7] := PWord(@AValue.Float)[4];
+      //PExtended(AValue.NativeData.Data)^ := AValue.Float;
     end;
     ftComp:
     begin
@@ -4348,6 +4363,9 @@ begin
       AValue.NativeData.AlignedSize := ceil(SizeOf(Currency) / STACK_SLOT_SIZE);
       PCurrency(AValue.NativeData.Data)^ := AValue.Float;
     end;
+    }
+  else
+    raise EThoriumRuntimeException.CreateFmt('Cannot convert to this native float type: %s.', [GetEnumName(TypeInfo(TFloatType), Ord(GetTypeData(AType)^.FloatType))]);
   end;
 end;
 
@@ -6208,6 +6226,7 @@ begin
   FThorium := AThorium;
   FTypes := TThoriumTypes.Create;
   FTypeMap := TThoriumTypesMap.Create;
+  FTypeMap.Sorted := True;
   InitializeLibrary;
 end;
 
@@ -6274,6 +6293,14 @@ var
 begin
   for I := 0 to FHostCallables.Count - 1 do
     FHostCallables[I].CreatePrototype;
+end;
+
+procedure TThoriumLibrary.DumpTypes;
+var
+  I: Integer;
+begin
+  for I := 0 to FTypeMap.Count - 1 do
+    WriteLn(Format('0x%8.8x  $0x%16.16x  %s %s', [I, Int64(FTypeMap.Keys[I]), FTypeMap.Data[I].ClassName, FTypeMap.Data[I].Name]));
 end;
 
 procedure TThoriumLibrary.InitializeLibrary;
@@ -6594,7 +6621,9 @@ begin
     // Make sure it persists.
     Result._AddRef;
     for I := 0 to High(ATypes) do
+    begin
       FTypeMap.Add(ATypes[I], Result);
+    end;
   end;
   FTypes.Add(Result);
 end;
@@ -6662,7 +6691,9 @@ var
 begin
   Idx := -1;
   if not FTypeMap.Find(AType, Idx) then
-    Exit(nil)
+  begin
+    Exit(nil);
+  end
   else
     Exit(FTypeMap.Data[Idx]);
 end;
@@ -11583,9 +11614,8 @@ begin
     TypeInfo(TThoriumString)}
   ]);
   RegisterType('float', TThoriumTypeFloat.Create(FThorium), [
-    TypeInfo(Float),
     TypeInfo(Double),
-    TypeInfo(Extended){,
+    TypeInfo(Single){,
     TypeInfo(TThoriumFloat)}
   ]);
   RegisterType('void', nil, []);

@@ -703,7 +703,8 @@ lccPutDataRegXMM:
       // note that, due to the nature of the movlps instruction, no second
       // dereferentiation is possible
       addq $8, %r12
-      jmp (%r11)
+      movq (%r14), %r14
+      jmp (%r15)
 lccPutDataStack:
       addq $8, %r12
       pushq (%r14)
@@ -836,35 +837,35 @@ irPush:
       pushq %r14
       jmp %rbx
 frXMM0:
-      movlps (%r14), %xmm0
+      movlpd (%r14), %xmm0
       addq $8, %r15
       jmp %rbx
 frXMM1:
-      movlps (%r14), %xmm1
+      movlpd (%r14), %xmm1
       addq $8, %r15
       jmp %rbx
 frXMM2:
-      movlps (%r14), %xmm2
+      movlpd (%r14), %xmm2
       addq $8, %r15
       jmp %rbx
 frXMM3:
-      movlps (%r14), %xmm3
+      movlpd (%r14), %xmm3
       addq $8, %r15
       jmp %rbx
 frXMM4:
-      movlps (%r14), %xmm4
+      movlpd (%r14), %xmm4
       addq $8, %r15
       jmp %rbx
 frXMM5:
-      movlps (%r14), %xmm5
+      movlpd (%r14), %xmm5
       addq $8, %r15
       jmp %rbx
 frXMM6:
-      movlps (%r14), %xmm6
+      movlpd (%r14), %xmm6
       addq $8, %r15
       jmp %rbx
 frXMM7:
-      movlps (%r14), %xmm7
+      movlpd (%r14), %xmm7
       addq $8, %r15
       jmp %rbx
 frPush:

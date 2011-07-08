@@ -12,5 +12,5 @@ public void main()
   if (test == test2) and (test == 20) {
     test2 = 40;
   }
-  nctest("Teststring", 10, 20, 3.14159, 3.14159);
+  nctest(3.14159, 3.14159);
 }
