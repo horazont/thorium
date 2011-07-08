@@ -41,9 +41,9 @@ program scripttest;
 {.$define HeapTrc}
 
 uses
-  {$ifdef HeapTrc}Heaptrc, {$endif}Classes, SysUtils, thorium, thorium_utils,
-  thorium_globals, (*ThoriumLibStd, ThoriumLibStdIO, ThoriumLibString,
-  ThoriumLibStreams, *)Thorium_DefaultCompiler, variants, ThoriumTestNativeCall;
+  {$ifdef HeapTrc}Heaptrc, {$endif}Classes, SysUtils, thorium, ThUtils,
+  ThGlobals, (*ThoriumLibStd, ThoriumLibStdIO, ThoriumLibString,
+  ThoriumLibStreams, *)ThCompiler, variants, ThoriumTestNativeCall;
 
 {$ifdef UseTestModule}
 const

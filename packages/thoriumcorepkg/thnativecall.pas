@@ -1,11 +1,11 @@
-unit Thorium_NativeCall;
+unit ThNativeCall;
 
 {$mode objfpc}{$H+}
 
 interface
 
 uses
-  Classes, SysUtils, Thorium, Thorium_Globals, typinfo, Thorium_Utils;
+  Classes, SysUtils, Thorium, ThGlobals, typinfo, ThUtils;
 
 procedure PrecompileNativeCall(var AInstructions: Pointer;
     AParameters: TThoriumHostParameters; AThParameters: TThoriumParameters;

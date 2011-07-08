@@ -26,7 +26,7 @@ For feedback and questions about Thorium Scripting Language please mail me,
 Jonas Wielicki:
 j.wielicki@sotecware.net
 *******************************************************************************)
-unit Thorium_Globals;
+unit ThGlobals;
 
 {$mode objfpc}{$H+}
 
@@ -2184,7 +2184,7 @@ const
 implementation
 
 uses
-  Thorium_Utils;
+  ThUtils;
 
 
 var

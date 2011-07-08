@@ -26,7 +26,7 @@ For feedback and questions about Thorium Scripting Language please mail me,
 Jonas Wielicki:
 j.wielicki@sotecware.net
 *******************************************************************************)
-unit Thorium_Utils;
+unit ThUtils;
 
 {$mode objfpc}{$H+}
 

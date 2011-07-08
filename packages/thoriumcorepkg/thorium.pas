@@ -114,7 +114,7 @@ unit Thorium;
 interface
 
 uses
-  Classes, SysUtils, thorium_globals, thorium_utils, typinfo, Variants, md5,
+  Classes, SysUtils, ThGlobals, ThUtils, typinfo, Variants, md5,
   contnrs, fgl, Math
   {$ifdef HookSIGUSR1}
     , BaseUnix
@@ -2478,7 +2478,7 @@ property DebugMode: Boolean read GetDebugMode;
 implementation
 
 uses
-  Thorium_NativeCall, Thorium_OptimizeJumps, Thorium_OptimizeMoveCopy;
+  ThNativeCall, Thorium_OptimizeJumps, Thorium_OptimizeMoveCopy;
 
 var FDebugMode: Boolean = {$ifdef DebugToConsole}True{$else}False{$endif};
 
@@ -2505,7 +2505,7 @@ end;
 
 {$endif}
 
-{$I Thorium_InstructionConstructors.inc}
+{$I ThInstructionConstructors.inc}
 
 {%REGION 'Timecheck' /fold}
 {$ifdef Timecheck}

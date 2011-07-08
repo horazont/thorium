@@ -1,11 +1,11 @@
-unit Thorium_OptimizeJumps;
+unit ThOptimizeJumps;
 
 {$mode objfpc}{$H+}
 
 interface
 
 uses
-  Classes, SysUtils, Thorium, Thorium_Globals;
+  Classes, SysUtils, Thorium, ThGlobals;
 
 const
   INVERSE_CONDITION_JUMP : array [tiJE..tiJLE] of TThoriumInstructionCode = (

@@ -1,11 +1,11 @@
-unit Thorium_OptimizeMoveCopy;
+unit ThOptimizeMoveCopy;
 
 {$mode objfpc}{$H+}
 
 interface
 
 uses
-  Classes, SysUtils, Thorium, Thorium_Globals;
+  Classes, SysUtils, Thorium, ThGlobals;
 
 type
 

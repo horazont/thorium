@@ -1,4 +1,4 @@
-unit Thorium_DefaultCompiler;
+unit ThCompiler;
 
 {$mode objfpc}{$H+}
 
@@ -10,7 +10,7 @@ unit Thorium_DefaultCompiler;
 interface
 
 uses
-  Classes, SysUtils, Thorium, Thorium_Globals, Thorium_Utils, typinfo,
+  Classes, SysUtils, Thorium, ThGlobals, ThUtils, typinfo,
   Thorium_OptimizeJumps;
 
 {$ifdef DebugTokenLoop}
@@ -304,7 +304,7 @@ var
   NoneCount: Integer = 0;
 {$endif}
 
-{$I Thorium_InstructionConstructors.inc}
+{$I ThInstructionConstructors.inc}
 
 function SymbolToStr(const Sym: TThoriumDefaultSymbol): String;
 begin

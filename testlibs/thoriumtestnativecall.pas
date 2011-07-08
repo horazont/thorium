@@ -5,7 +5,7 @@ unit ThoriumTestNativeCall;
 interface
 
 uses
-  Classes, SysUtils, Thorium, Thorium_Globals;
+  Classes, SysUtils, Thorium, ThGlobals;
 
 type
 
@@ -13,8 +13,9 @@ type
 
   TTestNativeCall = class (TThoriumLibrary)
   protected
-    class function GetName: String; override;
     procedure InitializeLibrary; override;
+  public
+    class function GetName: String; override;
   end;
 
 implementation
