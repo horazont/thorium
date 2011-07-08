@@ -126,9 +126,9 @@ type
   {$PACKENUM 2}
   TThoriumNativeCallInstructionCode = (
     ccData,
-    ccPutRefRef, ccPutRef, ccPutDataRegInt, ccPutDataRegXMM, {ccPutDataRegMMX,}
+    ccPutRefRef, ccPutRef, ccPutDataRegInt, {$ifdef CPU64}ccPutDataRegXMM, {$endif}
     ccPutDataStack, ccPutLargeDataStack, ccPutLargeDataInt, ccPutLargeDataFloat,
-    ccCallNone, ccCallRetValue, ccCallRetRefRef, ccCallRetRef, ccCallRetMMX, ccCallRetExtended,
+    ccCallNone, ccCallRetValue, ccCallRetRefRef, ccCallRetRef, {$ifdef CPU64}ccCallRetMMX, {$endif}ccCallRetExtended,
     ccClearStack, ccIncrStrRef, ccDecrStrRef,
     ccExit,
     ccNone);
@@ -149,7 +149,7 @@ type
   PThoriumNativeCallInstruction = ^TThoriumNativeCallInstruction;
 
   TThoriumNativeCallValueMode = (vmInt32, vmInt64, vmPointer, vmFloat, vmString);
-  TThoriumNativeCallRefMode = (rmRef, rmNormal, rmDeref);
+  TThoriumNativeCallRefMode = (rmRefToPtr, rmPtr, rmData);
   TThoriumNativeCallFloatMode = (fmAsDouble, fmAsSingle, fmAsExtended);
   TThoriumNativeCallDirection = (ncdPass, ncdReturn);
 

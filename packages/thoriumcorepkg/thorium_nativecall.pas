@@ -451,81 +451,6 @@ var
     Inc(Count);
   end;
 
-  function NewPutDataRegIntInstruction: PThoriumNativeCallInstruction;
-  begin
-    Result := NewInstruction;
-    if NativeRegistersUsed < NATIVE_REGISTER_COUNT then
-    begin
-      Result^.Instruction := ccPutDataRegInt;
-      Inc(NativeRegistersUsed);
-    end
-    else
-      Result^.Instruction := ccPutDataStack;
-  end;
-
-  function NewPutDataRegInt64Instruction: PThoriumNativeCallInstruction;
-  begin
-    Result := NewInstruction;
-    {$ifdef CPU64}
-    if NativeRegistersUsed < NATIVE_REGISTER_COUNT then
-    begin
-      Result^.Instruction := ccPutDataRegInt;
-      Inc(NativeRegistersUsed);
-    end
-    else
-      Result^.Instruction := ccPutDataStack;
-    {$else}
-    Result^.Instruction := ccPutLargeDataStack;
-    {$endif}
-  end;
-
-  function NewPutDataRegPtrInstruction: PThoriumNativeCallInstruction;
-  begin
-    Result := NewPutDataRegIntInstruction;
-  end;
-
-  function NewPutDataRegSingleInstruction: PThoriumNativeCallInstruction;
-  begin
-    Result := NewInstruction;
-    if NativeDoubleRegistersUsed < NATIVE_DOUBLE_REGISTER_COUNT then
-    begin
-      Result^.Instruction := ccPutDataRegXMM;
-      Inc(NativeDoubleRegistersUsed);
-    end
-    else
-      Result^.Instruction := ccPutDataStack;
-  end;
-
-  function NewPutDataRegDoubleInstruction: PThoriumNativeCallInstruction;
-  begin
-    Result := NewInstruction;
-    if NativeDoubleRegistersUsed < NATIVE_DOUBLE_REGISTER_COUNT then
-    begin
-      Result^.Instruction := ccPutDataRegXMM;
-      Inc(NativeDoubleRegistersUsed);
-    end
-    else
-    begin
-      {$ifdef CPU64}
-      Result^.Instruction := ccPutDataStack;
-      {$else}
-      Result^.Instruction := ccPutLargeDataStack;
-      {$endif}
-    end;
-  end;
-
-  function NewPutDataRegExtendedInstruction: PThoriumNativeCallInstruction;
-  begin
-    Result := NewInstruction;
-    Result^.Instruction := ccPutLargeDataStack;
-  end;
-
-  function NewPutLargeDataInstruction: PThoriumNativeCallInstruction;
-  begin
-    Result := NewInstruction;
-    Result^.Instruction := ccPutLargeDataStack;
-  end;
-
   function BaseOffset(const StackOffset: Integer): SizeInt; inline;
   begin
     Exit(StackOffset * SizeOf(TThoriumStackEntry));
@@ -543,7 +468,7 @@ var
   TypeData: PTypeData;
   Instruction: PThoriumNativeCallInstruction;
   CurrStackOffset: Integer;
-  Metadata: TThoriumNativeMetadata;
+  Spec: TThoriumNativeCallSpecification;
   ParamCount: Integer;
 begin
   NativeRegistersUsed := 0;
@@ -566,70 +491,89 @@ begin
     CurrStackOffset := ParamCount - (I+1);
     ParamType := AParameters[I];
     ThParamType := AThParameters[I];
-    TypeData := GetTypeData(ParamType);
-    case ParamType^.Kind of
-      tkBool, tkInteger, tkEnumeration, tkSet, tkUChar, tkWChar, tkChar:
+    Spec := ThParamType.GetNativeCallSpecification(ParamType);
+    Instruction := nil;
+    case Spec.RefMode of
+      rmRefToPtr:
       begin
-        // These are all 32bits or less
-        Instruction := NewPutDataRegIntInstruction;
-        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+        if (Spec.Count <> 1) or (Spec.ForceStack) then
+          raise EThoriumCompilerException.Create('Unsupported parameters for this RefMode.');
+        Instruction := NewInstruction;
+        Instruction^.Instruction := ccPutRefRef;
       end;
-
-      tkFloat:
+      rmPtr:
       begin
-        case TypeData^.FloatType of
-          ftSingle:
-          begin
-            Instruction := NewPutDataRegSingleInstruction;
-            Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
-          end;
-          ftDouble:
-          begin
-            Instruction := NewPutDataRegDoubleInstruction;
-            Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
-          end;
-          ftExtended:
-          begin
-            Instruction := NewPutDataRegExtendedInstruction;
-            Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
-          end;
+        if (Spec.Count <> 1) or (Spec.ForceStack) then
+          raise EThoriumCompilerException.Create('Unsupported parameters for this RefMode.');
+        Instruction := NewInstruction;
+        Instruction^.Instruction := ccPutRef;
+      end;
+      rmData:
+      begin
+        if Spec.ForceStack then
+          Instruction^.Instruction := ccPutLargeDataStack
         else
-          raise EThoriumCompilerException.CreateFmt('Unsupported NativeCall float type: %d (%s).', [Ord(TypeData^.FloatType), GetEnumName(TypeInfo(TFloatType), Ord(TypeData^.FloatType))]);
+        begin
+          case Spec.ValueMode of
+            vmInt32, vmPointer{$ifdef CPU64}, vmInt64{$endif}:
+            begin
+              Instruction := NewInstruction;
+              if (Spec.Count <> 1) then
+                Instruction^.Instruction := ccPutLargeDataInt
+              else
+                Instruction^.Instruction := ccPutDataRegInt;
+            end;
+            {$ifndef CPU64}
+            vmInt64:
+            begin
+              if Spec.Count <> 1 then
+                raise EThoriumCompilerException.Create('Cannot pass multiple Int64 on this platform. You should probably pass a reference instead.');
+              Instruction := NewInstruction;
+              Instruction^.Instruction := ccPutLargeDataStack;
+            end;
+            {$endif}
+            vmFloat:
+            begin
+              Instruction := NewInstruction;
+              case Spec.FloatMode of
+                fmAsSingle{$ifdef CPU64}, fmAsDouble{$endif}:
+                begin
+                  {$ifdef CPU64}
+                  if Spec.Count <> 1 then
+                    Instruction^.Instruction := ccPutLargeDataFloat
+                  else
+                    Instruction^.Instruction := ccPutDataRegXMM;
+                  {$else}
+                  if Spec.Count <> 1 then
+                    Instruction^.Instruction := ccPutLargeDataStack
+                  else
+                    Instruction^.Instruction := ccPutDataStack;
+                  {$endif}
+                end;
+                fmAsExtended{$ifdef CPU32}, fmAsDouble{$endif}:
+                begin
+                  if Spec.Count <> 1 then
+                    raise EThoriumCompilerException.Create('Cannot pass multiple Extended/Double floats at once on this platform. You should probably pass a reference instead.');
+                  Instruction^.Instruction := ccPutLargeDataStack;
+                end;
+              end;
+            end;
+            vmString:
+            begin
+              if Spec.Count <> 1 then
+                raise EThoriumCompilerException.Create('Cannot pass multiple strings at once. You should probably pass a reference instead.');
+              Instruction := NewInstruction;
+              Instruction^.Instruction := ccIncrStrRef;
+              Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
+              Instruction := NewInstruction;
+              Instruction^.Instruction := ccPutDataRegInt;
+            end;
+          end;
         end;
       end;
-
-      tkSString, tkWString, tkUString:
-      begin
-        raise EThoriumCompilerException.CreateFmt('Unsupported NativeCall string type: %d (%s).', [Ord(ParamType^.Kind), GetEnumName(TypeInfo(TTypeKind), Ord(ParamType^.Kind))]);
-      end;
-
-      tkAString:
-      begin
-        Instruction := NewInstruction;
-        Instruction^.Instruction := ccIncrStrRef;
-        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
-        Instruction := NewPutDataRegPtrInstruction;
-        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
-      end;
-
-      tkInt64, tkQWord:
-      begin
-        Instruction := NewPutDataRegInt64Instruction;
-        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
-      end;
-
-      tkUnknown:
-      begin
-        Metadata := ThParamType.GetNativeMetadata(ParamType);
-        if (Metadata.AlignedSize <= SizeOf(Pointer)) and (Metadata.AlignedSize > 0) then
-          Instruction := NewPutDataRegIntInstruction
-        else
-          Instruction := NewPutLargeDataInstruction;
-        Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
-      end;
-    else
-      raise EThoriumCompilerException.CreateFmt('Unsupported NativeCall type: %d (%s).', [Ord(ParamType^.Kind), GetEnumName(TypeInfo(TTypeKind), Ord(ParamType^.Kind))]);
     end;
+    if Instruction <> nil then
+      Instruction^.Data1 := NativeDataOffset(CurrStackOffset);
   end;
 
   ParamType := AReturnType.HostType;

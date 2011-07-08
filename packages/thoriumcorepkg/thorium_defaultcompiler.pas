@@ -247,6 +247,7 @@ type
   protected
     procedure CompilerError(const Msg: String); override;
     procedure CompilerError(const Msg: String; X, Y: Integer); override;
+    procedure CompilerError(const MsgFmt: String; Args: array of const); override;
     procedure Debug_CurrentSym;
     function ExpectSymbol(SymbolMask: TThoriumDefaultSymbols; ThrowError: Boolean = True): Boolean;
     function GenCode(AInstruction: TThoriumInstruction): Integer; override;
@@ -666,6 +667,12 @@ procedure TThoriumDefaultCompiler.CompilerError(const Msg: String; X, Y: Integer
   );
 begin
   raise EThoriumCompilerError.CreateFmt('(%d,%d): %s', [X, Y, Msg]);
+end;
+
+procedure TThoriumDefaultCompiler.CompilerError(const MsgFmt: String;
+  Args: array of const);
+begin
+  inherited CompilerError(MsgFmt, Args);
 end;
 
 procedure TThoriumDefaultCompiler.Debug_CurrentSym;
@@ -1999,6 +2006,7 @@ var
     NeedsNativeData: Boolean;
     Operation: TThoriumOperationDescription;
     ParamTypeInfo: PTypeInfo;
+    S: String;
   begin
     // Prefilter
     I := Entries.Count - 1;
@@ -2097,7 +2105,19 @@ var
       end;
 
       if Entries.Count = 0 then
-        CompilerError('Cannot call this with that combination of paramters.');
+      begin
+        S := '';
+        if Parameters.Count > 0 then
+        begin
+          S := Parameters[0].Name;
+          for I := 1 to Parameters.Count - 1 do
+            S += ', ' + Parameters[I].Name;
+        end;
+        if S <> '' then
+          CompilerError('Cannot call this with these arguments: %s.', [S])
+        else
+          CompilerError('Cannot call this without any arguments.', []);
+      end;
 
       I := Entries.Count - 1;
       while I >= 0 do

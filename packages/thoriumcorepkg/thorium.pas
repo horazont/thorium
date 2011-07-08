@@ -589,23 +589,24 @@ type
   TThoriumOperationArray = array of TThoriumGenericOperation;
 
   TThoriumNativeCallSpecification = record
-    Offset: Integer;
-    Mask: Integer;
     ValueMode: TThoriumNativeCallValueMode;
     FloatMode: TThoriumNativeCallFloatMode;
     RefMode: TThoriumNativeCallRefMode;
-  end;
 
-  TThoriumNativeMetadata = record
-    AlignedSize: Word;
-    RegisterTarget: TThoriumNativeRegisterTarget;
+    (* For now, if count is non-zero, a “large put” instruction will be applied.
+       The amount of puts neccessary to pass the value is expected to be in the
+       appropriate field on the stack. If count is non-zero, RefMode must be
+       rmDeref.*)
+    Count: SizeInt;
     ForceStack: Boolean;
   end;
 
-  {IThoriumNativeCallCompatible = interface ['{02E24A87-41F3-4D0A-98D7-F889E3FE2394}']
-    function GetNativeCallSpecification(const HostType: PTypeInfo; out Spec: TThoriumNativeCallSpecification): Boolean;
-    function GetParameterHostType(const I: Integer): PTypeInfo;
-  end;}
+  TThoriumNativeMetadata = record
+    PassInstruction: TThoriumNativeCallInstruction;
+    PassData2: SizeInt;
+    ReturnInstruction: TThoriumNativeCallInstruction;
+    ReturnData2: SizeInt;
+  end;
 
   IThoriumCallable = interface ['{C9317686-61BE-4D72-AF95-9E0FF25C752E}']
     function GetParameters: TThoriumParameters;
@@ -671,7 +672,7 @@ type
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; virtual; abstract;
     function DuplicateValue(const Input: TThoriumValue): TThoriumValue; virtual;
     function Equals(Obj: TObject): boolean; override;
-    function GetNativeMetadata(const ForType: PTypeInfo): TThoriumNativeMetadata; virtual; abstract;
+    function GetNativeCallSpecification(const ForType: PTypeInfo): TThoriumNativeCallSpecification; virtual; abstract;
     function HasFieldAccess: Boolean; virtual;
     function HasIndexedAccess: Boolean; virtual;
     (*function GetClassType: TClass;*)
@@ -760,8 +761,7 @@ type
        const TheObject: TThoriumType=nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
-    function GetNativeMetadata(const ForType: PTypeInfo
-       ): TThoriumNativeMetadata; override;
+    function GetNativeCallSpecification(const ForType: PTypeInfo): TThoriumNativeCallSpecification; override;
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
        override;
@@ -827,8 +827,8 @@ type
        const TheObject: TThoriumType=nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
-    function GetNativeMetadata(const ForType: PTypeInfo
-       ): TThoriumNativeMetadata; override;
+    function GetNativeCallSpecification(const ForType: PTypeInfo
+      ): TThoriumNativeCallSpecification; override;
 
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
          override;
@@ -879,8 +879,8 @@ type
     function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
     function DuplicateValue(const Input: TThoriumValue): TThoriumValue;
        override;
-    function GetNativeMetadata(const ForType: PTypeInfo
-       ): TThoriumNativeMetadata; override;
+    function GetNativeCallSpecification(const ForType: PTypeInfo
+      ): TThoriumNativeCallSpecification; override;
     function HasIndexedAccess: Boolean; override;
     function HasFieldAccess: Boolean; override;
     function NeedsClear: Boolean; override;
@@ -2055,7 +2055,7 @@ type
     procedure AppendOperation(var AOperations: TThoriumOperationArray; AOperation: TThoriumGenericOperation);
     procedure CompilerError(const Msg: String); virtual;
     procedure CompilerError(const Msg: String; X, Y: Integer); virtual;
-    procedure CompilerError(const MsgFmt: String; Args: array of const);
+    procedure CompilerError(const MsgFmt: String; Args: array of const); virtual;
     procedure ClaimRegister(const ARegID: TThoriumRegisterID);
     procedure PopAndClearByTable(const TargetTableSize: Integer);
     procedure DumpState; virtual;
@@ -3790,15 +3790,16 @@ begin
   Result.Int := PThoriumInteger(Ptr)^;
 end;
 
-function TThoriumTypeInteger.GetNativeMetadata(const ForType: PTypeInfo
-  ): TThoriumNativeMetadata;
+function TThoriumTypeInteger.GetNativeCallSpecification(const ForType: PTypeInfo
+  ): TThoriumNativeCallSpecification;
 begin
   if ForType^.Kind in [tkInt64, tkQWord] then
-    Result.AlignedSize := CPU_SIZE_FACTOR
+    Result.ValueMode := vmInt64
   else
-    Result.AlignedSize := 1;
+    Result.ValueMode := vmInt32;
   Result.ForceStack := False;
-  Result.RegisterTarget := rtInt;
+  Result.Count := 1;
+  Result.RefMode := rmData;
 end;
 
 function TThoriumTypeInteger.DoAddition(const AValue, BValue: TThoriumValue
@@ -4152,22 +4153,20 @@ begin
   Result.Float := PThoriumFloat(Ptr)^;
 end;
 
-function TThoriumTypeFloat.GetNativeMetadata(const ForType: PTypeInfo
-  ): TThoriumNativeMetadata;
+function TThoriumTypeFloat.GetNativeCallSpecification(const ForType: PTypeInfo
+  ): TThoriumNativeCallSpecification;
 begin
+  Result.Count := 1;
   Result.ForceStack := False;
-  Result.RegisterTarget := rtXMM;
+  Result.ValueMode := vmFloat;
+  Result.RefMode := rmData;
   case GetTypeData(ForType)^.FloatType of
     ftSingle:
-      Result.AlignedSize := 1;
+      Result.FloatMode := fmAsSingle;
     ftDouble:
-      Result.AlignedSize := CPU_SIZE_FACTOR;
+      Result.FloatMode := fmAsDouble;
     ftExtended:
-      Result.AlignedSize := StackSlotCount(SizeOf(Extended));
-    ftComp:
-      Result.AlignedSize := StackSlotCount(SizeOf(Comp));
-    ftCurr:
-      Result.AlignedSize := StackSlotCount(SizeOf(Currency));
+      Result.FloatMode := fmAsExtended;
   else
     raise EThoriumException.CreateFmt('Invalid float type: ''%s''.', [ForType^.Name]);
   end;
@@ -4520,12 +4519,13 @@ begin
   Result.Str^ := Input.Str^;
 end;
 
-function TThoriumTypeString.GetNativeMetadata(const ForType: PTypeInfo
-  ): TThoriumNativeMetadata;
+function TThoriumTypeString.GetNativeCallSpecification(const ForType: PTypeInfo
+  ): TThoriumNativeCallSpecification;
 begin
-  Result.RegisterTarget := rtInt;
-  Result.AlignedSize := 1;
+  Result.Count := 1;
   Result.ForceStack := False;
+  Result.ValueMode := vmString;
+  Result.RefMode := rmData;
 end;
 
 function TThoriumTypeString.HasIndexedAccess: Boolean;

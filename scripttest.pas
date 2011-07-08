@@ -47,7 +47,7 @@ uses
 
 {$ifdef UseTestModule}
 const
-  MODULE_TEST_NAME = 'scripts/testscript.expressions.txt';
+  MODULE_TEST_NAME = 'scripts/testscript.new.txt';
 {$endif}
 
 var
