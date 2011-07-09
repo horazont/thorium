@@ -58,6 +58,7 @@ type
        override;
     function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue;
        override;
+    function DoCreateNone: TThoriumValue; override;
     procedure DoDecrement(var ASubject: TThoriumValue); override;
     function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
          override;
@@ -486,6 +487,12 @@ function TThoriumTypeInteger.DoCreate(const InitialData: TThoriumInitialData
 begin
   Result.RTTI := Self;
   Result.Int := InitialData.Int;
+end;
+
+function TThoriumTypeInteger.DoCreateNone: TThoriumValue;
+begin
+  Result.RTTI := Self;
+  Result.Int := 0;
 end;
 
 procedure TThoriumTypeInteger.DoIncrement(var ASubject: TThoriumValue);

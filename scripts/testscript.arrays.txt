@@ -1,12 +1,6 @@
 loadlibrary thorium;
 
 public void main() {
-  int[] test;
-  test ~= 10;
-  test ~= 20;
-  test ~= 30;
-
-  int test2;
-  test2 = test[2];
-  test ~= test[0];
+  int[3] test;
+  test[0] = 100;
 }

@@ -21,6 +21,8 @@ type
   public
     property ValueType: TThoriumType read FValueType;
   public
+    function CanCreateNone(const ToRegister: Boolean;
+      out Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType = nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
@@ -36,8 +38,6 @@ type
     constructor Create(const AThorium: TThorium; const AValueType: TThoriumType
        );
   public
-    function CanCreateNone(const ToRegister: Boolean;
-      out Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType = nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
@@ -65,16 +65,22 @@ type
   public
     property Count: Integer read FCount;
   public
+    function CanCreateNone(const ToRegister: Boolean;
+       out Instruction: TThoriumCreateInstructionDescription): Boolean;
+       override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType = nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
     function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
 
+    function DoCreateNone: TThoriumValue; override;
+    procedure DoFree(var AValue: TThoriumValue); override;
     function DoGetIndexed(const AValue: TThoriumValue;
        const AIndex: TThoriumValue): TThoriumValue; override;
     function DoGetLength(const AValue: TThoriumValue): Integer; override;
     procedure DoSetIndexed(const AValue: TThoriumValue;
        const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
+    function DoToString(const AValue: TThoriumValue): String; override;
   end;
 
 implementation
@@ -96,6 +102,22 @@ end;
 function TThoriumTypeArray.GetTypeKind: TThoriumTypeKind;
 begin
   Result := tkArray;
+end;
+
+function TThoriumTypeArray.CanCreateNone(const ToRegister: Boolean;
+  out Instruction: TThoriumCreateInstructionDescription): Boolean;
+begin
+  Result := True;
+  if ToRegister then
+  begin
+    Instruction.Instruction := TThoriumInstructionREG(none(Self, 0));
+    Instruction.TargetRegisterOffset := 4;
+  end
+  else
+  begin
+    Instruction.Instruction := TThoriumInstructionREG(none_s(Self));
+    Instruction.TargetRegisterOffset := -1;
+  end;
 end;
 
 function TThoriumTypeArray.CanPerformOperation(
@@ -210,22 +232,6 @@ begin
   SetName(AValueType.Name+'[]');
 end;
 
-function TThoriumTypeDynamicArray.CanCreateNone(const ToRegister: Boolean;
-  out Instruction: TThoriumCreateInstructionDescription): Boolean;
-begin
-  Result := True;
-  if ToRegister then
-  begin
-    Instruction.Instruction := TThoriumInstructionREG(none(Self, 0));
-    Instruction.TargetRegisterOffset := 4;
-  end
-  else
-  begin
-    Instruction.Instruction := TThoriumInstructionREG(none_s(Self));
-    Instruction.TargetRegisterOffset := -1;
-  end;
-end;
-
 function TThoriumTypeDynamicArray.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
   const ExName: String; const ExType: PTypeInfo): Boolean;
@@ -332,6 +338,14 @@ begin
   SetName(Format('%s[%d]', [AValueType.Name, Count]));
 end;
 
+function TThoriumTypeStaticArray.CanCreateNone(const ToRegister: Boolean;
+  out Instruction: TThoriumCreateInstructionDescription): Boolean;
+var
+  Dummy: TThoriumCreateInstructionDescription;
+begin
+  Result := inherited CanCreateNone(ToRegister, Instruction) and (FValueType.CanCreateNone(True, Dummy));
+end;
+
 function TThoriumTypeStaticArray.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
   const ExName: String; const ExType: PTypeInfo): Boolean;
@@ -349,6 +363,31 @@ begin
   Result := (AnotherType is TThoriumTypeStaticArray) and
     (TThoriumTypeStaticArray(AnotherType).FCount = FCount) and
     (TThoriumTypeStaticArray(AnotherType).FValueType.IsEqualTo(FValueType));
+end;
+
+function TThoriumTypeStaticArray.DoCreateNone: TThoriumValue;
+var
+  I: Integer;
+begin
+  Result.RTTI := Self;
+  New(Result.StaticArray);
+  Result.StaticArray^ := GetMem(FCount * SizeOf(TThoriumValue));
+  for I := 0 to FCount - 1 do
+    Result.StaticArray^[I] := FValueType.DoCreateNone;
+end;
+
+procedure TThoriumTypeStaticArray.DoFree(var AValue: TThoriumValue);
+var
+  I: Integer;
+begin
+  if FValueType.NeedsClear then
+  begin
+    for I := 0 to FCount - 1 do
+      FValueType.DoFree(AValue.StaticArray^[I]);
+  end;
+  FreeMem(AValue.StaticArray^);
+  Dispose(AValue.StaticArray);
+  AValue.RTTI := nil;
 end;
 
 function TThoriumTypeStaticArray.DoGetIndexed(const AValue: TThoriumValue;
@@ -370,8 +409,22 @@ procedure TThoriumTypeStaticArray.DoSetIndexed(const AValue: TThoriumValue;
 begin
   if (AIndex.Int < 0) or (AIndex.Int >= FCount) then
     raise EThoriumRuntimeException.CreateFmt('Static array index %d out of bounds (%d..%d)', [AIndex.Int, 0, FCount-1]);
-  ThoriumFreeValue(AValue.StaticArray^[AIndex.Int]);
+  if FValueType.NeedsClear then
+    FValueType.DoFree(AValue.StaticArray^[AIndex.Int]);
   AValue.StaticArray^[AIndex.Int] := ThoriumDuplicateValue(NewValue);
+end;
+
+function TThoriumTypeStaticArray.DoToString(const AValue: TThoriumValue
+  ): String;
+var
+  I: Integer;
+begin
+  if FCount = 0 then
+    Exit('[]');
+  Result := '[' + ThoriumValueToStr(AValue.StaticArray^[0]);
+  for I := 1 to FCount - 1 do
+    Result += ', ' + ThoriumValueToStr(AValue.StaticArray^[I]);
+  Result += ']';
 end;
 
 end.
