@@ -103,24 +103,24 @@ begin
   end;
 end;
 
-function ext_s(AExtendedType: TThoriumType): TThoriumInstruction;
+function none_s(ATypeSpec: TThoriumType): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionEXT_S(Result) do
+  with TThoriumInstructionNONE_S(Result) do
   begin
-    Instruction := tiEXT_S;
-    ExtendedType := AExtendedType;
+    Instruction := tiNONE_S;
+    TypeSpec := ATypeSpec;
     CodeLine := 0;
   end;
 end;
 
-function ext(AExtendedType: TThoriumType; ATRI: Word): TThoriumInstruction;
+function none(ATypeSpec: TThoriumType; ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
-  with TThoriumInstructionEXT(Result) do
+  with TThoriumInstructionNONE(Result) do
   begin
-    Instruction := tiEXT;
-    ExtendedType := AExtendedType;
+    Instruction := tiNONE;
+    TypeSpec := ATypeSpec;
     TRI := ATRI;
     CodeLine := 0;
   end;

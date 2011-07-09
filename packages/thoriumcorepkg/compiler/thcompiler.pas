@@ -6,6 +6,7 @@ unit ThCompiler;
 // tsNone token.
 {$define DebugTokenLoop}
 {.$define DebugTokenizer}
+{$define DebugSolveIdentifier}
 
 interface
 
@@ -192,13 +193,13 @@ type
 
   TThoriumDefaultStatementKind = (tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
     tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak, tskReturn,
-    tskNullStatement);
+    tskNullStatement, tskAppend);
   TThoriumDefaultStatementKinds = set of TThoriumDefaultStatementKind;
 
 const
   THORIUM_DEFAULT_ALL_STATEMENTS = [tskFor, tskWhile, tskDoWhile, tskIf, tskBlock,
     tskAssignment, tskDeclaration, tskCall, tskSwitch, tskBreak, tskReturn,
-    tskNullStatement];
+    tskNullStatement, tskAppend];
 
 type
   TThoriumDeclarationHandler = procedure (const AVisibility: TThoriumVisibilityLevel;
@@ -272,6 +273,7 @@ type
     function ParseLibraryName: String;
     function ParseModuleName: String;
     procedure PlaceStatic(const StaticValue: TThoriumValue; ATargetRegister: Word);
+    function PlaceStaticDescription(const StaticValue: TThoriumValue; ATargetRegister: Word): TThoriumCreateInstructionDescription;
     function RelationalExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: TThoriumType = nil): TThoriumType;
     function SimpleExpression(ATargetRegister: Word; out AState: TThoriumValueState; AStaticValue: PThoriumValue = nil; ATypeHint: TThoriumType = nil): TThoriumType;
     function SolveIdentifier(ATargetRegister: Word;
@@ -300,7 +302,7 @@ type
 implementation
 
 uses
-  ThTypeString, ThTypeFunction, ThTypeInt;
+  ThTypeString, ThTypeFunction, ThTypeInt, ThTypeArrays;
 
 {$ifdef DebugTokenLoop}
 var
@@ -1534,8 +1536,18 @@ end;
 procedure TThoriumDefaultCompiler.PlaceStatic(const StaticValue: TThoriumValue;
   ATargetRegister: Word);
 var
-  InitialData: TThoriumInitialData;
   CreationDescription: TThoriumCreateInstructionDescription;
+begin
+  CreationDescription := PlaceStaticDescription(StaticValue, ATargetRegister);
+  // Create the value to the specified register
+  GenCreation(CreationDescription, ATargetRegister);
+end;
+
+function TThoriumDefaultCompiler.PlaceStaticDescription(
+  const StaticValue: TThoriumValue; ATargetRegister: Word
+  ): TThoriumCreateInstructionDescription;
+var
+  InitialData: TThoriumInitialData;
 begin
   if not (StaticValue.RTTI.TypeKind in [tkSimple, Thorium.tkString]) then
     raise EThoriumCompilerException.Create('Cannot handle static values which are not simple or string.');
@@ -1546,16 +1558,14 @@ begin
       InitialData.Int := AddLibraryString(StaticValue.Str^)
     else
       InitialData.Int := -1;
-    Assert(StaticValue.RTTI.CanCreate(InitialData, True, CreationDescription));
+    Assert(StaticValue.RTTI.CanCreate(InitialData, True, Result));
   end
   else
   begin
     // This must work for any type except string
     InitialData.Int := StaticValue.Int;
-    Assert(StaticValue.RTTI.CanCreate(InitialData, True, CreationDescription));
+    Assert(StaticValue.RTTI.CanCreate(InitialData, True, Result));
   end;
-  // Create the value to the specified register
-  GenCreation(CreationDescription, ATargetRegister);
 end;
 
 function TThoriumDefaultCompiler.RelationalExpression(ATargetRegister: Word;
@@ -1923,17 +1933,21 @@ var
       case Sym of
         tsDot: // Attribute access
         begin
-          if not Entries[I]^.Entry.TypeSpec.HasFieldAccess then
+          if Entries[I]^.Entry._Type in [ttType] then
+            Discard(I)
+          else if not Entries[I]^.Entry.TypeSpec.HasFieldAccess then
             Discard(I);
         end;
         tsOpenSquareBracket: // Element access
         begin
-          if not Entries[I]^.Entry.TypeSpec.HasIndexedAccess then
+          if not (Entries[I]^.Entry._Type in [ttType]) and not Entries[I]^.Entry.TypeSpec.HasIndexedAccess then
             Discard(I);
         end;
         tsOpenBracket: // Call
         begin
-          if not Entries[I]^.Entry.TypeSpec.CanCall then
+          if Entries[I]^.Entry._Type in [ttType] then
+            Discard(I)
+          else if not Entries[I]^.Entry.TypeSpec.CanCall then
             Discard(I);
         end;
       else
@@ -2232,6 +2246,9 @@ var
     end;
   end;
 
+var
+  ExprValue: TThoriumValue;
+  TmpType: TThoriumType;
 begin
   ExpectSymbol([tsIdentifier]);
 
@@ -2257,7 +2274,9 @@ begin
     // Add items in reverse order as we walk through the list in reverse order
     // later due to performance and safety reasons
     for I := High(EntriesHandle) downto 0 do
+    begin
       Entries.Add(@EntriesHandle[I]);
+    end;
 
     FilterTableEntries(Entries, AllowedKinds);
 
@@ -2353,31 +2372,63 @@ begin
         begin
           Proceed;
 
-          AttachHook;
           GetFreeRegister(trEXP, RegID1);
-          ExprType := RelationalExpression(RegID1, ExprState);
-          FlushHook(False);
+          if FCurrentSym <> tsCloseSquareBracket then
+          begin
+            AttachHook;
+            ExprType := RelationalExpression(RegID1, ExprState, @ExprValue);
+            FlushHook(False);
 
-          Operation.Operation := opIndexedRead;
-          WriteOperation.Operation := opIndexedWrite;
+            Operation.Operation := opIndexedRead;
+            WriteOperation.Operation := opIndexedWrite;
+          end
+          else
+          begin
+            ExprType := nil;
+            ExprState := vsStatic;
+          end;
           I := Entries.Count - 1;
           while I >= 0 do
           begin
             Entry := Entries[I];
             Solution := Solutions[I];
-            if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation, ExprType) then
-              Discard(I)
-            else
+            if Solution^.Kind = ikType then
             begin
-              Solution^.Writable := Entry^.Entry.TypeSpec.CanPerformOperation(WriteOperation, ExprType);
-              AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue, RegID1));
-              if Solution^.Writable then
-                AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(WriteOperation, ATargetRegister, RegPreviousValue, RegID1))
+              if ExprState <> vsStatic then
+                Discard(I)
+              else if (ExprType <> nil) and not (ExprType is TThoriumTypeInteger) then
+                Discard(I)
               else
               begin
-                // Append the read operation. This will be used to optimize
-                // later, if further qualification applies.
-                AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue, RegID1));
+                if ExprType = nil then
+                  Solution^.FinalType := TThoriumTypeDynamicArray.Create(FThorium, Solution^.FinalType)
+                else
+                  Solution^.FinalType := TThoriumTypeStaticArray.Create(FThorium, Solution^.FinalType, ExprValue.Int);
+              end;
+            end
+            else
+            begin
+              if ExprType = nil then
+                Discard(I)
+              else if not Entry^.Entry.TypeSpec.CanPerformOperation(Operation, ExprType) then
+                Discard(I)
+              else
+              begin
+                if ExprState = vsStatic then
+                begin
+                  AppendOperation(Solution^.GetCode, ThoriumEncapsulateCreation(PlaceStaticDescription(ExprValue, RegID1)));
+                  AppendOperation(Solution^.SetCode, ThoriumEncapsulateCreation(PlaceStaticDescription(ExprValue, RegID1)));
+                end;
+                Solution^.Writable := Entry^.Entry.TypeSpec.CanPerformOperation(WriteOperation, ExprType);
+                AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue, RegID1));
+                if Solution^.Writable then
+                  AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(WriteOperation, ATargetRegister, RegPreviousValue, RegID1))
+                else
+                begin
+                  // Append the read operation. This will be used to optimize
+                  // later, if further qualification applies.
+                  AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue, RegID1));
+                end;
               end;
             end;
             Dec(I);
@@ -2400,6 +2451,9 @@ begin
       end;
     end;
 
+    {$ifdef DebugSolveIdentifier}
+    WriteLn('Ident: ', Result.FullStr);
+    {$endif}
     if Solutions.Count > 1 then
     begin
       CompilerError('Ambigous identifier: '+Result.FullStr);
@@ -2415,10 +2469,12 @@ begin
       Result := Solutions[0]^;
     end;
 
-    for I := 0 to Solutions.Count - 1 do
-      Dispose(Solutions[I]);
-    Solutions.Clear;
-
+    I := Solutions.Count - 1;
+    while I >= 0 do
+    begin
+      Discard(I);
+      Dec(I);
+    end;
   finally
     FCodeHook := OldCodeHook;
     FCodeHook1 := OldCodeHook1;
@@ -2665,6 +2721,7 @@ var
   ExpressionState: TThoriumValueState;
   RegID1, RegID2: TThoriumRegisterID;
   Assignment: TThoriumAssignmentDescription;
+  Operation: TThoriumOperationDescription;
 begin
   // Identifier handling
   GetFreeRegister(trEXP, RegID1);
@@ -2686,7 +2743,7 @@ begin
     end;
   else
     // So see what we can do with it.
-    ExpectSymbol([tsAssign, tsSemicolon]);
+    ExpectSymbol([tsAssign, tsSemicolon, tsAppend]);
     case FCurrentSym of
       tsAssign:
       begin
@@ -2701,7 +2758,7 @@ begin
         Proceed;
         // Allocate a register for the RelationalExpression evaluation
         GetFreeRegister(trEXP, RegID2);
-        ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
+        ExpressionType := RelationalExpression(RegID2, ExpressionState, nil, Ident1.FinalType);
         if ExpressionType = nil then
           CompilerError('Cannot assign None type to anything.');
         // Allow casting
@@ -2741,6 +2798,27 @@ begin
         AppendOperations(Ident1.GetCode);
         if (Ident1.State = vsDynamic) and (Ident1.FinalType.NeedsClear) then
           GenCode(clr(RegID1));
+      end;
+      tsAppend:
+      begin
+        EmbedHint('append:right');
+        if not (tskAppend in AllowedStatements) then
+          CompilerError('Append is not allowed here.');
+        Proceed;
+        GetFreeRegister(trEXP, RegID2);
+        ExpressionType := SimpleExpression(RegID2, ExpressionState, nil, nil);
+        if ExpressionType = nil then
+          CompilerError('Cannot append None type to anything.');
+        Operation.Operation := opAppend;
+        if not Ident1.FinalType.CanPerformOperation(Operation, ExpressionType) then
+          CompilerError('Cannot append '+ExpressionType.Name+' to '+Ident1.FinalType.Name);
+        EmbedHint('append:left');
+        AppendOperations(Ident1.GetCode);
+        EmbedHint('append');
+        GenOperation(Operation, RegID1, RegID2);
+        if (ExpressionState = vsDynamic) and (ExpressionType.NeedsClear) then
+          GenCode(clr(RegID2));
+        ReleaseRegister(RegID2);
       end;
     end;
   end;

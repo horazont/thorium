@@ -617,6 +617,7 @@ type
     function GetName: String;
     function GetTypeKind: TThoriumTypeKind; virtual; abstract;
     procedure RaiseMissingTheObject;
+    procedure SetName(const AName: String);
   public // IUnknown
     function QueryInterface(const iid : tguid; out obj) : longint;stdcall;
   public
@@ -1496,7 +1497,7 @@ type
     constructor Create(ATarget: TThoriumModule); virtual;
     destructor Destroy; override;
   private
-    FStoredTypes: TInterfaceList;
+    FStoredTypes: TThoriumTypes;
   private
     function GetTypeFloat: TThoriumType;
     function GetTypeInteger: TThoriumType;
@@ -1593,6 +1594,7 @@ type
     procedure SaveTable;
     procedure SetupFunction(AFunction: TThoriumFunction;
       const AEntryPoint: Integer; const AName: String);
+    procedure StoreType(const AType: TThoriumType);
   public
     function CompileFromStream(SourceStream: TStream; Flags: TThoriumCompilerFlags = [cfOptimize]): Boolean; virtual; abstract;
   end;
@@ -1948,6 +1950,8 @@ function ThoriumEncapsulateOperation(const AOperation: TThoriumOperationDescript
   const Value1RI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
   const Value2RI: TThoriumRegisterID = THORIUM_REGISTER_INVALID;
   const ClearRegisters: TThoriumGenericOperationRegisters = []): TThoriumGenericOperation;
+function ThoriumEncapsulateCreation(const ACreation: TThoriumCreateInstructionDescription;
+  const TargetRI: TThoriumRegisterID = THORIUM_REGISTER_INVALID): TThoriumGenericOperation;
 
 function GetDebugMode: Boolean;
 property DebugMode: Boolean read GetDebugMode;
@@ -2057,6 +2061,15 @@ begin
   Result.ClearRegisters := ClearRegisters;
 end;
 
+function ThoriumEncapsulateCreation(
+  const ACreation: TThoriumCreateInstructionDescription;
+  const TargetRI: TThoriumRegisterID): TThoriumGenericOperation;
+begin
+  Result.Kind := okCreation;
+  Result.Creation := ACreation;
+  Result.TargetRI := TargetRI;
+end;
+
 function GetDebugMode: Boolean;
 begin
   Result := FDebugMode;
@@ -2122,8 +2135,8 @@ begin
     tiSTR: with TThoriumInstructionSTR(AInstruction) do Result := Result + Format('%%%s', [ThoriumRegisterToStr(TRI)]);
     tiSTRL: with TThoriumInstructionSTRL(AInstruction) do Result := Result + Format('[$0x%.8x] %%%s', [Index, ThoriumRegisterToStr(TRI)]);
 
-    tiEXT_S: with TThoriumInstructionEXT_S(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x]', [ptrint(ExtendedType)]);
-    tiEXT: with TThoriumInstructionEXT(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(ExtendedType), ThoriumRegisterToStr(TRI)]);
+    tiNONE_S: with TThoriumInstructionNONE_S(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x]', [ptrint(TypeSpec)]);
+    tiNONE: with TThoriumInstructionNONE(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(TypeSpec), ThoriumRegisterToStr(TRI)]);
 
     tiFNC: with TThoriumInstructionFNC(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
     tiXFNC: with TThoriumInstructionXFNC(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
@@ -2250,7 +2263,7 @@ begin
 
     tiRET:;
 
-    tiNOOP: with TThoriumInstructionNOOP(AInstruction) do Result := Result + Format('0x%.16x 0x%.16x 0x%.16x', [Parameter1, Parameter2, Parameter3], THORIUM_NUMBER_FORMAT);
+    tiNOOP: with TThoriumInstructionNOOP(AInstruction) do Result := Result + Format('%d', [Kind], THORIUM_NUMBER_FORMAT);
 
     tiEmbeddedHint: with TThoriumInstructionEmbeddedHint(AInstruction) do Result := '.'+StrPas(@Data[0]);
   else
@@ -2581,6 +2594,11 @@ end;
 procedure TThoriumType.RaiseMissingTheObject;
 begin
   raise EThoriumException.Create('Missing a valid TheObject parameter.');
+end;
+
+procedure TThoriumType.SetName(const AName: String);
+begin
+  FName := AName;
 end;
 
 function TThoriumType.QueryInterface(const iid: tguid; out obj): longint;
@@ -4818,20 +4836,23 @@ begin
   SigCurrModule := FModule;
   SigCurrCompiler := Self;
   {$endif}
-  FStoredTypes := TInterfaceList.Create;
+  FStoredTypes := TThoriumTypes.Create;
   FBreakContexts := TThoriumCompilerBreakContextList.Create;
   FJumps := TThoriumIntList.Create;
   FInstructions.RegisterAddressList(FJumps);
 end;
 
 destructor TThoriumCustomCompiler.Destroy;
+var
+  I: Integer;
 begin
   FInstructions.UnRegisterAddressList(FJumps);
   FJumps.Free;
   FBreakContexts.Free;
   FTableSizes.Free;
   FTable.Free;
-  FStoredTypes.Clear;
+  for I := 0 to FStoredTypes.Count - 1 do
+    FStoredTypes[I].Free;
   FStoredTypes.Free;
   inherited Destroy;
 end;
@@ -5567,6 +5588,13 @@ begin
   AFunction.FEntryPoint := AEntryPoint;
   AFunction.FName := AName;
   FInstructions.AddInstructionPointer(@AFunction.FEntryPoint);
+end;
+
+procedure TThoriumCustomCompiler.StoreType(const AType: TThoriumType);
+begin
+  if FStoredTypes.IndexOf(AType) >= 0 then
+    Exit;
+  FStoredTypes.Add(AType);
 end;
 
 {%ENDREGION}
@@ -6327,8 +6355,18 @@ function TThoriumRuntimeModule.FilterInstruction(
 begin
   Result := True;
   case AInstruction.Instruction of
-    tiNOOP, tiEmbeddedHint:
+    tiEmbeddedHint:
       Exit(False);
+    tiNOOP:
+    begin
+      case TThoriumInstructionNOOP(AInstruction).Kind of
+        THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET: raise EThoriumException.CreateFmt('Module %s contains NOT_IMPLEMENTED_YET noopmark.', [FName]);
+        THORIUM_NOOPMARK_INVALID_ACCESS: raise EThoriumException.CreateFmt('Module %s contains INVALID_ACCESS noopmark.', [FName]);
+        THORIUM_NOOPMARK_CALL: raise EThoriumException.CreateFmt('Module %s contains unresolved CALL noopmark.', [FName]);
+      else
+        Exit(False);
+      end;
+    end;
     tiMOVEFG, tiCOPYFG, tiMOVER_FG, tiCOPYR_FG:
     begin
       TThoriumInstructionMOVEFG(AInstruction).ModuleRef := DoResolveModulePtr(TThoriumInstructionMOVEFG(AInstruction).ModuleRef);
@@ -6570,23 +6608,24 @@ var
     end;
   end;
 
-  procedure ext_s; inline;
+  procedure none_s; inline;
   begin
-    with TThoriumInstructionEXT_S(FCurrentInstruction^) do
+    with TThoriumInstructionNONE_S(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       _NewEntry := FStack.Push;
-      _NewEntry^.Value := TThoriumType(ExtendedType).DoCreateNone;
+      _NewEntry^._Type := stValue;
+      _NewEntry^.Value := TThoriumType(TypeSpec).DoCreateNone;
       {$ifdef Timecheck}EndTimecheck('ext.s');{$endif}
     end;
   end;
 
-  procedure ext; inline;
+  procedure none; inline;
   begin
-    with TThoriumInstructionEXT(FCurrentInstruction^) do
+    with TThoriumInstructionNONE(FCurrentInstruction^) do
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
-      FRegisters[TRI] := TThoriumType(ExtendedType).DoCreateNone;
+      FRegisters[TRI] := TThoriumType(TypeSpec).DoCreateNone;
       {$ifdef Timecheck}EndTimecheck('ext');{$endif}
     end;
   end;
@@ -7895,6 +7934,21 @@ var
     end;
   end;
 
+  procedure noop; inline;
+  begin
+    with TThoriumInstructionNOOP(FCurrentInstruction^) do
+    begin
+      case Kind of
+        THORIUM_NOOPMARK_PLACEHOLDER: raise EThoriumRuntimeException.Create('Ran into PLACEHOLDER noopmark.');
+        THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET: raise EThoriumRuntimeException.Create('Ran into NOT_IMPLEMENTED_YET noopmark.');
+        THORIUM_NOOPMARK_CALL: raise EThoriumRuntimeException.Create('Ran into CALL noopmark.');
+        THORIUM_NOOPMARK_INVALID_ACCESS: raise EThoriumRuntimeException.Create('Ran into INVALID_ACCESS noopmark.');
+      else
+        raise EThoriumRuntimeException.Create('Ran into unknown noopmark.');
+      end;
+    end;
+  end;
+
   (*procedure Template; inline;
   begin
     with TThoriumInstruction(CurrInstruction^) do
@@ -7914,8 +7968,8 @@ begin
     tiSTRL_S: strl_s;
     tiSTR: str;
     tiSTRL: strl;
-    tiEXT_S: ext_s;
-    tiEXT: ext;
+    tiNONE_S: none_s;
+    tiNONE: none;
     tiFNC: fnc;
     tiXFNC: xfnc;
     tiXMETH: xmeth;
@@ -8015,6 +8069,7 @@ begin
     tiXCALL_M: xcall_m;
     tiRET: ret;
     tiEmbeddedHint: ;
+    tiNOOP: noop;
   else
     //Assert(False, 'Unknown opcode');
     raise EThoriumRuntimeException.CreateFmt('Unknown opcode: %d (%s)', [Ord(FCurrentInstruction^.Instruction), GetEnumName(TypeInfo(TThoriumInstructionCode), Ord(FCurrentInstruction^.Instruction))]);

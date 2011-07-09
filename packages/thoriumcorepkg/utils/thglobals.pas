@@ -340,7 +340,7 @@ type
     tiINT_S, tiINT, tiINTB,
     tiFLT_S, tiFLT,
     tiSTR_S, tiSTRL_S, tiSTR, tiSTRL,
-    tiEXT_S, tiEXT,
+    tiNONE_S, tiNONE,
     tiFNC, tiXFNC, tiXMETH,
     tiMOVER_G, tiCOPYR_G, tiMOVEG, tiCOPYG,
     tiMOVER_FG, tiCOPYR_FG, tiMOVEFG, tiCOPYFG,
@@ -484,17 +484,17 @@ type
     CodeLine: Cardinal;
   end;
 
-  TThoriumInstructionEXT_S = record
+  TThoriumInstructionNONE_S = record
     Instruction: TThoriumInstructionCode;
     {$ifdef ENDIAN_BIG}
     {$ifndef CPU64}
-    ExtendedTypePointerOverhead: LongInt;
+    TypeSpecPointerOverhead: LongInt;
     {$endif}
     {$endif}
-    ExtendedType: Pointer;
+    TypeSpec: Pointer;
     {$ifdef ENDIAN_LITTLE}
     {$ifndef CPU64}
-    ExtendedTypePointerOverhead: LongInt;
+    TypeSpecPointerOverhead: LongInt;
     {$endif}
     {$endif}
     Reserved: array [0..7] of Word;
@@ -502,17 +502,17 @@ type
     CodeLine: Cardinal;
   end;
 
-  TThoriumInstructionEXT = record
+  TThoriumInstructionNONE = record
     Instruction: TThoriumInstructionCode;
     {$ifdef ENDIAN_BIG}
     {$ifndef CPU64}
-    ExtendedTypePointerOverhead: LongInt;
+    TypeSpecPointerOverhead: LongInt;
     {$endif}
     {$endif}
-    ExtendedType: Pointer;
+    TypeSpec: Pointer;
     {$ifdef ENDIAN_LITTLE}
     {$ifndef CPU64}
-    ExtendedTypePointerOverhead: LongInt;
+    TypeSpecPointerOverhead: LongInt;
     {$endif}
     {$endif}
     TRI: Word;
@@ -2021,7 +2021,7 @@ const
     'int.s', 'int', 'intb',
     'flt.s', 'flt',
     'str.s', 'strl.s', 'str', 'strl',
-    'ext.s', 'ext',
+    'none.s', 'none',
     'fnc', 'xfnc', 'xmeth',
     'mover.g', 'copyr.g', 'moveg', 'copyg',
     'mover.fg', 'copyr.fg', 'movefg', 'copyfg',
@@ -2181,11 +2181,18 @@ const
   THORIUM_HEXDIGIT = THORIUM_DIGIT + ['A'..'F', 'a'..'f'];
 {%ENDREGION}
 
+var
+  TypeInfoArrayOfConst: PTypeInfo = nil;
+
 implementation
 
 uses
   ThUtils;
 
+procedure SetArrayOfConstTypeInfo(A: array of const);
+begin
+  TypeInfoArrayOfConst := TypeInfo(A);
+end;
 
 var
   MOVEFG: TThoriumInstructionMOVEFG;
@@ -2201,6 +2208,8 @@ if not (Offset(MOVEFG, MOVEFG.ModuleRef) = Offset(MOVER_FG, MOVER_FG.ModuleRef))
   raise EAssertionFailed.Create('ModuleRef is located at a different offset in mover_fg');
 if not (Offset(MOVEFG, MOVEFG.ModuleRef) = Offset(COPYR_FG, COPYR_FG.ModuleRef)) then
   raise EAssertionFailed.Create('ModuleRef is located at a different offset in copyr_fg');
+
+SetArrayOfConstTypeInfo([]);
 
 end.
 

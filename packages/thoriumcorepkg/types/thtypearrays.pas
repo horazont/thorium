@@ -33,15 +33,24 @@ type
 
   TThoriumTypeDynamicArray = class (TThoriumTypeArray)
   public
+    constructor Create(const AThorium: TThorium; const AValueType: TThoriumType
+       );
+  public
+    function CanCreateNone(const ToRegister: Boolean;
+      out Instruction: TThoriumCreateInstructionDescription): Boolean; override;
     function CanPerformOperation(var Operation: TThoriumOperationDescription;
        const TheObject: TThoriumType = nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
+    function NeedsClear: Boolean; override;
 
+    function DoCreateNone: TThoriumValue; override;
+    procedure DoFree(var AValue: TThoriumValue); override;
     function DoGetIndexed(const AValue: TThoriumValue;
        const AIndex: TThoriumValue): TThoriumValue; override;
     function DoGetLength(const AValue: TThoriumValue): Integer; override;
     procedure DoSetIndexed(const AValue: TThoriumValue;
        const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
+    function DoToString(const AValue: TThoriumValue): String; override;
   end;
 
   { TThoriumTypeStaticArray }
@@ -193,6 +202,29 @@ end;
 
 { TThoriumTypeDynamicArray }
 
+constructor TThoriumTypeDynamicArray.Create(const AThorium: TThorium;
+  const AValueType: TThoriumType);
+begin
+  inherited Create(AThorium, AValueType);
+  SetName(AValueType.Name+'[]');
+end;
+
+function TThoriumTypeDynamicArray.CanCreateNone(const ToRegister: Boolean;
+  out Instruction: TThoriumCreateInstructionDescription): Boolean;
+begin
+  Result := True;
+  if ToRegister then
+  begin
+    Instruction.Instruction := TThoriumInstructionREG(none(Self, 0));
+    Instruction.TargetRegisterOffset := 4;
+  end
+  else
+  begin
+    Instruction.Instruction := TThoriumInstructionREG(none_s(Self));
+    Instruction.TargetRegisterOffset := -1;
+  end;
+end;
+
 function TThoriumTypeDynamicArray.CanPerformOperation(
   var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
   const ExName: String; const ExType: PTypeInfo): Boolean;
@@ -210,6 +242,31 @@ begin
   else
     Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
   end;
+end;
+
+function TThoriumTypeDynamicArray.NeedsClear: Boolean;
+begin
+  Result := True;
+end;
+
+function TThoriumTypeDynamicArray.DoCreateNone: TThoriumValue;
+begin
+  Result.RTTI := Self;
+  New(Result.DynamicArray);
+end;
+
+procedure TThoriumTypeDynamicArray.DoFree(var AValue: TThoriumValue);
+var
+  I: Integer;
+  Arr: TThoriumArray;
+begin
+  Arr := AValue.DynamicArray^;
+  for I := 0 to High(Arr) do
+  begin
+    if Arr[I].RTTI <> nil then
+      Arr[I].RTTI.DoFree(Arr[I]);
+  end;
+  Dispose(AValue.DynamicArray);
 end;
 
 function TThoriumTypeDynamicArray.DoGetIndexed(const AValue: TThoriumValue;
@@ -234,6 +291,24 @@ begin
   AValue.DynamicArray^[AIndex.Int] := ThoriumDuplicateValue(NewValue);
 end;
 
+function TThoriumTypeDynamicArray.DoToString(const AValue: TThoriumValue
+  ): String;
+var
+  I: Integer;
+  Arr: TThoriumArray;
+begin
+  Arr := AValue.DynamicArray^;
+  if Length(Arr) < 1 then
+    Exit('[]');
+
+  Result := '[' + ThoriumValueToStr(Arr[0]);
+  for I := 1 to High(Arr) do
+  begin
+    Result += ', ' + ThoriumValueToStr(Arr[I]);
+  end;
+  Result += ']';
+end;
+
 { TThoriumTypeStaticArray }
 
 constructor TThoriumTypeStaticArray.Create(const AThorium: TThorium;
@@ -243,6 +318,7 @@ begin
     raise EThoriumException.CreateFmt('Cannot create a static array type with a length of %d.', [Count]);
   inherited Create(AThorium, AValueType);
   FCount := Count;
+  SetName(Format('%s[%d]', [AValueType.Name, Count]));
 end;
 
 function TThoriumTypeStaticArray.CanPerformOperation(
