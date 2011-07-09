@@ -532,6 +532,10 @@ begin
   AValue.NativeData.ForType := nil;
   AValue.NativeData.AlignedSize := 1 * CPU_SIZE_FACTOR;
   AValue.NativeData.Data := @AValue.Int;
+  if AType^.Kind = tkInteger then
+    AValue.NativeData.Size := 4
+  else
+    AValue.NativeData.Size := 8;
 end;
 
 function TThoriumTypeInteger.DoToString(const AValue: TThoriumValue): String;

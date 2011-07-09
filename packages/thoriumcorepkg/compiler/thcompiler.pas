@@ -2416,8 +2416,8 @@ begin
               begin
                 if ExprState = vsStatic then
                 begin
-                  AppendOperation(Solution^.GetCode, ThoriumEncapsulateCreation(PlaceStaticDescription(ExprValue, RegID1)));
-                  AppendOperation(Solution^.SetCode, ThoriumEncapsulateCreation(PlaceStaticDescription(ExprValue, RegID1)));
+                  AppendOperation(Solution^.GetCode, ThoriumEncapsulateCreation(PlaceStaticDescription(ExprValue, RegID1), RegID1));
+                  AppendOperation(Solution^.SetCode, ThoriumEncapsulateCreation(PlaceStaticDescription(ExprValue, RegID1), RegID1));
                 end;
                 Solution^.Writable := Entry^.Entry.TypeSpec.CanPerformOperation(WriteOperation, ExprType);
                 AppendOperation(Solution^.GetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue, RegID1));
@@ -2429,6 +2429,7 @@ begin
                   // later, if further qualification applies.
                   AppendOperation(Solution^.SetCode, ThoriumEncapsulateOperation(Operation, ATargetRegister, RegPreviousValue, RegID1));
                 end;
+                Solution^.FinalType := Operation.ResultType;
               end;
             end;
             Dec(I);

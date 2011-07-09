@@ -280,6 +280,8 @@ type
        systems) *)
     AlignedSize: SizeInt;
 
+    (* Actual size of data (used by arrays etc.) *)
+    Size: SizeInt;
 
     ForType: PTypeInfo;
   end;
@@ -640,6 +642,7 @@ type
     function IsEqualTo(const AnotherType: TThoriumType): Boolean; virtual; abstract;
     function NeedsClear: Boolean; virtual;
     function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
+    procedure DoAppend(const AValue, ToValue: TThoriumValue); virtual; abstract;
     function DoBitAnd(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoBitNot(const AValue: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoBitOr(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
@@ -2099,7 +2102,10 @@ end;
 
 function ThoriumValueToStr(const Value: TThoriumValue): String;
 begin
-  Result := 'Cannot convert yet.';
+  if Value.RTTI <> nil then
+    Exit(Value.RTTI.DoToString(Value))
+ else
+    Exit('<no rtti available>');
 end;
 
 function ThoriumMakeOOPEvent(ACode: Pointer; Userdata: Pointer): TMethod;
@@ -2187,6 +2193,7 @@ begin
     tiADDI: with TThoriumInstructionADDI(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(Op1), ThoriumRegisterToStr(Op2), ThoriumRegisterToStr(TRI)]);
     tiADDF: with TThoriumInstructionADDF(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(Op1), ThoriumRegisterToStr(Op2), ThoriumRegisterToStr(TRI)]);
     tiADDS: with TThoriumInstructionADDS(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(Op1), ThoriumRegisterToStr(Op2), ThoriumRegisterToStr(TRI)]);
+    tiAPPEND: with TThoriumInstructionAPPEND(AInstruction) do Result := Result + Format('%%%s %%%s', [ThoriumRegisterToStr(SRI), ThoriumRegisterToStr(TRI)]);
 
     tiSUBI: with TThoriumInstructionSUBI(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(Op1), ThoriumRegisterToStr(Op2), ThoriumRegisterToStr(TRI)]);
     tiSUBF: with TThoriumInstructionSUBF(AInstruction) do Result := Result + Format('%%%s %%%s %%%s', [ThoriumRegisterToStr(Op1), ThoriumRegisterToStr(Op2), ThoriumRegisterToStr(TRI)]);
@@ -7063,6 +7070,16 @@ var
     end;
   end;
 
+  procedure append; inline;
+  begin
+    with TThoriumInstructionAPPEND(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      FRegisters[TRI].RTTI.DoAppend(FRegisters[SRI], FRegisters[TRI]);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
   procedure subi; inline;
   begin
     with TThoriumInstructionSUBI(FCurrentInstruction^) do
@@ -8005,6 +8022,7 @@ begin
     tiADDI: addi;
     tiADDF: addf;
     tiADDS: adds;
+    tiAPPEND: append;
     tiSUBI: subi;
     tiSUBF: subf;
     tiMULI: muli;
@@ -8072,7 +8090,7 @@ begin
     tiNOOP: noop;
   else
     //Assert(False, 'Unknown opcode');
-    raise EThoriumRuntimeException.CreateFmt('Unknown opcode: %d (%s)', [Ord(FCurrentInstruction^.Instruction), GetEnumName(TypeInfo(TThoriumInstructionCode), Ord(FCurrentInstruction^.Instruction))]);
+    raise EThoriumRuntimeException.CreateFmt('Unknown opcode: $%4.4x (%s)', [Ord(FCurrentInstruction^.Instruction), GetEnumName(TypeInfo(TThoriumInstructionCode), Ord(FCurrentInstruction^.Instruction))]);
   end;
   //System.Inc(FCurrentInstructionIdx);
 end;

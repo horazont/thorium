@@ -787,6 +787,18 @@ begin
   end;
 end;
 
+function append(ASRI: Word; ATRI: Word): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionAPPEND(Result) do
+  begin
+    Instruction := tiAPPEND;
+    SRI := ASRI;
+    TRI := ATRI;
+    CodeLine := 0;
+  end;
+end;
+
 function subi(AOp1: Word; AOp2: Word; ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);

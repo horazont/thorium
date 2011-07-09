@@ -43,6 +43,7 @@ type
        const ExType: PTypeInfo = nil): Boolean; override;
     function NeedsClear: Boolean; override;
 
+    procedure DoAppend(const AValue, ToValue: TThoriumValue); override;
     function DoCreateNone: TThoriumValue; override;
     procedure DoFree(var AValue: TThoriumValue); override;
     function DoGetIndexed(const AValue: TThoriumValue;
@@ -236,7 +237,7 @@ begin
         Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
       NewNonCastOperation(Operation);
       Operation.ResultType := nil;
-      Operation.OperationInstruction := OperationInstructionDescription(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0), -1, -1, -1);
+      Operation.OperationInstruction := OperationInstructionDescription(append(0, 0), 0, -1, 1);
       Exit(True);
     end;
   else
@@ -247,6 +248,16 @@ end;
 function TThoriumTypeDynamicArray.NeedsClear: Boolean;
 begin
   Result := True;
+end;
+
+procedure TThoriumTypeDynamicArray.DoAppend(const AValue, ToValue: TThoriumValue
+  );
+var
+  L: PtrInt;
+begin
+  L := Length(ToValue.DynamicArray^);
+  SetLength(ToValue.DynamicArray^, L+1);
+  ToValue.DynamicArray^[L] := ThoriumDuplicateValue(AValue);
 end;
 
 function TThoriumTypeDynamicArray.DoCreateNone: TThoriumValue;
