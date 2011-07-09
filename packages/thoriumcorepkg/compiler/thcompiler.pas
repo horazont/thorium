@@ -11,7 +11,7 @@ interface
 
 uses
   Classes, SysUtils, Thorium, ThGlobals, ThUtils, typinfo,
-  ThOptimizeJumps;
+  ThOptimizeJumps, ThUtilityClasses;
 
 {$ifdef DebugTokenLoop}
 const

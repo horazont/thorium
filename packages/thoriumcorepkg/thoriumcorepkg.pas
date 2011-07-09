@@ -10,7 +10,7 @@ uses
   Thorium, ThCompiler, ThOptimizeJumps, ThOptimizeMoveCopy, ThTypeArrays, 
   ThTypeFloat, ThTypeFunction, ThTypeHost, ThTypeHostFunction, 
   ThTypeHostRecord, ThTypeInt, ThTypeRTTI, ThTypeString, ThTypeStruct, 
-  ThDescriptors, ThGlobals, ThNativeCall, ThUtils;
+  ThDescriptors, ThGlobals, ThNativeCall, ThUtils, ThUtilityClasses;
 
 implementation
 
