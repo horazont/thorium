@@ -2949,6 +2949,7 @@ begin
   //FEventCapsules := TFPObjectHashTable.CreateWith(50, @RSHash);
   FNestingLevel := -1;
   FPrototype := TThoriumTypeFunction.Create;
+  FPrototypeCallable := TThoriumTypeFunction(FPrototype);
   FPrototyped := False;
   FVisibilityLevel := vsPrivate;
   FPrototypedCalls := TThoriumJumpList.Create;
@@ -6267,8 +6268,8 @@ constructor TThoriumRuntimeFunction.Create(
 begin
   FEntryPoint := ACompiledFunction.FEntryPoint;
   FPrototype := ACompiledFunction.FPrototype;
-  FHasReturnValue := (FPrototype as TThoriumTypeHostFunction).ReturnType <> nil;
-  FParameterCount := (FPrototype as TThoriumTypeHostFunction).Parameters.Count;
+  FHasReturnValue := (FPrototype as TThoriumTypeFunction).ReturnType <> nil;
+  FParameterCount := (FPrototype as TThoriumTypeFunction).Parameters.Count;
 end;
 
 procedure TThoriumRuntimeFunction.FillStackFrame(

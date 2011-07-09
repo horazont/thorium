@@ -114,13 +114,14 @@
       <Unit9>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
         <UnitName Value="Thorium"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="4636"/>
-        <CursorPos X="18" Y="4662"/>
+        <TopLine Value="6233"/>
+        <CursorPos X="57" Y="6271"/>
         <UsageCount Value="100"/>
         <Bookmarks Count="1">
-          <Item0 X="3" Y="4064" ID="1"/>
+          <Item0 X="3" Y="4065" ID="1"/>
         </Bookmarks>
         <Loaded Value="True"/>
       </Unit9>
@@ -134,12 +135,10 @@
       <Unit11>
         <Filename Value="packages\thoriumcorepkg\utils\thglobals.pas"/>
         <UnitName Value="ThGlobals"/>
-        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="224"/>
         <CursorPos X="3" Y="334"/>
         <UsageCount Value="100"/>
-        <Loaded Value="True"/>
       </Unit11>
       <Unit12>
         <Filename Value="packages\thoriumcorepkg\utils\thutils.pas"/>
@@ -187,16 +186,15 @@
       <Unit17>
         <Filename Value="packages\thoriumcorepkg\compiler\thcompiler.pas"/>
         <UnitName Value="ThCompiler"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="36" Y="14"/>
+        <TopLine Value="1109"/>
+        <CursorPos X="23" Y="1136"/>
         <ExtraEditorCount Value="1"/>
         <ExtraEditor1>
           <WindowIndex Value="0"/>
-          <TopLine Value="2789"/>
-          <CursorPos X="73" Y="2815"/>
+          <TopLine Value="225"/>
+          <CursorPos X="36" Y="14"/>
         </ExtraEditor1>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
@@ -381,15 +379,13 @@
       <Unit40>
         <Filename Value="packages\thoriumcorepkg\utils\thutilityclasses.pas"/>
         <UnitName Value="ThUtilityClasses"/>
-        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="35" Y="26"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit40>
     </Units>
-    <JumpHistory Count="17" HistoryIndex="16">
+    <JumpHistory Count="20" HistoryIndex="19">
       <Position1>
         <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
         <Caret Line="6074" Column="4" TopLine="6039"/>
@@ -455,9 +451,21 @@
         <Caret Line="1427" Column="15" TopLine="1359"/>
       </Position16>
       <Position17>
-        <Filename Value="packages\thoriumcorepkg\compiler\thcompiler.pas"/>
-        <Caret Line="667" Column="1" TopLine="641"/>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="4651" Column="68" TopLine="4622"/>
       </Position17>
+      <Position18>
+        <Filename Value="packages\thoriumcorepkg\compiler\thcompiler.pas"/>
+        <Caret Line="1136" Column="23" TopLine="1109"/>
+      </Position18>
+      <Position19>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="2952" Column="36" TopLine="2902"/>
+      </Position19>
+      <Position20>
+        <Filename Value="packages\thoriumcorepkg\thorium.pas"/>
+        <Caret Line="2954" Column="72" TopLine="2926"/>
+      </Position20>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
