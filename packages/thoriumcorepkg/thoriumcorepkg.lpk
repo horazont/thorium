@@ -7,7 +7,7 @@
       <Version Value="10"/>
       <SearchPaths>
         <IncludeFiles Value="includes"/>
-        <OtherUnitFiles Value="optimizer;compiler;types"/>
+        <OtherUnitFiles Value="optimizer;compiler;types;utils"/>
         <UnitOutputDirectory Value="$(PkgDir)/lib/$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Parsing>
@@ -45,47 +45,91 @@
     <Description Value="Core package of Thorium Scripting Language, containing the main engine and global constants."/>
     <License Value="MPL 1.1"/>
     <Version Major="1" Minor="1"/>
-    <Files Count="10">
+    <Files Count="21">
       <Item1>
-        <Filename Value="thorium.pas"/>
-        <UnitName Value="Thorium"/>
-      </Item1>
-      <Item2>
-        <Filename Value="thglobals.pas"/>
-        <UnitName Value="thglobals"/>
-      </Item2>
-      <Item3>
-        <Filename Value="thutils.pas"/>
-        <UnitName Value="thutils"/>
-      </Item3>
-      <Item4>
-        <Filename Value="LICENSE.txt"/>
-        <Type Value="Text"/>
-      </Item4>
-      <Item5>
         <Filename Value="CHANGELOG.txt"/>
         <Type Value="Text"/>
-      </Item5>
-      <Item6>
+      </Item1>
+      <Item2>
+        <Filename Value="LICENSE.txt"/>
+        <Type Value="Text"/>
+      </Item2>
+      <Item3>
+        <Filename Value="thorium.pas"/>
+        <UnitName Value="Thorium"/>
+      </Item3>
+      <Item4>
         <Filename Value="compiler/thcompiler.pas"/>
-        <UnitName Value="thcompiler"/>
-      </Item6>
-      <Item7>
+        <UnitName Value="ThCompiler"/>
+      </Item4>
+      <Item5>
         <Filename Value="includes/ThInstructionConstructors.inc"/>
         <Type Value="Binary"/>
+      </Item5>
+      <Item6>
+        <Filename Value="optimizer/thoptimizejumps.pas"/>
+        <UnitName Value="ThOptimizeJumps"/>
+      </Item6>
+      <Item7>
+        <Filename Value="optimizer/thoptimizemovecopy.pas"/>
+        <UnitName Value="ThOptimizeMoveCopy"/>
       </Item7>
       <Item8>
-        <Filename Value="thnativecall.pas"/>
-        <UnitName Value="thnativecall"/>
+        <Filename Value="types/thtypearrays.pas"/>
+        <UnitName Value="ThTypeArrays"/>
       </Item8>
       <Item9>
-        <Filename Value="optimizer/thorium_optimizejumps.pas"/>
-        <UnitName Value="Thorium_OptimizeJumps"/>
+        <Filename Value="types/thtypefloat.pas"/>
+        <UnitName Value="ThTypeFloat"/>
       </Item9>
       <Item10>
-        <Filename Value="optimizer/thorium_optimizemovecopy.pas"/>
-        <UnitName Value="Thorium_OptimizeMoveCopy"/>
+        <Filename Value="types/thtypefunction.pas"/>
+        <UnitName Value="ThTypeFunction"/>
       </Item10>
+      <Item11>
+        <Filename Value="types/thtypehost.pas"/>
+        <UnitName Value="ThTypeHost"/>
+      </Item11>
+      <Item12>
+        <Filename Value="types/thtypehostfunction.pas"/>
+        <UnitName Value="ThTypeHostFunction"/>
+      </Item12>
+      <Item13>
+        <Filename Value="types/thtypehostrecord.pas"/>
+        <UnitName Value="ThTypeHostRecord"/>
+      </Item13>
+      <Item14>
+        <Filename Value="types/thtypeint.pas"/>
+        <UnitName Value="ThTypeInt"/>
+      </Item14>
+      <Item15>
+        <Filename Value="types/thtypertti.pas"/>
+        <UnitName Value="ThTypeRTTI"/>
+      </Item15>
+      <Item16>
+        <Filename Value="types/thtypestring.pas"/>
+        <UnitName Value="ThTypeString"/>
+      </Item16>
+      <Item17>
+        <Filename Value="types/thtypestruct.pas"/>
+        <UnitName Value="ThTypeStruct"/>
+      </Item17>
+      <Item18>
+        <Filename Value="utils/thdescriptors.pas"/>
+        <UnitName Value="ThDescriptors"/>
+      </Item18>
+      <Item19>
+        <Filename Value="utils/thglobals.pas"/>
+        <UnitName Value="ThGlobals"/>
+      </Item19>
+      <Item20>
+        <Filename Value="utils/thnativecall.pas"/>
+        <UnitName Value="ThNativeCall"/>
+      </Item20>
+      <Item21>
+        <Filename Value="utils/thutils.pas"/>
+        <UnitName Value="ThUtils"/>
+      </Item21>
     </Files>
     <LazDoc Paths="/home/horazont/Projects/fpc/thorium/packages/thoriumcorepkg/lazdoc"/>
     <RequiredPkgs Count="1">

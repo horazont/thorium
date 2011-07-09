@@ -148,8 +148,6 @@ type
   TThoriumHostCallableBase = class;
   TThoriumHostFunctionBase = class;
   TThoriumHostMethodBase = class;
-  TThoriumHostObjectType = class;
-  TThoriumRTTIObjectType = class;
   TThoriumInstructions = class;
   TThoriumModule = class;
   TThoriumLibraryConstant = class;
@@ -233,6 +231,9 @@ type
 
   (* An array containing references to host environment methods. *)
   TThoriumRTTIMethods = array of TThoriumHostMethodBase;
+
+  TThoriumRTTIMethodsCallback = procedure (Sender: TObject; var Methods: TThoriumRTTIMethods) of object;
+  TThoriumRTTIStaticMethodsCallback = procedure (Sender: TObject; var Methods: TThoriumRTTIStaticMethods) of object;
 
   (* This record completely defines a type of the host environment, including
      host class types. *)
@@ -352,8 +353,6 @@ type
     const Module: TThoriumModule; const Msg: String) of object;
   TThoriumOnOpenModule = procedure (Sender: TThorium; const ModuleName: String;
     var Stream: TStream) of object;
-  TThoriumRTTIMethodsCallback = procedure (Sender: TThoriumRTTIObjectType; var Methods: TThoriumRTTIMethods) of object;
-  TThoriumRTTIStaticMethodsCallback = procedure (Sender: TThoriumRTTIObjectType; var Methods: TThoriumRTTIStaticMethods) of object;
   TThoriumSimpleMethod = procedure (const Input: array of Pointer;
     Result: PThoriumValue) of object;
   TThoriumClassMethod = procedure (const Input: array of Pointer;
@@ -403,7 +402,7 @@ type
     function _AddRef: LongInt; stdcall;
     function _Release: LongInt; stdcall;
     function QueryInterface(const IID: TGuid; out Obj): LongInt; stdcall;
-  protected // IThoriumPersistent
+  public // IThoriumPersistent
     procedure EnableHostControl;
     procedure DisableHostControl;
     procedure FreeReference;
@@ -429,11 +428,12 @@ type
     FReference2: IThoriumPersistent;
   protected
     property Reference: IUnknown read FReference implements IUnknown;
-  protected
-    class procedure GetStaticMethodList(Sender: TThoriumRTTIObjectType; var Methods: TThoriumRTTIStaticMethods); virtual;
-    class procedure GetMethodList(Sender: TThoriumRTTIObjectType; var Methods: TThoriumRTTIMethods); virtual;
+  public
+    class procedure GetStaticMethodList(Sender: TObject; var Methods: TThoriumRTTIStaticMethods); virtual;
+    class procedure GetMethodList(Sender: TObject; var Methods: TThoriumRTTIMethods); virtual;
   public
     property ThoriumReference: IThoriumPersistent read FReference2 implements IThoriumPersistent;
+    property ThoriumReferenceImplementation: TThoriumReferenceImplementation read FReferenceImplementation;
   end;
   {$M-}
   TThoriumPersistentClass = class of TThoriumPersistent;
@@ -609,8 +609,12 @@ type
   end;
 
   IThoriumCallable = interface ['{C9317686-61BE-4D72-AF95-9E0FF25C752E}']
+    function GetHasReturnValue: Boolean;
     function GetParameters: TThoriumParameters;
     function GetReturnType: TThoriumType;
+    property HasReturnValue: Boolean read GetHasReturnValue;
+    property ReturnType: TThoriumType read GetReturnType;
+    property Parameters: TThoriumParameters read GetParameters;
   end;
 
   IThoriumHostCallable = interface ['{14B6F0DA-D255-4A73-87E8-FC1AC5CA83A1}']
@@ -743,335 +747,6 @@ type
     function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
   end;
 
-  { TThoriumTypeInteger }
-
-  TThoriumTypeInteger = class (TThoriumTypeSimple)
-  protected
-    function GetNoneInitialData(out InitialData: TThoriumInitialData
-       ): Boolean; override;
-  public
-    function CreateFromInt(const Int: TThoriumInteger): TThoriumValue;
-  public
-    function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
-       const AnotherType: TThoriumType=nil): Boolean; override;
-    function CanCreate(const InitialData: TThoriumInitialData;
-       const ToRegister: Boolean; out
-       Instruction: TThoriumCreateInstructionDescription): Boolean; override;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
-    function GetNativeCallSpecification(const ForType: PTypeInfo): TThoriumNativeCallSpecification; override;
-
-    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
-       override;
-    function DoBitAnd(const AValue, BValue: TThoriumValue): TThoriumValue;
-       override;
-    function DoBitOr(const AValue, BValue: TThoriumValue): TThoriumValue;
-       override;
-    function DoBitXor(const AValue, BValue: TThoriumValue): TThoriumValue;
-         override;
-    function DoBitShr(const AValue, BValue: TThoriumValue): TThoriumValue;
-       override;
-    function DoBitShl(const AValue, BValue: TThoriumValue): TThoriumValue;
-       override;
-    function DoBitNot(const AValue: TThoriumValue): TThoriumValue;
-       override;
-    function DoCast(const AValue: TThoriumValue; const TargetType: TThoriumType
-       ): TThoriumValue; override;
-    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
-       ): Boolean; override;
-    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean; override;
-    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCreate(const InitialData: TThoriumInitialData): TThoriumValue;
-       override;
-    procedure DoDecrement(var ASubject: TThoriumValue); override;
-    function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
-         override;
-    function DoEvaluate(const AValue: TThoriumValue): Boolean; override;
-    procedure DoFreeNative(var AValue: TThoriumValue); override;
-    procedure DoFromNative(var AValue: TThoriumValue); override;
-    procedure DoIncrement(var ASubject: TThoriumValue); override;
-    function DoIntegerDivision(const AValue, BValue: TThoriumValue
-       ): TThoriumValue; override;
-    function DoModulus(const AValue, BValue: TThoriumValue): TThoriumValue;
-       override;
-    function DoMultiplication(const AValue, BValue: TThoriumValue
-       ): TThoriumValue; override;
-    procedure DoNegate(var AValue: TThoriumValue); override;
-    function DoSubtraction(const AValue, BValue: TThoriumValue
-       ): TThoriumValue; override;
-    procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo);
-       override;
-    function DoToString(const AValue: TThoriumValue): String; override;
-  end;
-
-  { TThoriumTypeFloat }
-
-  TThoriumTypeFloat = class (TThoriumTypeSimple)
-  protected
-    function GetNoneInitialData(out InitialData: TThoriumInitialData
-       ): Boolean; override;
-  public
-    function CanCreate(const InitialData: TThoriumInitialData;
-       const ToRegister: Boolean; out
-       Instruction: TThoriumCreateInstructionDescription): Boolean; override;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
-    function GetNativeCallSpecification(const ForType: PTypeInfo
-      ): TThoriumNativeCallSpecification; override;
-
-    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
-         override;
-    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
-       ): Boolean; override;
-    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean; override;
-    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCreate(const InitialData: TThoriumInitialData
-         ): TThoriumValue; override;
-    procedure DoDecrement(var ASubject: TThoriumValue); override;
-    function DoDivision(const AValue, BValue: TThoriumValue): TThoriumValue;
-        override;
-    procedure DoFreeNative(var AValue: TThoriumValue); override;
-    procedure DoFromNative(var AValue: TThoriumValue); override;
-    procedure DoIncrement(var ASubject: TThoriumValue); override;
-    procedure DoNegate(var AValue: TThoriumValue); override;
-    function DoMultiplication(const AValue, BValue: TThoriumValue
-       ): TThoriumValue; override;
-    function DoSubtraction(const AValue, BValue: TThoriumValue
-       ): TThoriumValue; override;
-    procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo); override;
-    function DoToString(const AValue: TThoriumValue): String; override;
-  end;
-
-  { TThoriumTypeString }
-
-  TThoriumTypeString = class (TThoriumTypeSimple)
-  protected
-    function GetNoneInitialData(out InitialData: TThoriumInitialData
-       ): Boolean; override;
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    function CreateFromString(const Str: String): TThoriumValue;
-  public
-    function CanCreate(const InitialData: TThoriumInitialData;
-       const ToRegister: Boolean; out
-       Instruction: TThoriumCreateInstructionDescription): Boolean; override;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil; const ExName: String='';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    function CreateValueFromPtr(const Ptr: Pointer): TThoriumValue; override;
-    function DuplicateValue(const Input: TThoriumValue): TThoriumValue;
-       override;
-    function GetNativeCallSpecification(const ForType: PTypeInfo
-      ): TThoriumNativeCallSpecification; override;
-    function HasIndexedAccess: Boolean; override;
-    function HasFieldAccess: Boolean; override;
-    function NeedsClear: Boolean; override;
-
-    function DoAddition(const AValue, BValue: TThoriumValue): TThoriumValue;
-       override;
-    function DoCmpEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpGreater(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpGreaterOrEqual(const AValue, BValue: TThoriumValue
-       ): Boolean; override;
-    function DoCmpLess(const AValue, BValue: TThoriumValue): Boolean; override;
-    function DoCmpLessOrEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    function DoCmpNotEqual(const AValue, BValue: TThoriumValue): Boolean;
-       override;
-    procedure DoFree(var AValue: TThoriumValue); override;
-    procedure DoFreeNative(var AValue: TThoriumValue); override;
-    procedure DoFromNative(var AValue: TThoriumValue); override;
-    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
-       ): TThoriumValue; override;
-    function DoGetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue
-       ): TThoriumValue; override;
-    procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo);
-       override;
-    function DoToString(const AValue: TThoriumValue): String; override;
-  end;
-
-  { TThoriumTypeFunction }
-
-  TThoriumTypeFunction = class (TThoriumType, IThoriumCallable)
-  public
-    constructor Create;
-    destructor Destroy; override;
-  private
-    FParameters: TThoriumParameters;
-    FReturnType: TThoriumType;
-    function GetHasReturnValue: Boolean;
-    function GetHasReturnValueInt: Integer;
-  protected
-    procedure Assign(ASource: TThoriumTypeFunction);
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    function GetParameters: TThoriumParameters;
-    function GetReturnType: TThoriumType;
-    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
-  published
-    property HasReturnValue: Boolean read GetHasReturnValue;
-    property HasReturnValueInt: Integer read GetHasReturnValueInt;
-    property Parameters: TThoriumParameters read FParameters;
-    property ReturnType: TThoriumType read FReturnType write FReturnType;
-  end;
-
-  { TThoriumTypeHostFunction }
-
-  TThoriumTypeHostFunction = class (TThoriumType, IThoriumCallable, IThoriumHostCallable)
-  public
-    constructor Create(const AThorium: TThorium; const AHostFunction: TThoriumHostCallableBase);
-    destructor Destroy; override;
-  private
-    FHostFunction: TThoriumHostCallableBase;
-    FParameters: TThoriumParameters;
-    FReturnType: TThoriumType;
-    function GetHasReturnValue: Boolean;
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    function GetParameters: TThoriumParameters;
-    function GetHostParameters: TThoriumHostParameters;
-    function GetReturnType: TThoriumType;
-    function GetHostReturnType: TThoriumHostType;
-    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
-    function NeedsNativeData: Boolean;
-  published
-    property HasReturnValue: Boolean read GetHasReturnValue;
-    property Parameters: TThoriumParameters read FParameters;
-    property ReturnType: TThoriumType read FReturnType;
-    property HostFunction: TThoriumHostCallableBase read FHostFunction;
-  end;
-
-  { TThoriumTypeHostType }
-
-  TThoriumTypeHostType = class (TThoriumType)
-  public
-    constructor Create(const AThorium: TThorium; const AHostType: TThoriumHostObjectType);
-  private
-    FHostType: TThoriumHostObjectType;
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    property HostType: TThoriumHostObjectType read FHostType;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
-  end;
-
-  { TThoriumTypeStruct }
-
-  TThoriumTypeStruct = class (TThoriumType)
-  public
-    constructor Create(AThorium: TThorium);
-    destructor Destroy; override;
-  private
-    FCount: Integer;
-    FFields: array of TThoriumStructFieldDefinition;
-
-    procedure Expand;
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    function Add(const AName: String;
-      const ValueType: TThoriumType): Integer;
-    function Add(const AReference: TThoriumStructFieldDefinition): Integer;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    procedure Delete(const AIndex: Integer);
-    function IndexOf(const AName: String): Integer;
-    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
-    function NeedsClear: Boolean; override;
-    function UsesType(const AnotherType: TThoriumType; MayRecurse: Boolean=True
-       ): Boolean; override;
-  end;
-
-  { TThoriumTypeArray }
-
-  TThoriumTypeArray = class (TThoriumType)
-  public
-    constructor Create(const AThorium: TThorium; const AValueType: TThoriumType);
-  private
-    FValueType: TThoriumType;
-  protected
-    function GetTypeKind: TThoriumTypeKind; override;
-  public
-    property ValueType: TThoriumType read FValueType;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType = nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
-    function HasIndexedAccess: Boolean; override;
-    function NeedsClear: Boolean; override;
-  end;
-
-  { TThoriumTypeDynamicArray }
-
-  TThoriumTypeDynamicArray = class (TThoriumTypeArray)
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType = nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-
-    function DoGetIndexed(const AValue: TThoriumValue;
-       const AIndex: TThoriumValue): TThoriumValue; override;
-    function DoGetLength(const AValue: TThoriumValue): Integer; override;
-    procedure DoSetIndexed(const AValue: TThoriumValue;
-       const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
-  end;
-
-  { TThoriumTypeStaticArray }
-
-  TThoriumTypeStaticArray = class (TThoriumTypeArray)
-  public
-    constructor Create(const AThorium: TThorium; const AValueType: TThoriumType;
-       Count: Integer);
-  private
-    FCount: Integer;
-  public
-    property Count: Integer read FCount;
-  public
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType = nil; const ExName: String = '';
-       const ExType: PTypeInfo = nil): Boolean; override;
-    function IsEqualTo(const AnotherType: TThoriumType): Boolean; override;
-
-    function DoGetIndexed(const AValue: TThoriumValue;
-       const AIndex: TThoriumValue): TThoriumValue; override;
-    function DoGetLength(const AValue: TThoriumValue): Integer; override;
-    procedure DoSetIndexed(const AValue: TThoriumValue;
-       const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
-  end;
-
     (* A set of values processable by Thorium representing the complete register
      set of a Thorium virtual machine. *)
   TThoriumRegisters = array [0..THORIUM_REGISTER_COUNT-1] of TThoriumValue;
@@ -1082,13 +757,6 @@ type
    Region: Identifier qualification and relocation
                                                                               *)
 {%REGION 'Identifier qualification and relocation' /fold}
-  (* An array of TThoriumHostObjectType mainly used to notify the compiler about
-     (possibly relocation needing) uses of an external type. *)
-  TThoriumHostObjectTypeArray = array of TThoriumHostObjectType;
-
-  (* An array of TThoriumLibraryProperty mainly used to notify the compiler
-     about (possibly relocation needing) uses of a library property. *)
-  TThoriumLibraryPropertyArray = array of TThoriumLibraryProperty;
 
   TThoriumValueState = (vsDynamic, vsAccessable, vsStatic);
   // vsDynamic = Result of a calculating operation
@@ -1112,19 +780,8 @@ type
     GetCode: TThoriumOperationArray;
     SetJumpMarks: TThoriumIntArray;
     SetCode: TThoriumOperationArray;
-    UsedExtendedTypes: array of TThoriumHostObjectType;
-    UsedLibraryProps: array of TThoriumLibraryProperty;
   end;
   PThoriumQualifiedIdentifier = ^TThoriumQualifiedIdentifier;
-
-  (* This record contains information about a relocation. *)
-  TThoriumRelocation = record
-    ByteOffset: Cardinal;
-    ObjectIndex: Cardinal;
-  end;
-
-  (* A pointer to a record containing information about a relocation. *)
-  PThoriumRelocation = ^TThoriumRelocation;
 
   TThoriumQualifiedIdentifierList = specialize TFPGList<PThoriumQualifiedIdentifier>;
 {%ENDREGION}
@@ -1231,7 +888,6 @@ type
     function GetCount: Integer;
     function GetTypeSpec(Index: Integer): TThoriumType;
   protected
-    procedure Assign(ASource: TThoriumParameters);
     procedure Clear;
     procedure Delete(AIndex: Integer);
     procedure Remove(AType: TThoriumType);
@@ -1240,6 +896,7 @@ type
     property TypeSpec[Index: Integer]: TThoriumType read GetTypeSpec; default;
   public
     procedure Add(AType: TThoriumType);
+    procedure Assign(ASource: TThoriumParameters);
     function Duplicate: TThoriumParameters;
     procedure GetParameterSpec(const Index: Integer; out ParamSpec: TThoriumType); deprecated;
     procedure LoadFromStream(Stream: TStream);
@@ -1274,14 +931,16 @@ type
     FEntryPoint: TThoriumInstructionAddress;
     FEventCapsules: TFPHashList;
     FNestingLevel: Integer;
-    FPrototype: TThoriumTypeFunction;
+    FPrototype: TThoriumType;
+    FPrototypeCallable: IThoriumCallable;
     FPrototyped: Boolean;
     FPrototypedCalls: TThoriumJumpList;
     FVisibilityLevel: TThoriumVisibilityLevel;
   public
     property EntryPoint: TThoriumInstructionAddress read FEntryPoint;
     property NestingLevel: Integer read FNestingLevel;
-    property Prototype: TThoriumTypeFunction read FPrototype;
+    property Prototype: TThoriumType read FPrototype;
+    property PrototypeCallable: IThoriumCallable read FPrototypeCallable;
     property Prototyped: Boolean read FPrototyped;
     property VisibilityLevel: TThoriumVisibilityLevel read FVisibilityLevel;
 
@@ -1373,13 +1032,19 @@ type
   public
     constructor Create(ALibrary: TThoriumLibrary); virtual;
     destructor Destroy; override;
+  private
+    procedure SetName(const AValue: String);
   protected
     FLibrary: TThoriumLibrary;
     FName: String;
     FParameters: TThoriumHostParameters;
     FReturnType: TThoriumHostType;
-    FPrototype: TThoriumTypeHostFunction;
-    function GetPrototype: TThoriumTypeHostFunction;
+    FPrototype: TThoriumType;
+    FPrototypeCallable: IThoriumCallable;
+    FPrototypeHostCallable: IThoriumHostCallable;
+    function GetPrototype: TThoriumType;
+    function GetPrototypeCallable: IThoriumCallable;
+    function GetPrototypeHostCallable: IThoriumHostCallable;
   protected
     procedure CalcHash; override;
   public
@@ -1387,10 +1052,13 @@ type
     function NeedsNativeData: Boolean; virtual;
   public
     property Parameters: TThoriumHostParameters read FParameters;
-    property Prototype: TThoriumTypeHostFunction read GetPrototype;
+    property Prototype: TThoriumType read GetPrototype;
+    property PrototypeCallable: IThoriumCallable read GetPrototypeCallable;
+    property PrototypeHostCallable: IThoriumHostCallable read GetPrototypeHostCallable;
     property ReturnType: TThoriumHostType read FReturnType write FReturnType;
     property ReturnTypeStoring: Boolean read FReturnType.Storing write FReturnType.Storing;
-    property Name: String read FName write FName;
+    property OwnerLibrary: TThoriumLibrary read FLibrary;
+    property Name: String read FName write SetName;
   end;
 
   TThoriumHostCallableList = specialize TFPGList<TThoriumHostCallableBase>;
@@ -1452,9 +1120,11 @@ type
   public
     constructor Create(ALibrary: TThoriumLibrary); override;
   protected
-    FHostObjectType: TThoriumHostObjectType;
+    FType: TThoriumType;
   protected
     procedure CallFromVirtualMachine(OfObject: TObject; AVirtualMachine: TThoriumVirtualMachine=nil); virtual; abstract;
+  public
+    procedure SetType(const AType: TThoriumType);
   end;
 
   { TThoriumHostMethodNativeCall }
@@ -1493,139 +1163,6 @@ type
                                                                               *)
 {%REGION 'Host class types' /fold}
 
-  { TThoriumHostObjectType }
-
-  (* This is the base class for any class-alike type published by the host
-     environment. You will need to override the methods to make it represent
-     a type you want. *)
-  TThoriumHostObjectType = class (TThoriumType)
-    constructor Create(ALibrary: TThoriumLibrary); virtual;
-    destructor Destroy; override;
-  protected
-    FLibrary: TThoriumLibrary;
-  public
-    procedure ApplyStoring(var AValue: Pointer; MayDecreaseReference: Boolean = True); virtual; abstract;
-    procedure DisposeValue(var AValue: Pointer); virtual; abstract;
-    function DuplicateInstance(const AValue: Pointer): Pointer; virtual; abstract;
-    function FindMethod(const AMethodName: String): TThoriumHostMethodBase; virtual;
-    function GetFieldID(const FieldIdent: String; out ID: QWord): Boolean; virtual;
-    function GetFieldStoring(const AFieldID: QWord): Boolean; virtual; abstract;
-    procedure GetFieldType(const AFieldID: QWord; out TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition); virtual; abstract;
-    function GetIndexType(const IndexType: TThoriumType; out TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition): Boolean; virtual;
-    function GetNewInstance: Pointer; virtual; abstract;
-    function GetStaticFieldID(const FieldIdent: String; out ID: QWord): Boolean; virtual;
-    function GetStaticFieldStoring(const AFieldID: QWord): Boolean; virtual; abstract;
-    procedure GetStaticFieldType(const AFieldID: QWord; out TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition); virtual; abstract;
-  end;
-  TThoriumHostObjectTypeClass = class of TThoriumHostObjectType;
-
-  { TThoriumRTTIObjectType }
-
-  (* This is a derivate of TThoriumHostObjectType which uses the RTTI
-     information of a class implementing IThoriumPersistent and some callbacks
-     to publish a class to Thorium. Some optimizations have been made to
-     reduce the overhead of RTTI as much as possible. *)
-  TThoriumRTTIObjectType = class (TThoriumHostObjectType)
-    constructor Create(ALibrary: TThoriumLibrary); override;
-    constructor Create(ALibrary: TThoriumLibrary;
-      ABaseClass: TThoriumPersistentClass; AbstractClass: Boolean = False);
-    constructor Create(ALibrary: TThoriumLibrary; ABaseClass: TClass;
-      MethodCallback: TThoriumRTTIMethodsCallback;
-      StaticMethodCallback: TThoriumRTTIStaticMethodsCallback;
-      AbstractClass: Boolean = False);
-    destructor Destroy; override;
-  private
-    FBaseClass: TClass;
-    FCanUsePersistent: Boolean;
-    FPropCount: SmallInt;
-    FPropList: PPropList;
-    FStaticMethods: array of TThoriumHostFunctionBase;
-    FMethods: array of TThoriumHostMethodBase;
-    FStoringProperties: TStringList;
-  protected
-    procedure CalcHash; override;
-  public
-    procedure ApplyStoring(var AValue: Pointer; MayDecreaseReference: Boolean=
-       True); override;
-    procedure DisposeValue(var AValue: Pointer); override;
-    function DuplicateInstance(const AValue: Pointer): Pointer; override;
-    function FindMethod(const AMethodName: String): TThoriumHostMethodBase;
-       override;
-    function GetFieldID(const FieldIdent: String; out ID: QWord): Boolean;
-       override;
-    function GetFieldStoring(const AFieldID: QWord): Boolean; override;
-    procedure GetFieldType(const AFieldID: QWord; out TypeSpec: TThoriumType;
-       out Access: TThoriumAccessDefinition); override;
-    function GetNewInstance: Pointer; override;
-    function GetPropertyStoring(const PropInfo: PPropInfo): Boolean;
-    function GetPropertyStoring(const PropertyName: String): Boolean;
-    function GetStaticFieldID(const FieldIdent: String; out ID: QWord
-       ): Boolean; override;
-    procedure GetStaticFieldType(const AFieldID: QWord; out
-       TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition); override;
-    procedure DoEnableHostControl(const AValue: TThoriumValue); override;
-    function DoEvaluate(const AValue: TThoriumValue): Boolean; override;
-    function DoGetField(const AValue: TThoriumValue; const AFieldID: QWord
-       ): TThoriumValue; override;
-    procedure DoSetField(const AValue: TThoriumValue;
-              const AFieldID: QWord; const NewValue: TThoriumValue); override;
-    procedure SetPropertyStoring(const PropInfo: PPropInfo; const Storing: Boolean);
-    procedure SetPropertyStoring(const PropertyName: String; const Storing: Boolean);
-  public
-    property BaseClass: TClass read FBaseClass;
-
-    function NewNativeCallMethod(const AName: String;
-      const ACodePointer: Pointer;
-      const AParameters: array of PTypeInfo;
-      const AReturnType: PTypeInfo = nil;
-      const ACallingConvention: TThoriumNativeCallingConvention = ncRegister): TThoriumHostMethodNativeCall;
-    function NewNativeCallStaticMethod(const AName: String;
-      const ACodePointer: Pointer; const ADataPointer: Pointer;
-      const AParameters: array of PTypeInfo;
-      const AReturnType: PTypeInfo = nil;
-      const ACallingConvention: TThoriumNativeCallingConvention = ncRegister): TThoriumHostMethodAsFunctionNativeCall;
-    function NewNativeCallStaticFunction(const AName: String;
-      const ACodePointer: Pointer;
-      const AParameters: array of PTypeInfo;
-      const AReturnType: PTypeInfo = nil;
-      const ACallingConvention: TThoriumNativeCallingConvention = ncRegister): TThoriumHostFunctionNativeCall;
-  end;
-
-  { TThoriumHostRecordType }
-
-  generic TThoriumHostRecordType<RecordType> = class (TThoriumHostObjectType)
-  public
-    constructor Create(ALibrary: TThoriumLibrary); override;
-    constructor Create(ALibrary: TThoriumLibrary;
-      AFields: array of TThoriumHostRecordField);
-    destructor Destroy; override;
-  private
-    FFields: TThoriumHostRecordFields;
-  private
-    function IndexOfFieldDefinition(const AFieldName: String): Integer;
-  protected
-    procedure CalcHash; override;
-  public
-    function CanAssignTo(var Assignment: TThoriumAssignmentDescription;
-       const AnotherType: TThoriumType=nil): Boolean; override;
-    function CanPerformOperation(var Operation: TThoriumOperationDescription;
-       const TheObject: TThoriumType=nil): Boolean; override;
-    procedure DisposeValue(var AValue: Pointer); override;
-    function DuplicateInstance(const AValue: Pointer): Pointer; override;
-    function GetFieldID(const FieldIdent: String; out ID: QWord): Boolean;
-       override;
-    function GetFieldStoring(const AFieldID: QWord): Boolean; override;
-    procedure GetFieldType(const AFieldID: QWord; out
-      TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition);
-      override;
-    function GetNewInstance: Pointer; override;
-    function OpGetField(const AInstance: Pointer; const AFieldID: QWord
-       ): TThoriumValue; override;
-    procedure OpSetField(const AInstance: Pointer; const AFieldID: QWord;
-       const NewValue: TThoriumValue); override;
-  public
-  end;
-  TThoriumHostRecordClass = class of TThoriumHostRecordType;
 
 {%ENDREGION}
 
@@ -1784,8 +1321,8 @@ type
       const AValue: TThoriumString): PThoriumValue;
 
     function RegisterFinishedObjectType(const AName: String;
-      const AInstance: TThoriumHostObjectType;
-      const ATypeInfo: PTypeInfo): TThoriumHostObjectType;
+      const AInstance: TThoriumType;
+      const ATypeInfo: PTypeInfo): TThoriumType;
 
     function RegisterNativeCallFunction(const AName: String;
       const ACodePointer: Pointer; const AParameters: array of PTypeInfo;
@@ -1816,12 +1353,12 @@ type
       const AInitialValue: PThoriumValue = nil): TThoriumLibraryPropertyDirectSetCallback;
 
     function RegisterRTTIType(const AClass: TThoriumPersistentClass;
-      AbstractClass: Boolean = False): TThoriumRTTIObjectType;
+      AbstractClass: Boolean = False): TThoriumType;
 
     function RegisterRTTIType(const AClass: TClass;
       AMethodsCallback: TThoriumRTTIMethodsCallback;
       AStaticMethodsCallback: TThoriumRTTIStaticMethodsCallback;
-      AbstractClass: Boolean = False): TThoriumRTTIObjectType;
+      AbstractClass: Boolean = False): TThoriumType;
 
     function RegisterType(const AName: String; const AInstance: TThoriumType;
       const ATypes: array of PTypeInfo): TThoriumType;
@@ -1833,6 +1370,8 @@ type
     function FindTypeForHostType(const AType: PTypeInfo): TThoriumType;
     class function GetName: String; virtual; abstract;
     procedure LookupIdentifier(const AName: String; var Entries: TThoriumTableEntryResults);
+  public
+    property Thorium: TThorium read FThorium;
   end;
 
   TThoriumLibraryClass = class of TThoriumLibrary;
@@ -1995,9 +1534,9 @@ type
   private
     FStoredTypes: TInterfaceList;
   private
-    function GetTypeFloat: TThoriumTypeFloat;
-    function GetTypeInteger: TThoriumTypeInteger;
-    function GetTypeString: TThoriumTypeString;
+    function GetTypeFloat: TThoriumType;
+    function GetTypeInteger: TThoriumType;
+    function GetTypeString: TThoriumType;
     function IsRegisterInUse(AID: TThoriumRegisterID): Boolean;
     procedure SetRegisterInUse(AID: TThoriumRegisterID; AInUse: Boolean);
   protected
@@ -2007,10 +1546,6 @@ type
     FCodeHook2: PThoriumInstructionArray;
     FError: Boolean;
     FGlobalValueCount: PInteger;
-    FHostFuncUsage: TFPList;
-    FHostFuncRelocations: TFPList;
-    FHostTypeUsage: TFPList;
-    FHostTypeRelocations: TFPList;
     FInstructions: TThoriumInstructions;
     FLastError: String;
     FLibPropUsage: TFPList;
@@ -2031,23 +1566,11 @@ type
     FThorium: TThorium;
     FTypeTable: TFPObjectHashTable;
   protected
-    property TypeInteger: TThoriumTypeInteger read GetTypeInteger;
-    property TypeFloat: TThoriumTypeFloat read GetTypeFloat;
-    property TypeString: TThoriumTypeString read GetTypeString;
+    property TypeInteger: TThoriumType read GetTypeInteger;
+    property TypeFloat: TThoriumType read GetTypeFloat;
+    property TypeString: TThoriumType read GetTypeString;
   protected
-    function AddLibraryPropertyUsage(const AProp: TThoriumLibraryProperty): Integer;
-    function AddLibraryPropertyUsageEx(var TargetArray: TThoriumLibraryPropertyArray;
-        AItem: TThoriumLibraryProperty): Integer;
-    procedure AddLibraryPropertyUsages(const AProp: TThoriumLibraryPropertyArray);
-    function AddLibraryPropertyUsageToRelocate(const AProp: TThoriumLibraryProperty; const AOffset: ptruint): Integer;
     function AddLibraryString(const AStr: String): Integer;
-    function AddHostTypeUsage(const AType: TThoriumHostObjectType): Integer;
-    function AddHostTypeUsageEx(var TargetArray: TThoriumHostObjectTypeArray;
-        AItem: TThoriumHostObjectType): Integer;
-    procedure AddHostTypeUsages(const AUsageArray: TThoriumHostObjectTypeArray);
-    function AddHostTypeUsageToRelocate(const AType: TThoriumHostObjectType; const AOffset: ptruint): Integer;
-    function AddHostFunctionUsage(const AFunc: TThoriumHostCallableBase): Integer;
-    function AddHostFunctionUsageToRelocate(const AFunc: TThoriumHostCallableBase; const AOffset: ptruint): Integer;
     function AddPublicVariable(AName: String): TThoriumVariable;
     function AppendCode(ACodeArray: TThoriumInstructionArray): Integer;
     function AppendCodeEx(const ASource: TThoriumInstructionArray; var ADest: TThoriumInstructionArray): Integer;
@@ -2134,10 +1657,6 @@ type
     FCompiled: Boolean;
     FCompress: Boolean;
     FGlobalValueCount: Integer;
-    FHostFuncUsage: TFPList;
-    FHostFuncRelocations: TFPList;
-    FHostTypeUsage: TFPList;
-    FHostTypeRelocations: TFPList;
     FInstructions: TThoriumInstructions;
     FLastCompilerError: String;
     FLibPropUsage: TFPList;
@@ -2155,13 +1674,7 @@ type
     FStringLibrary: TStringList;
     FThorium: TThorium;
   private
-    function AddLibraryPropertyUsage(const AProp: TThoriumLibraryProperty): Integer;
-    function AddLibraryPropertyUsageToRelocate(const AProp: TThoriumLibraryProperty; const AOffset: ptruint): Integer;
     function AddLibraryString(const AStr: String): Integer;
-    function AddHostTypeUsage(const AType: TThoriumHostObjectType): Integer;
-    function AddHostTypeUsageToRelocate(const AType: TThoriumHostObjectType; const AOffset: ptruint): Integer;
-    function AddHostFunctionUsage(const AFunc: TThoriumHostCallableBase): Integer;
-    function AddHostFunctionUsageToRelocate(const AFunc: TThoriumHostCallableBase; const AOffset: ptruint): Integer;
     procedure ClearAll;
     function GetLibraryString(Index: Integer): String;
     function GetLibraryStringCount: Integer;
@@ -2255,7 +1768,7 @@ type
     constructor Create(const ACompiledFunction: TThoriumFunction);
   private
     FParameterCount: Integer;
-    FPrototype: TThoriumTypeFunction;
+    FPrototype: TThoriumType;
     FHasReturnValue: Boolean;
     FEntryPoint: Integer;
     FModule: TThoriumRuntimeModule;
@@ -2305,9 +1818,9 @@ type
     destructor Destroy; override;
   private
     FThorium: TThorium;
-    FTypeString: TThoriumTypeString;
-    FTypeInteger: TThoriumTypeInteger;
-    FTypeFloat: TThoriumTypeFloat;
+    FTypeString: TThoriumType;
+    FTypeInteger: TThoriumType;
+    FTypeFloat: TThoriumType;
     FModules: TThoriumRuntimeModules;
     FModuleMap: TThoriumRuntimeModuleMap;
     FFunctions: TThoriumRuntimeFunctions;
@@ -2402,9 +1915,9 @@ type
     FOnRequireModule: TThoriumOnRequireModule;
     FOnOpenModule: TThoriumOnOpenModule;
     FVirtualMachine: TThoriumVirtualMachine;
-    FTypeFloat: TThoriumTypeFloat;
-    FTypeInteger: TThoriumTypeInteger;
-    FTypeString: TThoriumTypeString;
+    FTypeFloat: TThoriumType;
+    FTypeInteger: TThoriumType;
+    FTypeString: TThoriumType;
   private
     function GetLibrary(Index: Integer): TThoriumLibrary;
     function GetLibraryCount: Integer;
@@ -2436,9 +1949,9 @@ type
     property OnCompilerOutput: TThoriumOnCompilerOutput read FOnCompilerOutput write FOnCompilerOutput;
     property OnOpenModule: TThoriumOnOpenModule read FOnOpenModule write FOnOpenModule;
     property OnRequireModule: TThoriumOnRequireModule read FOnRequireModule write FOnRequireModule;
-    property TypeFloat: TThoriumTypeFloat read FTypeFloat;
-    property TypeInteger: TThoriumTypeInteger read FTypeInteger;
-    property TypeString: TThoriumTypeString read FTypeString;
+    property TypeFloat: TThoriumType read FTypeFloat;
+    property TypeInteger: TThoriumType read FTypeInteger;
+    property TypeString: TThoriumType read FTypeString;
     property VirtualMachine: TThoriumVirtualMachine read FVirtualMachine;
   end;
 
@@ -2478,7 +1991,8 @@ property DebugMode: Boolean read GetDebugMode;
 implementation
 
 uses
-  ThNativeCall, Thorium_OptimizeJumps, Thorium_OptimizeMoveCopy;
+  ThNativeCall, ThOptimizeJumps, ThOptimizeMoveCopy, ThTypeInt, ThTypeString,
+  ThTypeFunction, ThTypeHostFunction, ThTypeRTTI, ThTypeFloat;
 
 var FDebugMode: Boolean = {$ifdef DebugToConsole}True{$else}False{$endif};
 
@@ -2604,34 +2118,6 @@ var
 begin
   for I := 0 to 15 do
     Write(IntToHex(THash(AHash)[I], 2));
-end;
-
-function OperationInstructionDescription(const AInstruction: TThoriumInstruction;
-  Op1: Integer = 0; Op2: Integer = 1; Target: Integer = 2): TThoriumOperationInstructionDescription;
-begin
-  Result.Instruction := TThoriumInstructionREG(AInstruction);
-  Result.Value1RIOffset := Op1;
-  Result.Value2RIOffset := Op2;
-  Result.TargetRIOffset := Target;
-end;
-
-function AccessDescription(const AInstruction: TThoriumInstruction;
-  AValueRegister: Integer = -1; ATargetRegister: Integer = -1;
-  AExtendedRegister: Integer = -1; AIndexRegister: Integer = -1): TThoriumAccess;
-begin
-  Result.Allowed := True;
-  Result.Instruction := TThoriumInstructionREG(AInstruction);
-  Result.IndexRIOffset := AIndexRegister;
-  Result.ValueRIOffset := AValueRegister;
-  Result.ExtendedRIOffset := AExtendedRegister;
-  Result.TargetRIOffset := ATargetRegister;
-end;
-
-function CreationDescription(const AInstruction: TThoriumInstruction;
-  ATargetRegister: Integer = -1): TThoriumCreateInstructionDescription;
-begin
-  Result.Instruction := TThoriumInstructionREG(AInstruction);
-  Result.TargetRegisterOffset := ATargetRegister;
 end;
 
 function ThoriumValueToStr(const Value: TThoriumValue): String;
@@ -3010,12 +2496,12 @@ begin
   inherited Destroy;
 end;
 
-class procedure TThoriumPersistent.GetMethodList(Sender: TThoriumRTTIObjectType; var Methods: TThoriumRTTIMethods);
+class procedure TThoriumPersistent.GetMethodList(Sender: TObject; var Methods: TThoriumRTTIMethods);
 begin
 
 end;
 
-class procedure TThoriumPersistent.GetStaticMethodList(Sender: TThoriumRTTIObjectType; var Methods: TThoriumRTTIStaticMethods);
+class procedure TThoriumPersistent.GetStaticMethodList(Sender: TObject; var Methods: TThoriumRTTIStaticMethods);
 begin
 
 end;
@@ -3475,8 +2961,8 @@ begin
       AValue.RTTI.DoBitNot(Result);
     end;
 
-    opLen: Result := AValue.RTTI.FThorium.FTypeInteger.CreateFromInt(AValue.RTTI.DoGetLength(A));
-    opString: Result := AValue.RTTI.FThorium.FTypeString.CreateFromString(AValue.RTTI.DoToString(A));
+    opLen: Result := (AValue.RTTI.FThorium.FTypeInteger as TThoriumTypeInteger).CreateFromInt(AValue.RTTI.DoGetLength(A));
+    opString: Result := (AValue.RTTI.FThorium.FTypeString as TThoriumTypeString).CreateFromString(AValue.RTTI.DoToString(A));
     opClone: Result := AValue.RTTI.DoClone(A);
 
     opLogicalAnd: Result := AValue.RTTI.DoLogicalAnd(A, B);
@@ -3548,1656 +3034,6 @@ end;
 function TThoriumTypeSimple.IsEqualTo(const AnotherType: TThoriumType): Boolean;
 begin
   Result := AnotherType.ClassType = ClassType;
-end;
-
-{ TThoriumTypeInteger }
-
-function TThoriumTypeInteger.GetNoneInitialData(out
-  InitialData: TThoriumInitialData): Boolean;
-begin
-  Result := True;
-  InitialData.Int := 0;
-end;
-
-function TThoriumTypeInteger.CreateFromInt(const Int: TThoriumInteger
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := Int;
-end;
-
-function TThoriumTypeInteger.CanAssignTo(
-  var Assignment: TThoriumAssignmentDescription; const AnotherType: TThoriumType
-  ): Boolean;
-begin
-  if AnotherType is TThoriumTypeFloat then
-  begin
-    if not Assignment.Casting then
-      Result := inherited;
-    Assignment.Cast.Needed := True;
-    Assignment.Cast.Instruction := TThoriumInstructionCAST(castif(0, 0));
-    Assignment.Cast.TargetType := AnotherType;
-  end
-  else
-    Result := inherited;
-end;
-
-function TThoriumTypeInteger.CanCreate(const InitialData: TThoriumInitialData;
-  const ToRegister: Boolean; out
-  Instruction: TThoriumCreateInstructionDescription): Boolean;
-begin
-  if ToRegister then
-    Instruction := CreationDescription(int(InitialData.Int, 0), 4)
-  else
-    Instruction := CreationDescription(int_s(InitialData.Int));
-  Result := True;
-end;
-
-function TThoriumTypeInteger.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-
-  function IntIntOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject is TThoriumTypeInteger then
-    begin
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-      Result := True;
-    end
-    else
-      Result := False;
-  end;
-
-  function IntFltOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject is TThoriumTypeFloat then
-    begin
-      Operation.ResultType := TheObject;
-      Operation.Casts[0].Needed := True;
-      Operation.Casts[0].Instruction := TThoriumInstructionCAST(castif(0, 0));
-      Operation.Casts[0].TargetType := Operation.ResultType;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-      Result := True;
-    end
-    else
-      Result := False;
-  end;
-
-  procedure IntOp(Instruction: TThoriumInstruction);
-  begin
-    Operation.ResultType := Self;
-    Operation.Casts[0].Needed := False;
-    Operation.Casts[1].Needed := False;
-    Operation.OperationInstruction := OperationInstructionDescription(Instruction, -1, -1, 0);
-  end;
-
-begin
-  Result := True;
-  if Operation.Operation in opReflexive then
-  begin
-    Operation.ResultType := nil;
-    Operation.Casts[0].Needed := False;
-    Operation.Casts[1].Needed := False;
-    case Operation.Operation of
-      opIncrement:
-        IntOp(inci(0));
-      opDecrement:
-        IntOp(deci(0));
-      opBitNot:
-        IntOp(_not(0));
-      opNegate:
-        IntOp(negi(0));
-      opToNative:
-      begin
-        Assert(ExType <> nil);
-        if ExType^.Kind in [tkInteger,tkChar,tkEnumeration,tkWChar,tkSet,tkInt64,tkQWord] then
-          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0)
-        else
-          Exit(False);
-        Exit;
-      end;
-      opFromNative:
-      begin
-        Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0);
-      end;
-      opFreeNative:
-      begin
-        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), -1, -1, 0);
-      end;
-      opEvaluate:
-      begin
-        Operation.OperationInstruction := OperationInstructionDescription(evali(0), 0, -1, -1);
-        Exit;
-      end;
-    else
-      Result := inherited;
-    end;
-    Exit;
-  end
-  else if TheObject = nil then
-    RaiseMissingTheObject
-  else
-  begin
-    case Operation.Operation of
-      opAddition:
-      begin
-        if IntIntOp(addi(0, 0, 0)) then
-          Exit
-        else if IntFltOp(addf(0, 0, 0)) then
-          Exit;
-      end;
-
-      opSubtraction:
-      begin
-        if IntIntOp(subi(0, 0, 0)) then
-          Exit
-        else if IntFltOp(subf(0, 0, 0)) then
-          Exit;
-      end;
-
-      opMultiplication:
-      begin
-        if IntIntOp(muli(0, 0, 0)) then
-          Exit
-        else if IntFltOp(mulf(0, 0, 0)) then
-          Exit;
-      end;
-
-      opDivision:
-      begin
-        if TheObject is TThoriumTypeInteger then
-        begin
-          Operation.ResultType := FThorium.FTypeFloat;
-          Operation.Casts[0].Needed := True;
-          Operation.Casts[0].Instruction := TThoriumInstructionCAST(castif(0, 0));
-          Operation.Casts[0].TargetType := Operation.ResultType;
-          Operation.Casts[1].Needed := True;
-          Operation.Casts[1].Instruction := TThoriumInstructionCAST(castif(0, 0));
-          Operation.Casts[1].TargetType := Operation.ResultType;
-          Operation.OperationInstruction := OperationInstructionDescription(divf(0, 0, 0));
-          Exit;
-        end
-        else if IntFltOp(divf(0, 0, 0)) then
-          Exit;
-      end;
-
-      opIntegerDivision:
-        if IntIntOp(divi(0, 0, 0)) then
-          Exit;
-
-      opModulus:
-        if IntIntOp(_mod(0, 0, 0)) then
-          Exit;
-
-      opBitOr:
-        if IntIntOp(_or(0, 0, 0)) then
-          Exit;
-
-      opBitXor:
-        if IntIntOp(_xor(0, 0, 0)) then
-          Exit;
-
-      opBitAnd:
-        if IntIntOp(_and(0, 0, 0)) then
-          Exit;
-
-      opBitShl:
-        if IntIntOp(_shl(0, 0, 0)) then
-          Exit;
-
-      opBitShr:
-        if IntIntOp(_shr(0, 0, 0)) then
-          Exit;
-
-      opCmpLessOrEqual, opCmpGreaterOrEqual, opCmpGreater, opCmpLess,
-      opCmpNotEqual, opCmpEqual:
-      begin
-        Operation.ResultType := nil;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        if TheObject is TThoriumTypeInteger then
-        begin
-          Operation.OperationInstruction := OperationInstructionDescription(cmpi(0, 0), 0, 1, -1);
-          Exit;
-        end
-        else if TheObject is TThoriumTypeFloat then
-        begin
-          Operation.OperationInstruction := OperationInstructionDescription(cmpif(0, 0), 0, 1, -1);
-          Exit;
-        end;
-      end;
-
-      opString:
-      begin
-        Operation.ResultType := FThorium.FTypeString;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(tostr_i(0, 0), 0, -1, 1);
-        Exit(True);
-      end;
-    end;
-  end;
-  Result := inherited;
-end;
-
-function TThoriumTypeInteger.CreateValueFromPtr(const Ptr: Pointer
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := PThoriumInteger(Ptr)^;
-end;
-
-function TThoriumTypeInteger.GetNativeCallSpecification(const ForType: PTypeInfo
-  ): TThoriumNativeCallSpecification;
-begin
-  if ForType^.Kind in [tkInt64, tkQWord] then
-    Result.ValueMode := vmInt64
-  else
-    Result.ValueMode := vmInt32;
-  Result.ForceStack := False;
-  Result.Count := 1;
-  Result.RefMode := rmData;
-end;
-
-function TThoriumTypeInteger.DoAddition(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int + BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoBitAnd(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int and BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoBitOr(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int or BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoBitXor(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int xor BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoBitShr(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int shr BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoBitShl(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int shl BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoBitNot(const AValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := not AValue.Int;
-end;
-
-function TThoriumTypeInteger.DoCast(const AValue: TThoriumValue;
-  const TargetType: TThoriumType): TThoriumValue;
-begin
-  if TargetType is TThoriumTypeFloat then
-  begin
-    Result.RTTI := TargetType;
-    Result.Float := AValue.Int;
-  end
-  else
-    raise EThoriumRuntimeException.CreateFmt('Cannot cast %s to %s.', [Name, TargetType.Name]);
-end;
-
-function TThoriumTypeInteger.DoCmpEqual(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeFloat then
-    Result := AValue.Int = BValue.Float
-  else
-    Result := AValue.Int = BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoCmpGreater(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeFloat then
-    Result := AValue.Int > BValue.Float
-  else
-    Result := AValue.Int > BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoCmpGreaterOrEqual(const AValue,
-  BValue: TThoriumValue): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeFloat then
-    Result := AValue.Int >= BValue.Float
-  else
-    Result := AValue.Int >= BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoCmpLess(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeFloat then
-    Result := AValue.Int < BValue.Float
-  else
-    Result := AValue.Int < BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoCmpLessOrEqual(const AValue,
-  BValue: TThoriumValue): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeFloat then
-    Result := AValue.Int <= BValue.Float
-  else
-    Result := AValue.Int <= BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoCmpNotEqual(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeFloat then
-    Result := AValue.Int <> BValue.Float
-  else
-    Result := AValue.Int <> BValue.Int;
-end;
-
-procedure TThoriumTypeInteger.DoDecrement(var ASubject: TThoriumValue);
-begin
-  ASubject.Int -= 1;
-end;
-
-function TThoriumTypeInteger.DoDivision(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := FThorium.FTypeFloat;
-  Result.Float := AValue.Int / BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoEvaluate(const AValue: TThoriumValue): Boolean;
-begin
-  Result := AValue.Int <> 0;
-end;
-
-procedure TThoriumTypeInteger.DoFreeNative(var AValue: TThoriumValue);
-begin
-  AValue.NativeData.Data := nil;
-end;
-
-procedure TThoriumTypeInteger.DoFromNative(var AValue: TThoriumValue);
-begin
-  AValue.NativeData.Data := nil;
-end;
-
-function TThoriumTypeInteger.DoCreate(const InitialData: TThoriumInitialData
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := InitialData.Int;
-end;
-
-procedure TThoriumTypeInteger.DoIncrement(var ASubject: TThoriumValue);
-begin
-  ASubject.Int += 1;
-end;
-
-function TThoriumTypeInteger.DoIntegerDivision(const AValue,
-  BValue: TThoriumValue): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int div BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoModulus(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int mod BValue.Int;
-end;
-
-function TThoriumTypeInteger.DoMultiplication(const AValue,
-  BValue: TThoriumValue): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int * BValue.Int;
-end;
-
-procedure TThoriumTypeInteger.DoNegate(var AValue: TThoriumValue);
-begin
-  AValue.Int := -AValue.Int;
-end;
-
-function TThoriumTypeInteger.DoSubtraction(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := AValue.Int - BValue.Int;
-end;
-
-procedure TThoriumTypeInteger.DoToNative(var AValue: TThoriumValue;
-  const AType: PTypeInfo);
-begin
-  AValue.NativeData.ForType := nil;
-  AValue.NativeData.AlignedSize := 1 * CPU_SIZE_FACTOR;
-  AValue.NativeData.Data := @AValue.Int;
-end;
-
-function TThoriumTypeInteger.DoToString(const AValue: TThoriumValue): String;
-begin
-  Result := IntToStr(AValue.Int);
-end;
-
-{ TThoriumTypeFloat }
-
-function TThoriumTypeFloat.GetNoneInitialData(out
-  InitialData: TThoriumInitialData): Boolean;
-begin
-  Result := True;
-  InitialData.Flt := 0.0;
-end;
-
-function TThoriumTypeFloat.CanCreate(const InitialData: TThoriumInitialData;
-  const ToRegister: Boolean; out
-  Instruction: TThoriumCreateInstructionDescription): Boolean;
-begin
-  if ToRegister then
-    Instruction := CreationDescription(flt(InitialData.Flt, 0), 4)
-  else
-    Instruction := CreationDescription(flt_s(InitialData.Flt));
-  Result := True;
-end;
-
-function TThoriumTypeFloat.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-
-  function FltFltOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject is TThoriumTypeFloat then
-    begin
-      Result := True;
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-    end
-    else
-      Result := False;
-  end;
-
-  function FltIntOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject is TThoriumTypeInteger then
-    begin
-      Result := True;
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := True;
-      Operation.Casts[1].Instruction := TThoriumInstructionCAST(castif(0, 0));
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-    end
-    else
-      Result := False;
-  end;
-
-  procedure FltOp(Instruction: TThoriumInstruction);
-  begin
-    Operation.ResultType := Self;
-    Operation.Casts[0].Needed := False;
-    Operation.Casts[1].Needed := False;
-    Operation.OperationInstruction := OperationInstructionDescription(Instruction, 0, -1, -1);
-  end;
-
-begin
-  Result := True;
-  if Operation.Operation in opReflexive then
-  begin
-    Operation.ResultType := nil;
-    Operation.Casts[0].Needed := False;
-    Operation.Casts[1].Needed := False;
-    case Operation.Operation of
-      opNegate:
-        FltOp(negf(0));
-      opIncrement:
-        FltOp(incf(0));
-      opDecrement:
-        FltOp(decf(0));
-      opToNative:
-      begin
-        if ExType^.Kind in [tkFloat] then
-          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0)
-        else
-          Exit(False);
-        Exit;
-      end;
-      opFromNative:
-      begin
-        Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0);
-      end;
-      opFreeNative:
-      begin
-        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), -1, -1, 0);
-      end;
-    else
-      Result := inherited;
-    end;
-    Exit;
-  end
-  else if TheObject = nil then
-    RaiseMissingTheObject
-  else
-  begin
-    case Operation.Operation of
-      opAddition:
-        if FltFltOp(addf(0, 0, 0)) then
-          Exit
-        else if FltIntOp(addf(0, 0, 0)) then
-          Exit;
-      opSubtraction:
-        if FltFltOp(subf(0, 0, 0)) then
-          Exit
-        else if FltIntOp(subf(0, 0, 0)) then
-          Exit;
-      opMultiplication:
-        if FltFltOp(mulf(0, 0, 0)) then
-          Exit
-        else if FltIntOp(mulf(0, 0, 0)) then
-          Exit;
-      opDivision:
-        if FltFltOp(divf(0, 0, 0)) then
-          Exit
-        else if FltIntOp(divf(0, 0, 0)) then
-          Exit;
-
-      opCmpLessOrEqual, opCmpGreaterOrEqual, opCmpGreater, opCmpLess,
-      opCmpNotEqual, opCmpEqual:
-      begin
-        Operation.ResultType := nil;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        if TheObject is TThoriumTypeInteger then
-        begin
-          Operation.OperationInstruction := OperationInstructionDescription(cmpfi(0, 0), 0, 1, -1);
-          Exit;
-        end
-        else if TheObject is TThoriumTypeFloat then
-        begin
-          Operation.OperationInstruction := OperationInstructionDescription(cmpf(0, 0), 0, 1, -1);
-          Exit;
-        end;
-      end;
-    end;
-  end;
-  Result := inherited;
-end;
-
-function TThoriumTypeFloat.CreateValueFromPtr(const Ptr: Pointer
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Float := PThoriumFloat(Ptr)^;
-end;
-
-function TThoriumTypeFloat.GetNativeCallSpecification(const ForType: PTypeInfo
-  ): TThoriumNativeCallSpecification;
-begin
-  Result.Count := 1;
-  Result.ForceStack := False;
-  Result.ValueMode := vmFloat;
-  Result.RefMode := rmData;
-  case GetTypeData(ForType)^.FloatType of
-    ftSingle:
-      Result.FloatMode := fmAsSingle;
-    ftDouble:
-      Result.FloatMode := fmAsDouble;
-    ftExtended:
-      Result.FloatMode := fmAsExtended;
-  else
-    raise EThoriumException.CreateFmt('Invalid float type: ''%s''.', [ForType^.Name]);
-  end;
-end;
-
-function TThoriumTypeFloat.DoAddition(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Float := AValue.Float + BValue.Float;
-end;
-
-function TThoriumTypeFloat.DoCmpEqual(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeInteger then
-    Result := AValue.Float = BValue.Int
-  else
-    Result := AValue.Float = BValue.Float;
-end;
-
-function TThoriumTypeFloat.DoCmpGreater(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeInteger then
-    Result := AValue.Float > BValue.Int
-  else
-    Result := AValue.Float > BValue.Float;
-end;
-
-function TThoriumTypeFloat.DoCmpGreaterOrEqual(const AValue,
-  BValue: TThoriumValue): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeInteger then
-    Result := AValue.Float >= BValue.Int
-  else
-    Result := AValue.Float >= BValue.Float;
-end;
-
-function TThoriumTypeFloat.DoCmpLess(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeInteger then
-    Result := AValue.Float < BValue.Int
-  else
-    Result := AValue.Float < BValue.Float;
-end;
-
-function TThoriumTypeFloat.DoCmpLessOrEqual(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeInteger then
-    Result := AValue.Float <= BValue.Int
-  else
-    Result := AValue.Float <= BValue.Float;
-end;
-
-function TThoriumTypeFloat.DoCmpNotEqual(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  if BValue.RTTI is TThoriumTypeInteger then
-    Result := AValue.Float <> BValue.Int
-  else
-    Result := AValue.Float <> BValue.Float;
-end;
-
-function TThoriumTypeFloat.DoCreate(const InitialData: TThoriumInitialData
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Int := InitialData.Int;
-end;
-
-procedure TThoriumTypeFloat.DoDecrement(var ASubject: TThoriumValue);
-begin
-  ASubject.Float -= 1;
-end;
-
-function TThoriumTypeFloat.DoDivision(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Float := AValue.Float / BValue.Float;
-end;
-
-procedure TThoriumTypeFloat.DoFreeNative(var AValue: TThoriumValue);
-begin
-  if AValue.NativeData.ForType <> nil then
-    FreeMem(AValue.NativeData.Data);
-  AValue.NativeData.Data := nil;
-end;
-
-procedure TThoriumTypeFloat.DoFromNative(var AValue: TThoriumValue);
-begin
-  if AValue.NativeData.ForType = nil then
-  begin
-    AValue.NativeData.Data := nil;
-    Exit;
-  end;
-  case GetTypeData(AValue.NativeData.ForType)^.FloatType of
-    ftSingle:
-    begin
-      AValue.Float := PSingle(AValue.NativeData.Data)^;
-    end;
-    ftExtended:
-    begin
-      AValue.Float := PExtended(AValue.NativeData.Data)^;
-    end;
-    ftComp:
-    begin
-      AValue.Float := PComp(AValue.NativeData.Data)^;
-    end;
-    ftCurr:
-    begin
-      AValue.Float := PCurrency(AValue.NativeData.Data)^;
-    end;
-  end;
-  FreeMem(AValue.NativeData.Data);
-  AValue.NativeData.Data := nil;
-  AValue.NativeData.ForType := nil;
-end;
-
-procedure TThoriumTypeFloat.DoIncrement(var ASubject: TThoriumValue);
-begin
-  ASubject.Float += 1;
-end;
-
-procedure TThoriumTypeFloat.DoNegate(var AValue: TThoriumValue);
-begin
-  AValue.Float := -AValue.Float;
-end;
-
-function TThoriumTypeFloat.DoMultiplication(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Float := AValue.Float * BValue.Float;
-end;
-
-function TThoriumTypeFloat.DoSubtraction(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  Result.Float := AValue.Float - BValue.Float;
-end;
-
-procedure TThoriumTypeFloat.DoToNative(var AValue: TThoriumValue;
-  const AType: PTypeInfo);
-var
-  Size: SizeUInt;
-begin
-  AValue.NativeData.ForType := AType;
-  case GetTypeData(AType)^.FloatType of
-    ftSingle:
-    begin
-      AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Single)));
-      AValue.NativeData.AlignedSize := 1;
-      {$ifdef CPU64}
-      PDWord(AValue.NativeData.Data)[1] := 0;
-      {$endif}
-      PSingle(AValue.NativeData.Data)^ := AValue.Float;
-    end;
-    ftDouble:
-    begin
-      AValue.NativeData.ForType := nil;
-      AValue.NativeData.AlignedSize := 1 * CPU_SIZE_FACTOR;
-      AValue.NativeData.Data := @AValue.Float;
-    end;
-{ TODO : Fix passing of Extended float type. }
-    {
-    ftExtended:
-    begin
-      Size := FitStackSize(SizeOf(Extended));
-      AValue.NativeData.Data := GetMem(Size);
-      FillDWord(AValue.NativeData.Data^, Size shr 2, 0);
-      AValue.NativeData.AlignedSize := Size shr ({$ifdef CPU64}3{$else}2{$endif});
-      PWord(AValue.NativeData.Data)[3] := PWord(@AValue.Float)[0];
-      PWord(AValue.NativeData.Data)[4] := PWord(@AValue.Float)[1];
-      PWord(AValue.NativeData.Data)[5] := PWord(@AValue.Float)[2];
-      PWord(AValue.NativeData.Data)[6] := PWord(@AValue.Float)[3];
-      PWord(AValue.NativeData.Data)[7] := PWord(@AValue.Float)[4];
-      //PExtended(AValue.NativeData.Data)^ := AValue.Float;
-    end;
-    ftComp:
-    begin
-      AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Comp)));
-      AValue.NativeData.AlignedSize := ceil(SizeOf(Comp) / STACK_SLOT_SIZE);
-      PComp(AValue.NativeData.Data)^ := AValue.Float;
-    end;
-    ftCurr:
-    begin
-      AValue.NativeData.Data := GetMem(FitStackSize(SizeOf(Currency)));
-      AValue.NativeData.AlignedSize := ceil(SizeOf(Currency) / STACK_SLOT_SIZE);
-      PCurrency(AValue.NativeData.Data)^ := AValue.Float;
-    end;
-    }
-  else
-    raise EThoriumRuntimeException.CreateFmt('Cannot convert to this native float type: %s.', [GetEnumName(TypeInfo(TFloatType), Ord(GetTypeData(AType)^.FloatType))]);
-  end;
-end;
-
-function TThoriumTypeFloat.DoToString(const AValue: TThoriumValue): String;
-begin
-  Result := FloatToStr(AValue.Float, THORIUM_NUMBER_FORMAT);
-end;
-
-{ TThoriumTypeString }
-
-function TThoriumTypeString.GetNoneInitialData(out
-  InitialData: TThoriumInitialData): Boolean;
-begin
-  Result := True;
-  InitialData.Int := -1;
-end;
-
-function TThoriumTypeString.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkString;
-end;
-
-function TThoriumTypeString.CreateFromString(const Str: String): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  New(Result.Str);
-  Result.Str^ := Str;
-end;
-
-function TThoriumTypeString.CanCreate(const InitialData: TThoriumInitialData;
-  const ToRegister: Boolean; out
-  Instruction: TThoriumCreateInstructionDescription): Boolean;
-begin
-  if ToRegister then
-  begin
-    if InitialData.Int < 0 then
-      Instruction := CreationDescription(str(0), 0)
-    else
-      Instruction := CreationDescription(strl(InitialData.Int, 0), 2);
-  end
-  else
-  begin
-    if InitialData.Int < 0 then
-      Instruction := CreationDescription(str_s())
-    else
-      Instruction := CreationDescription(strl_s(InitialData.Int));
-  end;
-  Result := True;
-end;
-
-function TThoriumTypeString.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-
-  function StrStrOp(Instruction: TThoriumInstruction): Boolean;
-  begin
-    if TheObject is TThoriumTypeString then
-    begin
-      Result := True;
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction);
-    end
-    else
-      Result := False;
-  end;
-
-  function StrIndexOp(Instruction: TThoriumInstruction; AOp1, AOp2, ATarget: Integer): Boolean;
-  begin
-    if TheObject is TThoriumTypeInteger then
-    begin
-      Result := True;
-      Operation.ResultType := Self;
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(Instruction, AOp1, AOp2, ATarget);
-    end
-    else
-      Result := False;
-  end;
-
-begin
-  Result := True;
-  if Operation.Operation in opReflexive then
-  begin
-    Operation.ResultType := nil;
-    Operation.Casts[0].Needed := False;
-    Operation.Casts[1].Needed := False;
-    case Operation.Operation of
-      opString:
-      begin
-        NewNonCastOperation(Operation);
-        Operation.ResultType := Self;
-        Operation.OperationInstruction := OperationInstructionDescription(copyr(0, 0), 0, -1, 1);
-        Exit(True);
-      end;
-      opLen:
-      begin
-        NewNonCastOperation(Operation);
-        Operation.ResultType := FThorium.FTypeInteger;
-        Operation.OperationInstruction := OperationInstructionDescription(len_s(0, 0), 0, -1, 1);
-        Exit(True);
-      end;
-      opToNative:
-      begin
-        if ExType^.Kind in [tkAString] then
-          Operation.OperationInstruction := OperationInstructionDescription(x2n(0, ExType), -1, -1, 0)
-        else
-          Exit(False);
-        Exit;
-      end;
-      opFromNative:
-      begin
-        Operation.OperationInstruction := OperationInstructionDescription(n2x(0), -1, -1, 0);
-        Exit;
-      end;
-      opFreeNative:
-      begin
-        Operation.OperationInstruction := OperationInstructionDescription(clrn(0), -1, -1, 0);
-        Exit;
-      end;
-    else
-      Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
-    end;
-  end
-  else if TheObject = nil then
-    RaiseMissingTheObject
-  else
-  begin
-    case Operation.Operation of
-      opAddition:
-        if StrStrOp(adds(0, 0, 0)) then
-          Exit;
-      opIndexedRead:
-        if StrIndexOp(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0), -1, -1, -1) then
-          Exit;
-
-      opCmpEqual, opCmpGreater, opCmpGreaterOrEqual, opCmpLess,
-      opCmpLessOrEqual, opCmpNotEqual:
-      begin
-        if (TheObject is TThoriumTypeString) then
-        begin
-          Operation.ResultType := nil;
-          Operation.Casts[0].Needed := False;
-          Operation.Casts[1].Needed := False;
-          Operation.OperationInstruction := OperationInstructionDescription(cmps(0, 0), 0, 1, -1);
-          Exit;
-        end;
-      end;
-    end;
-  end;
-  Result := inherited;
-end;
-
-function TThoriumTypeString.CreateValueFromPtr(const Ptr: Pointer
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  New(Result.Str);
-  Result.Str^ := PThoriumString(Ptr)^;
-end;
-
-function TThoriumTypeString.DuplicateValue(const Input: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  New(Result.Str);
-  Result.Str^ := Input.Str^;
-end;
-
-function TThoriumTypeString.GetNativeCallSpecification(const ForType: PTypeInfo
-  ): TThoriumNativeCallSpecification;
-begin
-  Result.Count := 1;
-  Result.ForceStack := False;
-  Result.ValueMode := vmString;
-  Result.RefMode := rmData;
-end;
-
-function TThoriumTypeString.HasIndexedAccess: Boolean;
-begin
-  Result := True;
-end;
-
-function TThoriumTypeString.HasFieldAccess: Boolean;
-begin
-  Result := True;
-end;
-
-function TThoriumTypeString.NeedsClear: Boolean;
-begin
-  Result := True;
-end;
-
-function TThoriumTypeString.DoAddition(const AValue, BValue: TThoriumValue
-  ): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  New(Result.Str);
-  Result.Str^ := AValue.Str^ + BValue.Str^;
-end;
-
-function TThoriumTypeString.DoCmpEqual(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  Result := AValue.Str^ = BValue.Str^;
-end;
-
-function TThoriumTypeString.DoCmpGreater(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  Result := AValue.Str^ > BValue.Str^;
-end;
-
-function TThoriumTypeString.DoCmpGreaterOrEqual(const AValue,
-  BValue: TThoriumValue): Boolean;
-begin
-  Result := AValue.Str^ >= BValue.Str^;
-end;
-
-function TThoriumTypeString.DoCmpLess(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  Result := AValue.Str^ < BValue.Str^;
-end;
-
-function TThoriumTypeString.DoCmpLessOrEqual(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  Result := AValue.Str^ <= BValue.Str^;
-end;
-
-function TThoriumTypeString.DoCmpNotEqual(const AValue, BValue: TThoriumValue
-  ): Boolean;
-begin
-  Result := AValue.Str^ <> BValue.Str^;
-end;
-
-procedure TThoriumTypeString.DoFree(var AValue: TThoriumValue);
-begin
-  Dispose(AValue.Str);
-  AValue.RTTI := nil;
-end;
-
-procedure TThoriumTypeString.DoFreeNative(var AValue: TThoriumValue);
-begin
-
-end;
-
-procedure TThoriumTypeString.DoFromNative(var AValue: TThoriumValue);
-begin
-
-end;
-
-function TThoriumTypeString.DoGetField(const AValue: TThoriumValue;
-  const AFieldID: QWord): TThoriumValue;
-begin
-  {$ifdef DebugToConsole}
-  case AFieldID of
-    0:
-    begin
-      Result.RTTI := FThorium.FTypeInteger;
-      Result.Int := Length(AValue.Str^);
-    end;
-  end;
-  {$else}
-  case AFieldID of
-    0: Result.Int := Length(AValue.Str^);
-  end;
-  {$endif}
-end;
-
-function TThoriumTypeString.DoGetIndexed(const AValue: TThoriumValue;
-  const AIndex: TThoriumValue): TThoriumValue;
-begin
-  Result.RTTI := Self;
-  New(Result.Str);
-  Result.Str^ := AValue.Str^[AIndex.Int];
-end;
-
-procedure TThoriumTypeString.DoToNative(var AValue: TThoriumValue;
-  const AType: PTypeInfo);
-begin
-  AValue.NativeData.AlignedSize := 1;
-  AValue.NativeData.Data := AValue.Str;
-end;
-
-function TThoriumTypeString.DoToString(const AValue: TThoriumValue): String;
-begin
-  Result:=AValue.Str^;
-end;
-
-{ TThoriumTypeFunction }
-
-constructor TThoriumTypeFunction.Create;
-begin
-  FParameters := TThoriumParameters.Create;
-  FReturnType := nil;
-end;
-
-destructor TThoriumTypeFunction.Destroy;
-begin
-  FReturnType := nil;
-  FParameters.Free;
-  inherited Destroy;
-end;
-
-function TThoriumTypeFunction.GetHasReturnValue: Boolean;
-begin
-  Result := FReturnType <> nil;
-end;
-
-function TThoriumTypeFunction.GetHasReturnValueInt: Integer;
-begin
-  if HasReturnValue then
-    Result := 1
-  else
-    Result := 0;
-end;
-
-procedure TThoriumTypeFunction.Assign(ASource: TThoriumTypeFunction);
-begin
-  FParameters.Assign(ASource.FParameters);
-  FReturnType := ASource.ReturnType;
-end;
-
-function TThoriumTypeFunction.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkFunction;
-end;
-
-function TThoriumTypeFunction.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-begin
-  if Operation.Operation = opCall then
-  begin
-    Operation.Casts[0].Needed := False;
-    Operation.Casts[1].Needed := False;
-    Operation.OperationInstruction := OperationInstructionDescription(call(0, 0), 1, -1, 0);
-    Operation.ResultType := FReturnType;
-    Result := True;
-  end
-  else
-    Result := inherited;
-end;
-
-function TThoriumTypeFunction.GetParameters: TThoriumParameters;
-begin
-  Result := FParameters;
-end;
-
-function TThoriumTypeFunction.GetReturnType: TThoriumType;
-begin
-  Result := FReturnType;
-end;
-
-function TThoriumTypeFunction.IsEqualTo(const AnotherType: TThoriumType
-  ): Boolean;
-begin
-  raise EThoriumException.Create('TThoriumTypeFunction.IsEqualTo not implemented yet.');
-end;
-
-{ TThoriumTypeHostFunction }
-
-constructor TThoriumTypeHostFunction.Create(const AThorium: TThorium;
-  const AHostFunction: TThoriumHostCallableBase);
-var
-  I: Integer;
-  TypeSpec: TThoriumType;
-  Op: TThoriumOperationDescription;
-begin
-  inherited Create(AThorium);
-  FHostFunction := AHostFunction;
-  FParameters := TThoriumParameters.Create;
-  for I := 0 to AHostFunction.FParameters.Count - 1 do
-  begin
-    TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(AHostFunction.FParameters.GetParameter(I));
-    if TypeSpec = nil then
-      raise EThoriumException.CreateFmt('Cannot find respective thorium type for %s.', [AHostFunction.FParameters.GetParameter(I)^.Name]);
-    if AHostFunction.NeedsNativeData then
-    begin;
-      Op.Operation := opToNative;
-      if not TypeSpec.CanPerformOperation(Op, nil, '', AHostFunction.FParameters.Parameters[I]) then
-        raise EThoriumException.CreateFmt('''%s'' cannot be passed to this native call function (opToNative not supported for ''%s'').', [TypeSpec.Name, AHostFunction.FParameters.GetParameter(I)^.Name]);
-      Op.Operation := opFromNative;
-      if not TypeSpec.CanPerformOperation(Op) then
-        raise EThoriumException.CreateFmt('''%s'' cannot be passed to a native call function (opFromNative not supported).', [TypeSpec.Name]);
-    end;
-    FParameters.Add(TypeSpec);
-  end;
-  if AHostFunction.ReturnType.HostType <> nil then
-  begin
-    TypeSpec := AHostFunction.FLibrary.DeepFindTypeForHostType(AHostFunction.FReturnType.HostType);
-    if TypeSpec = nil then
-      raise EThoriumException.CreateFmt('Cannot find respective thorium type for %s.', [AHostFunction.ReturnType.HostType^.Name]);
-    if AHostFunction.NeedsNativeData then
-    begin;
-      Op.Operation := opToNative;
-      if not TypeSpec.CanPerformOperation(Op, nil, '', AHostFunction.ReturnType.HostType) then
-        raise EThoriumException.CreateFmt('''%s'' cannot be return type of this native call function (opToNative not supported for ''%s'').', [TypeSpec.Name, AHostFunction.ReturnType.HostType^.Name]);
-      Op.Operation := opFromNative;
-      if not TypeSpec.CanPerformOperation(Op) then
-        raise EThoriumException.CreateFmt('''%s'' cannot be return type of a native call function (opFromNative not supported).', [TypeSpec.Name]);
-    end;
-    FReturnType := TypeSpec;
-  end
-  else
-    FReturnType := nil;
-end;
-
-destructor TThoriumTypeHostFunction.Destroy;
-begin
-  FParameters.Free;
-  inherited Destroy;
-end;
-
-function TThoriumTypeHostFunction.GetHasReturnValue: Boolean;
-begin
-  Result := FReturnType <> nil;
-end;
-
-function TThoriumTypeHostFunction.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkHostFunction;
-end;
-
-function TThoriumTypeHostFunction.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-begin
-  case Operation.Operation of
-    opCall:
-    begin
-      Operation.Casts[0].Needed := False;
-      Operation.Casts[1].Needed := False;
-      Operation.OperationInstruction := OperationInstructionDescription(xcall(0, 0), 1, -1, 0);
-      Operation.ResultType := FReturnType;
-      Result := True;
-    end;
-  else
-    Result := False;
-  end;
-end;
-
-function TThoriumTypeHostFunction.GetParameters: TThoriumParameters;
-begin
-  Result := FParameters;
-end;
-
-function TThoriumTypeHostFunction.GetHostParameters: TThoriumHostParameters;
-begin
-  Result := HostFunction.Parameters;
-end;
-
-function TThoriumTypeHostFunction.GetReturnType: TThoriumType;
-begin
-  Result := FReturnType;
-end;
-
-function TThoriumTypeHostFunction.GetHostReturnType: TThoriumHostType;
-begin
-  Result := HostFunction.ReturnType;
-end;
-
-function TThoriumTypeHostFunction.IsEqualTo(const AnotherType: TThoriumType
-  ): Boolean;
-begin
-  raise EThoriumException.Create('TThoriumTypeHostFunction.IsEqualTo not implemented yet.');
-end;
-
-function TThoriumTypeHostFunction.NeedsNativeData: Boolean;
-begin
-  Exit(FHostFunction.NeedsNativeData);
-end;
-
-{ TThoriumTypeHostType }
-
-constructor TThoriumTypeHostType.Create(const AThorium: TThorium;
-  const AHostType: TThoriumHostObjectType);
-begin
-  inherited Create(AThorium);
-  FHostType := AHostType;
-end;
-
-function TThoriumTypeHostType.GetTypeKind: TThoriumTypeKind;
-begin
-  Result:=tkHostType;
-end;
-
-function TThoriumTypeHostType.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-begin
-  raise EThoriumException.Create('Not implemented yet.');
-end;
-
-function TThoriumTypeHostType.IsEqualTo(const AnotherType: TThoriumType
-  ): Boolean;
-begin
-  raise EThoriumException.Create('Not implemented yet.');
-end;
-
-{ TThoriumTypeStruct }
-
-constructor TThoriumTypeStruct.Create(AThorium: TThorium);
-begin
-  inherited Create(AThorium);
-  FCount := 0;
-end;
-
-destructor TThoriumTypeStruct.Destroy;
-begin
-  inherited Destroy;
-end;
-
-procedure TThoriumTypeStruct.Expand;
-begin
-  SetLength(FFields, Length(FFields) + 8);
-end;
-
-function TThoriumTypeStruct.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkStruct;
-end;
-
-function TThoriumTypeStruct.Add(const AName: String; const ValueType: TThoriumType): Integer;
-begin
-  if ValueType.UsesType(Self) then
-    raise EThoriumException.Create('Cannot cross-refer types in structs.');
-  if FCount = Length(FFields) then
-    Expand;
-  FFields[FCount].Name := AName;
-  FFields[FCount].ValueType := ValueType;
-  FFields[FCount].Offset := SizeOf(TThoriumValue) * FCount;
-  Result := FCount;
-  Inc(FCount);
-end;
-
-function TThoriumTypeStruct.Add(const AReference: TThoriumStructFieldDefinition
-  ): Integer;
-begin
-  Result := Add(AReference.Name, AReference.ValueType);
-end;
-
-function TThoriumTypeStruct.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-begin
-  Result := inherited CanPerformOperation(Operation, TheObject);
-end;
-
-procedure TThoriumTypeStruct.Delete(const AIndex: Integer);
-var
-  I: Integer;
-begin
-  if (AIndex < 0) or (AIndex >= FCount) then
-    raise EListError.CreateFmt('List index (%d) out of bounds (0…%d)', [AIndex, 0, FCount - 1]);
-  FFields[AIndex].Name := '';
-  FFields[AIndex].ValueType := nil;
-  for I := AIndex + 1 to FCount - 1 do
-  begin
-    FFields[I-1].Name := FFields[I].Name;
-    FFields[I-1].ValueType := FFields[I].ValueType;
-  end;
-  FFields[FCount-1].Name := '';
-  FFields[FCount-1].ValueType := nil;
-  Dec(FCount);
-end;
-
-function TThoriumTypeStruct.IndexOf(const AName: String): Integer;
-begin
-  for Result := 0 to FCount - 1 do
-    if FFields[Result].Name = AName then
-      Exit;
-  Result := -1;
-end;
-
-function TThoriumTypeStruct.IsEqualTo(const AnotherType: TThoriumType): Boolean;
-var
-  OtherInstance: TThoriumTypeStruct;
-  I: Integer;
-begin
-  if not (AnotherType is TThoriumTypeStruct) then
-    Exit(False);
-  OtherInstance := TThoriumTypeStruct(AnotherType);
-  if OtherInstance.FCount <> FCount then
-    Exit(False);
-  for I := 0 to FCount - 1 do
-  begin
-    if OtherInstance.FFields[I].Name <> Self.FFields[I].Name then
-      Exit(False);
-    if OtherInstance.FFields[I].ValueType <> Self.FFields[I].ValueType then
-      Exit(False);
-    if OtherInstance.FFields[I].Offset <> Self.FFields[I].Offset then
-      Exit(False);
-  end;
-  Result := True;
-end;
-
-function TThoriumTypeStruct.NeedsClear: Boolean;
-begin
-  Result := True;
-end;
-
-function TThoriumTypeStruct.UsesType(const AnotherType: TThoriumType;
-  MayRecurse: Boolean): Boolean;
-var
-  I: Integer;
-begin
-  for I := 0 to FCount - 1 do
-  begin
-    if FFields[I].ValueType.IsEqualTo(AnotherType) then
-      Exit(True)
-    else if MayRecurse and FFields[I].ValueType.UsesType(AnotherType) then
-      Exit(True);
-  end;
-  Result := False;
-end;
-
-{ TThoriumTypeArray }
-
-constructor TThoriumTypeArray.Create(const AThorium: TThorium;
-  const AValueType: TThoriumType);
-begin
-  inherited Create(AThorium);
-  FValueType := AValueType;
-end;
-
-function TThoriumTypeArray.GetTypeKind: TThoriumTypeKind;
-begin
-  Result := tkArray;
-end;
-
-function TThoriumTypeArray.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-begin
-  if Operation.Operation in opReflexive then
-  begin
-    case Operation.Operation of
-      opLen:
-      begin
-        Operation.ResultType := FThorium.FTypeInteger;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(len_a(0, 0), 0, -1, 1);
-        Exit(True);
-      end;
-      opDevolatile:
-      begin
-        Operation.ResultType := nil;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(update_x(0), -1, -1, 0);
-        Exit(True);
-      end;
-    end;
-  end
-  else if (Operation.Operation in opIndexedAccess) and (TheObject is TThoriumTypeInteger) then
-  begin
-    case Operation.Operation of
-      opIndexedRead:
-      begin
-        Operation.ResultType := FValueType;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(xiget(0, 0, 0), 1, 0, 2);
-        Exit(True);
-      end;
-      opIndexedWrite:
-      begin
-        Operation.ResultType := FValueType;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(xiset(0, 0, 0), 1, 0, 2);
-        Exit(True);
-      end;
-    end;
-  end
-  else if TheObject.IsEqualTo(Self) then
-  begin
-    case Operation.Operation of
-      opAddition:
-      begin
-        Operation.ResultType := Self;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
-        Exit(True);
-      end;
-      opMultiplication:
-      begin
-        Operation.ResultType := Self;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
-        Exit(True);
-      end;
-      opCmpEqual:
-      begin
-        Operation.ResultType := FThorium.FTypeInteger;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
-        Exit(True);
-      end;
-      opCmpNotEqual:
-      begin
-        Operation.ResultType := FThorium.FTypeInteger;
-        Operation.Casts[0].Needed := False;
-        Operation.Casts[1].Needed := False;
-        Operation.OperationInstruction := OperationInstructionDescription(TThoriumInstruction(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0)), 0, 0, 0);
-        Exit(True);
-      end;
-    else
-      Exit(False);
-    end;
-  end;
-  Result := False;
-end;
-
-function TThoriumTypeArray.IsEqualTo(const AnotherType: TThoriumType): Boolean;
-begin
-  Result := (AnotherType is TThoriumTypeArray) and (TThoriumTypeArray(AnotherType).FValueType.IsEqualTo(FValueType));
-end;
-
-function TThoriumTypeArray.HasIndexedAccess: Boolean;
-begin
-  Result := True;
-end;
-
-function TThoriumTypeArray.NeedsClear: Boolean;
-begin
-  Result := True;
-end;
-
-{ TThoriumTypeDynamicArray }
-
-function TThoriumTypeDynamicArray.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-begin
-  case Operation.Operation of
-    opAppend:
-    begin
-      if not TheObject.IsEqualTo(FValueType) then
-        Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
-      NewNonCastOperation(Operation);
-      Operation.ResultType := nil;
-      Operation.OperationInstruction := OperationInstructionDescription(noop(THORIUM_NOOPMARK_NOT_IMPLEMENTED_YET, 0, 0, 0), -1, -1, -1);
-      Exit(True);
-    end;
-  else
-    Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
-  end;
-end;
-
-function TThoriumTypeDynamicArray.DoGetIndexed(const AValue: TThoriumValue;
-  const AIndex: TThoriumValue): TThoriumValue;
-begin
-  if (AIndex.Int < 0) or (AIndex.Int > High(AValue.DynamicArray^)) then
-    raise EThoriumRuntimeException.CreateFmt('Dynamic array index %d out of bounds (%d..%d)', [AIndex.Int, 0, High(AValue.DynamicArray^)]);
-  Result := AValue.DynamicArray^[AIndex.Int];
-end;
-
-function TThoriumTypeDynamicArray.DoGetLength(const AValue: TThoriumValue): Integer;
-begin
-  Result := Length(AValue.DynamicArray^);
-end;
-
-procedure TThoriumTypeDynamicArray.DoSetIndexed(const AValue: TThoriumValue;
-  const AIndex: TThoriumValue; const NewValue: TThoriumValue);
-begin
-  if (AIndex.Int < 0) or (AIndex.Int > High(AValue.DynamicArray^)) then
-    raise EThoriumRuntimeException.CreateFmt('Dynamic array index %d out of bounds (%d..%d)', [AIndex.Int, 0, High(AValue.DynamicArray^)]);
-  ThoriumFreeValue(AValue.DynamicArray^[AIndex.Int]);
-  AValue.DynamicArray^[AIndex.Int] := ThoriumDuplicateValue(NewValue);
-end;
-
-{ TThoriumTypeStaticArray }
-
-constructor TThoriumTypeStaticArray.Create(const AThorium: TThorium;
-  const AValueType: TThoriumType; Count: Integer);
-begin
-  if Count <= 0 then
-    raise EThoriumException.CreateFmt('Cannot create a static array type with a length of %d.', [Count]);
-  inherited Create(AThorium, AValueType);
-  FCount := Count;
-end;
-
-function TThoriumTypeStaticArray.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType;
-  const ExName: String; const ExType: PTypeInfo): Boolean;
-begin
-  Result := inherited;
-  if Operation.Operation in [opAddition, opMultiplication] then
-    Exit(False);
-  if Operation.Operation = opLen then
-    Operation.OperationInstruction := OperationInstructionDescription(int(FCount, 0), -1, -1, 4);
-end;
-
-function TThoriumTypeStaticArray.IsEqualTo(const AnotherType: TThoriumType
-  ): Boolean;
-begin
-  Result := (AnotherType is TThoriumTypeStaticArray) and
-    (TThoriumTypeStaticArray(AnotherType).FCount = FCount) and
-    (TThoriumTypeStaticArray(AnotherType).FValueType.IsEqualTo(FValueType));
-end;
-
-function TThoriumTypeStaticArray.DoGetIndexed(const AValue: TThoriumValue;
-  const AIndex: TThoriumValue): TThoriumValue;
-begin
-  if (AIndex.Int < 0) or (AIndex.Int >= FCount) then
-    raise EThoriumRuntimeException.CreateFmt('Static array index %d out of bounds (%d..%d)', [AIndex.Int, 0, FCount-1]);
-  Result := AValue.StaticArray^[AIndex.Int];
-end;
-
-function TThoriumTypeStaticArray.DoGetLength(const AValue: TThoriumValue
-  ): Integer;
-begin
-  Result := FCount;
-end;
-
-procedure TThoriumTypeStaticArray.DoSetIndexed(const AValue: TThoriumValue;
-  const AIndex: TThoriumValue; const NewValue: TThoriumValue);
-begin
-  if (AIndex.Int < 0) or (AIndex.Int >= FCount) then
-    raise EThoriumRuntimeException.CreateFmt('Static array index %d out of bounds (%d..%d)', [AIndex.Int, 0, FCount-1]);
-  ThoriumFreeValue(AValue.StaticArray^[AIndex.Int]);
-  AValue.StaticArray^[AIndex.Int] := ThoriumDuplicateValue(NewValue);
 end;
 
 {%ENDREGION}
@@ -5348,7 +3184,7 @@ begin
   Result.FNestingLevel := FNestingLevel;
   Result.FPrototyped := False;
   Result.FVisibilityLevel := FVisibilityLevel;
-  Result.FPrototype.Assign(FPrototype);
+  (Result.FPrototype as TThoriumTypeFunction).Assign(FPrototype as TThoriumTypeFunction);
 end;
 
 (*function TThoriumFunction.AsEvent(AParameters: array of TThoriumHostType;
@@ -5420,641 +3256,6 @@ end;
 {%ENDREGION}
 
 {%REGION 'Host class types' /fold}
-
-{ TThoriumHostObjectType }
-
-constructor TThoriumHostObjectType.Create(ALibrary: TThoriumLibrary);
-begin
-  inherited Create(ALibrary.FThorium);
-  FLibrary := ALibrary;
-  FHashGenerated := False;
-end;
-
-destructor TThoriumHostObjectType.Destroy;
-begin
-  inherited Destroy;
-end;
-
-function TThoriumHostObjectType.FindMethod(const AMethodName: String
-  ): TThoriumHostMethodBase;
-begin
-  Result := nil;
-end;
-
-function TThoriumHostObjectType.GetFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-begin
-  Result := False;
-end;
-
-function TThoriumHostObjectType.GetIndexType(const IndexType: TThoriumType; out
-  TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition): Boolean;
-begin
-  Result := False;
-end;
-
-function TThoriumHostObjectType.GetStaticFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-begin
-  Result := False;
-end;
-
-{ TThoriumRTTIObjectType }
-
-constructor TThoriumRTTIObjectType.Create(ALibrary: TThoriumLibrary);
-begin
-  raise EThoriumException.Create('TThoriumRTTIObjectType must not be created without BaseClass.');
-end;
-
-constructor TThoriumRTTIObjectType.Create(ALibrary: TThoriumLibrary;
-  ABaseClass: TThoriumPersistentClass; AbstractClass: Boolean = False);
-begin
-  if ABaseClass = nil then
-    raise EThoriumException.Create('TThoriumRTTIObjectType must not be created without BaseClass.');
-  Create(ALibrary, ABaseClass, @ABaseClass.GetMethodList, @ABaseClass.GetStaticMethodList, AbstractClass);
-  FCanUsePersistent := True;
-end;
-
-constructor TThoriumRTTIObjectType.Create(ALibrary: TThoriumLibrary;
-  ABaseClass: TClass; MethodCallback: TThoriumRTTIMethodsCallback;
-  StaticMethodCallback: TThoriumRTTIStaticMethodsCallback;
-  AbstractClass: Boolean = False);
-var
-  TypeInfo: PTypeInfo;
-  I: Integer;
-begin
-  if not AbstractClass and not Supports(ABaseClass, IThoriumPersistent) then
-    raise EThoriumException.CreateFmt('%s does not support IThoriumPersistent.', [ABaseClass.ClassName]);
-  inherited Create(ALibrary);
-  FCanUsePersistent := False;
-  FBaseClass := ABaseClass;
-  TypeInfo := FBaseClass.ClassInfo;
-  if TypeInfo <> nil then
-  begin
-    FPropCount := GetTypeData(TypeInfo)^.PropCount;
-    GetMem(FPropList, FPropCount * SizeOf(Pointer));
-    GetPropInfos(TypeInfo, FPropList);
-  end
-  else
-  begin
-    FPropCount := 0;
-    FPropList := nil;
-  end;
-  if MethodCallback <> nil then
-  begin
-    MethodCallback(Self, FMethods);
-    for I := 0 to High(FMethods) do
-    begin
-      with FMethods[I] do
-      begin
-        FName := ThoriumCase(FMethods[I].FName);
-        FHostObjectType := Self;
-      end;
-      if FMethods[I] is TThoriumHostMethodNativeCall then
-        TThoriumHostMethodNativeCall(FMethods[I]).Precompile;
-    end;
-  end;
-  if StaticMethodCallback <> nil then
-  begin
-    StaticMethodCallback(Self, FStaticMethods);
-    for I := 0 to High(FStaticMethods) do
-    begin
-      with FStaticMethods[I] do
-        FName := ThoriumCase(FStaticMethods[I].FName);
-      if FStaticMethods[I] is TThoriumHostFunctionNativeCall then
-        TThoriumHostFunctionNativeCall(FStaticMethods[I]).Precompile;
-    end;
-  end;
-  FStoringProperties := TStringList.Create;
-end;
-
-destructor TThoriumRTTIObjectType.Destroy;
-var
-  I: Integer;
-begin
-  Freemem(FPropList);
-  for I := 0 to High(FMethods) do
-    FMethods[I].Free;
-  for I := 0 to High(FStaticMethods) do
-    FStaticMethods[I].Free;
-  FStoringProperties.Free;
-  inherited Destroy;
-end;
-
-procedure TThoriumRTTIObjectType.ApplyStoring(var AValue: Pointer;
-  MayDecreaseReference: Boolean);
-var
-  Intf: IThoriumPersistent;
-begin
-  if FCanUsePersistent then
-  begin
-    TThoriumPersistent(AValue).FReferenceImplementation.EnableHostControl;
-    if MayDecreaseReference then
-      TThoriumPersistent(AValue).FReferenceImplementation.FreeReference;
-  end
-  else
-  begin
-    TObject(AValue).GetInterface(IThoriumPersistent, Intf);
-    Intf.EnableHostControl;
-    if MayDecreaseReference then
-      Intf.FreeReference;
-    Intf := nil;
-  end;
-end;
-
-procedure TThoriumRTTIObjectType.DisposeValue(var AValue: Pointer);
-var
-  Intf: IThoriumPersistent;
-begin
-  if FCanUsePersistent then
-    TThoriumPersistent(AValue).FReferenceImplementation.FreeReference
-  else
-  begin
-    TObject(AValue).GetInterface(IThoriumPersistent, Intf);
-    Intf.FreeReference;
-    Intf := nil;
-  end;
-  AValue := nil;
-end;
-
-function TThoriumRTTIObjectType.DuplicateInstance(const AValue: Pointer
-  ): Pointer;
-var
-  Intf: IThoriumPersistent;
-begin
-  // Then assign the pointer from the source value. We can use the GetReference
-  // method to automatically increase the stuff...
-
-  if FCanUsePersistent then
-    TThoriumPersistent(Result) := TThoriumPersistent(TThoriumPersistent(AValue).FReferenceImplementation.GetReference)
-  else
-  begin
-    TObject(AValue).GetInterface(IThoriumPersistent, Intf);
-    TObject(Result) := Intf.GetReference;
-    Intf := nil;
-  end;
-  //TThoriumPersistent(Result.Extended.Value) := TThoriumPersistent(AValue.Value).GetReference;
-end;
-
-function TThoriumRTTIObjectType.FindMethod(const AMethodName: String): TThoriumHostMethodBase;
-var
-  I: Integer;
-begin
-  for I := 0 to High(FMethods) do
-  begin
-    Result := FMethods[I];
-    if Result.Name = AMethodName then
-      Exit;
-  end;
-  Result := nil;
-end;
-
-function TThoriumRTTIObjectType.GetFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-var
-  FieldName: ShortString;
-  I: Integer;
-begin
-  if Length(FieldIdent) > 255 then
-  begin
-    Result := False;
-    Exit;
-  end;
-  FieldName := FieldIdent;
-  for I := 0 to FPropCount - 1 do
-  begin
-    if (ShortCompareText(FieldName, UpCase(FPropList^[I]^.Name)) = 0) then
-    begin
-      ID := QWord(I);
-      Result := True;
-      Exit;
-    end;
-  end;
-  for I := 0 to High(FMethods) do
-  begin
-    if FieldIdent = FMethods[I].Name then
-    begin
-      ID := QWord(I) or THORIUM_RTTI_METHOD_BIT;
-      Result := True;
-      Exit;
-    end;
-  end;
-  Result := False;
-end;
-
-function TThoriumRTTIObjectType.GetFieldStoring(const AFieldID: QWord
-  ): Boolean;
-var
-  PropInfo: PPropInfo;
-begin
-  if (AFieldID and THORIUM_RTTI_METHOD_BIT <> 0) then
-  begin
-    Result := False;
-    Exit;
-  end;
-  PropInfo := FPropList^[AFieldID];
-  Result := GetPropertyStoring(PropInfo);
-end;
-
-procedure TThoriumRTTIObjectType.GetFieldType(const AFieldID: QWord; out
-  TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition);
-var
-  Info: PPropInfo;
-begin
-  if (AFieldID and THORIUM_RTTI_METHOD_BIT = THORIUM_RTTI_METHOD_BIT) then
-  begin
-    TypeSpec := FMethods[AFieldID xor THORIUM_RTTI_METHOD_BIT].Prototype;
-    Access.ReadAccess.Allowed := True;
-    Access.ReadAccess := AccessDescription(xmeth(FMethods[AFieldID xor THORIUM_RTTI_METHOD_BIT], 0, 0), -1, 4, 5);
-    Access.WriteAccess.Allowed := False;
-  end
-  else
-  begin
-    Info := FPropList^[AFieldID];//PPropInfo(ptruint(AFieldID));
-    Access.ReadAccess := AccessDescription(xfget(AFieldID, 0, 0), -1, 5, 4);
-    if Info^.SetProc = nil then
-    begin
-      Access.WriteAccess.Allowed := False;
-    end
-    else
-    begin
-      Access.WriteAccess := AccessDescription(xfset(AFieldID, 0, 0), 5, -1, 4);
-    end;
-    TypeSpec := FLibrary.DeepFindTypeForHostType(Info^.PropType);
-  end;
-end;
-
-function TThoriumRTTIObjectType.GetNewInstance: Pointer;
-begin
-  Result := nil;
-end;
-
-function TThoriumRTTIObjectType.GetPropertyStoring(const PropInfo: PPropInfo
-  ): Boolean;
-begin
-  Result := FStoringProperties.IndexOfObject(TObject(PropInfo)) >= 0;
-end;
-
-function TThoriumRTTIObjectType.GetPropertyStoring(const PropertyName: String
-  ): Boolean;
-var
-  PropInfo: PPropInfo;
-begin
-  PropInfo := GetPropInfo(FBaseClass, PropertyName);
-  if PropInfo = nil then
-    raise EPropertyError.CreateFmt('Property ''%s'' not found.', [PropertyName]);
-  Result := GetPropertyStoring(PropInfo);
-end;
-
-function TThoriumRTTIObjectType.GetStaticFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-var
-  I: Integer;
-begin
-  for I := 0 to High(FStaticMethods) do
-  begin
-    if FStaticMethods[I].Name = FieldIdent then
-    begin
-      ID := QWord(I) or THORIUM_RTTI_METHOD_BIT;
-      Result := True;
-      Exit;
-    end;
-  end;
-  Result := False;
-end;
-
-procedure TThoriumRTTIObjectType.GetStaticFieldType(const AFieldID: QWord; out
-  TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition);
-begin
-  if AFieldID and THORIUM_RTTI_METHOD_BIT = 0 then
-  begin
-    raise EThoriumException.Create('Cannot do that.')
-  end
-  else
-  begin
-    Access.ReadAccess.Allowed := False;
-    Access.WriteAccess.Allowed := False;
-  end;
-end;
-
-procedure TThoriumRTTIObjectType.DoEnableHostControl(const AValue: TThoriumValue
-  );
-var
-  Intf: IThoriumPersistent;
-begin
-  if FCanUsePersistent then
-    TThoriumPersistent(AValue.HostObject).FReferenceImplementation.EnableHostControl
-  else
-  begin
-    TObject(AValue.HostObject).GetInterface(IThoriumPersistent, Intf);
-    Intf.EnableHostControl;
-    Intf := nil;
-  end;
-end;
-
-function TThoriumRTTIObjectType.DoEvaluate(const AValue: TThoriumValue): Boolean;
-begin
-  if AValue.HostObject <> nil then
-    Exit(True);
-  Result := False;
-end;
-
-function TThoriumRTTIObjectType.DoGetField(const AValue: TThoriumValue;
-  const AFieldID: QWord): TThoriumValue;
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-procedure TThoriumRTTIObjectType.DoSetField(const AValue: TThoriumValue;
-  const AFieldID: QWord; const NewValue: TThoriumValue);
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-procedure TThoriumRTTIObjectType.SetPropertyStoring(const PropInfo: PPropInfo;
-  const Storing: Boolean);
-var
-  Idx: Integer;
-begin
-  Idx := FStoringProperties.IndexOfObject(TObject(PropInfo));
-  if Storing then
-  begin
-    if Idx < 0 then
-      FStoringProperties.AddObject(PropInfo^.Name, TObject(PropInfo));
-  end
-  else
-  begin
-    if Idx >= 0 then
-      FStoringProperties.Delete(Idx);
-  end;
-end;
-
-procedure TThoriumRTTIObjectType.SetPropertyStoring(const PropertyName: String;
-  const Storing: Boolean);
-var
-  PropInfo: PPropInfo;
-begin
-  PropInfo := GetPropInfo(FBaseClass, PropertyName);
-  if PropInfo = nil then
-    raise EPropertyError.CreateFmt('Property ''%s'' not found.', [PropertyName]);
-  SetPropertyStoring(PropInfo, Storing);
-end;
-
-procedure TThoriumRTTIObjectType.CalcHash;
-var
-  Signature: String;
-  SigLength: Integer;
-  Offset: Integer;
-  I: Integer;
-begin
-  SigLength := 12;
-  for I := 0 to FPropCount - 1 do
-    Inc(SigLength, SizeOf(TTypeKind) + Length(FPropList^[I]^.Name));
-  for I := 0 to High(FMethods) do
-    Inc(SigLength, 16);
-  for I := 0 to High(FStaticMethods) do
-    Inc(SigLength, 16);
-  SetLength(Signature, SigLength);
-  Move(FPropCount, Signature[1], SizeOf(Integer));
-  Move(High(FMethods), Signature[5], SizeOf(Integer));
-  Move(High(FStaticMethods), Signature[9], SizeOf(Integer));
-  Offset := 13;
-  for I := 0 to FPropCount - 1 do
-  begin
-    Move(FPropList^[I]^.PropType^.Kind, Signature[Offset], SizeOf(TTypeKind));
-    Inc(Offset, SizeOf(TTypeKind));
-    Move(FPropList^[I]^.Name[1], Signature[Offset], Length(FPropList^[I]^.Name));
-    Inc(Offset, Length(FPropList^[I]^.Name));
-  end;
-  for I := 0 to High(FMethods) do
-  begin
-    Move(FMethods[I].GetHash, Signature[Offset], 16);
-    Inc(Offset, 16);
-  end;
-  for I := 0 to High(FStaticMethods) do
-  begin
-    Move(FStaticMethods[I].GetHash, Signature[Offset], 16);
-    Inc(Offset, 16);
-  end;
-  FHash := TThoriumHash(MD5Buffer(Signature[1], Length(Signature)));
-end;
-
-function TThoriumRTTIObjectType.NewNativeCallMethod(const AName: String;
-  const ACodePointer: Pointer; const AParameters: array of PTypeInfo;
-  const AReturnType: PTypeInfo;
-  const ACallingConvention: TThoriumNativeCallingConvention
-  ): TThoriumHostMethodNativeCall;
-var
-  I: Integer;
-begin
-  Result := TThoriumHostMethodNativeCall.Create(Self.FLibrary);
-  with Result do
-  begin
-    Name := AName;
-    CodePointer := ACodePointer;
-    for I := 0 to High(AParameters) do
-      Parameters.Add(AParameters[I]);
-    FReturnType.HostType := AReturnType;
-    CallingConvention := ACallingConvention;
-  end;
-end;
-
-function TThoriumRTTIObjectType.NewNativeCallStaticMethod(
-  const AName: String; const ACodePointer: Pointer; const ADataPointer: Pointer;
-  const AParameters: array of PTypeInfo;
-  const AReturnType: PTypeInfo;
-  const ACallingConvention: TThoriumNativeCallingConvention
-  ): TThoriumHostMethodAsFunctionNativeCall;
-var
-  I: Integer;
-begin
-  Result := TThoriumHostMethodAsFunctionNativeCall.Create(Self.FLibrary);
-  with Result do
-  begin
-    Name := AName;
-    CodePointer := ACodePointer;
-    DataPointer := ADataPointer;
-    for I := 0 to High(AParameters) do
-      Parameters.Add(AParameters[I]);
-    FReturnType.HostType := AReturnType;
-    CallingConvention := ACallingConvention;
-  end;
-end;
-
-function TThoriumRTTIObjectType.NewNativeCallStaticFunction(
-  const AName: String; const ACodePointer: Pointer;
-  const AParameters: array of PTypeInfo;
-  const AReturnType: PTypeInfo;
-  const ACallingConvention: TThoriumNativeCallingConvention
-  ): TThoriumHostFunctionNativeCall;
-var
-  I: Integer;
-begin
-  Result := TThoriumHostFunctionNativeCall.Create(Self.FLibrary);
-  with Result do
-  begin
-    Name := AName;
-    CodePointer := ACodePointer;
-    for I := 0 to High(AParameters) do
-      Parameters.Add(AParameters[I]);
-    FReturnType.HostType := AReturnType;
-    CallingConvention := ACallingConvention;
-  end;
-end;
-
-{ TThoriumHostRecordType }
-
-constructor TThoriumHostRecordType.Create(ALibrary: TThoriumLibrary);
-begin
-  raise EThoriumException.Create('TThoriumHostRecordType must not be created without field information.');
-end;
-
-constructor TThoriumHostRecordType.Create(ALibrary: TThoriumLibrary;
-  AFields: array of TThoriumHostRecordField);
-var
-  I: Integer;
-begin
-  inherited Create(ALibrary);
-  SetLength(FFields, High(AFields) + 1);
-  for I := 0 to High(AFields) do
-  begin
-    FFields[I] := AFields[I];
-    FFields[I].FieldName := ThoriumCase(FFields[I].FieldName);
-  end;
-end;
-
-destructor TThoriumHostRecordType.Destroy;
-begin
-  inherited Destroy;
-end;
-
-function TThoriumHostRecordType.IndexOfFieldDefinition(const AFieldName: String
-  ): Integer;
-begin
-  for Result := 0 to Length(FFields) - 1 do
-  begin
-    if FFields[Result].FieldName = AFieldName then
-      Exit;
-  end;
-  Result := -1;
-end;
-
-procedure TThoriumHostRecordType.CalcHash;
-var
-  I: Integer;
-  Buffer: PByte;
-  BufferSize: Ptruint;
-  FieldHash: TThoriumHash;
-begin
-  (*BufferSize := EntrySize * Length(FFields);
-  Buffer := GetMem(BufferSize);
-  try
-    for I := 0 to Length(FFields) - 1 do
-    begin
-      if FFields[I].FieldType.HostType and (htTypeSection or htSizeSection) = htExt then
-        FieldHash := FFields[I].FieldType.Extended.GetHash
-      else
-        FillByte(FieldHash, SizeOf(TThoriumHash), 0);
-      Buffer[I*EntrySize] := FFields[I].FieldType.HostType;
-      Move(FieldHash[0], Buffer[I*EntrySize + 1], SizeOf(TThoriumHash));
-    end;
-    FHash := TThoriumHash(MD5Buffer(Buffer, BufferSize));
-  finally
-    FreeMem(Buffer);
-  end;*)
-  raise Exception.Create('Needs to be reimplemented');
-end;
-
-function TThoriumHostRecordType.CanAssignTo(
-  var Assignment: TThoriumAssignmentDescription; const AnotherType: TThoriumType
-  ): Boolean;
-begin
-  Result := IsEqualTo(AnotherType);
-  if not Result then
-  begin
-    Result := inherited;
-    Exit;
-  end;
-  Assignment.Cast.Needed := False;
-end;
-
-function TThoriumHostRecordType.CanPerformOperation(
-  var Operation: TThoriumOperationDescription; const TheObject: TThoriumType
-  ): Boolean;
-begin
-  Result := False;
-end;
-
-procedure TThoriumHostRecordType.DisposeValue(var AValue: Pointer);
-type
-  PRecordType = ^RecordType;
-begin
-  Dispose(PRecordType(AValue));
-  AValue := nil;
-end;
-
-function TThoriumHostRecordType.DuplicateInstance(const AValue: Pointer
-  ): Pointer;
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-function TThoriumHostRecordType.GetFieldID(const FieldIdent: String; out
-  ID: QWord): Boolean;
-var
-  FieldDefinitionIdx: Integer;
-  FieldDefinition: PThoriumHostRecordField;
-  Mask: Cardinal;
-begin
-(*  FieldDefinitionIdx := IndexOfFieldDefinition(FieldIdent);
-  Result := FieldDefinitionIdx >= 0;
-  if not Result then
-    Exit;
-  FieldDefinition := @FFields[FieldDefinitionIdx];
-  case FieldDefinition^.FieldType.HostType of
-    htByte, htShortInt: Mask := $FF;
-    htWord, htSmallInt: Mask := $FFFF;
-    htDWord, htLongInt: Mask := $FFFFFFFF;
-  else
-    Mask := 0;
-  end;
-  ID := Mask or (QWord(FieldDefinitionIdx) shl 32);*)
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-function TThoriumHostRecordType.GetFieldStoring(const AFieldID: QWord
-  ): Boolean;
-var
-  FieldDefinition: PThoriumHostRecordField;
-begin
-  FieldDefinition := @FFields[Integer((AFieldID shr 32) and $FFFFFFFF)];
-  Result := FieldDefinition^.FieldType.Storing;
-end;
-
-procedure TThoriumHostRecordType.GetFieldType(const AFieldID: QWord; out
-  TypeSpec: TThoriumType; out Access: TThoriumAccessDefinition);
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-function TThoriumHostRecordType.GetNewInstance: Pointer;
-type
-  PRecordType = ^RecordType;
-begin
-  New(PRecordType(Result));
-end;
-
-function TThoriumHostRecordType.OpGetField(const AInstance: Pointer;
-  const AFieldID: QWord): TThoriumValue;
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
-
-procedure TThoriumHostRecordType.OpSetField(const AInstance: Pointer;
-  const AFieldID: QWord; const NewValue: TThoriumValue);
-begin
-  raise EThoriumException.Create('Not reimplemented yet.');
-end;
 
 {%ENDREGION}
 
@@ -6421,10 +3622,10 @@ begin
 end;
 
 function TThoriumLibrary.RegisterFinishedObjectType(const AName: String;
-  const AInstance: TThoriumHostObjectType; const ATypeInfo: PTypeInfo
-  ): TThoriumHostObjectType;
+  const AInstance: TThoriumType; const ATypeInfo: PTypeInfo
+  ): TThoriumType;
 begin
-  Result := TThoriumHostObjectType(RegisterType(AName, AInstance, ATypeInfo));
+  Result := RegisterType(AName, AInstance, ATypeInfo);
 end;
 
 function TThoriumLibrary.RegisterNativeCallFunction(const AName: String;
@@ -6558,7 +3759,7 @@ end;
 
 function TThoriumLibrary.RegisterRTTIType(
   const AClass: TThoriumPersistentClass; AbstractClass: Boolean
-  ): TThoriumRTTIObjectType;
+  ): TThoriumType;
 var
   CasedName: String;
 begin
@@ -6582,7 +3783,7 @@ end;
 function TThoriumLibrary.RegisterRTTIType(const AClass: TClass;
   AMethodsCallback: TThoriumRTTIMethodsCallback;
   AStaticMethodsCallback: TThoriumRTTIStaticMethodsCallback;
-  AbstractClass: Boolean): TThoriumRTTIObjectType;
+  AbstractClass: Boolean): TThoriumType;
 var
   CasedName: String;
 begin
@@ -6911,13 +4112,6 @@ end;
 
 { TThoriumHostCallableBase }
 
-function TThoriumHostCallableBase.GetPrototype: TThoriumTypeHostFunction;
-begin
-  if FPrototype = nil then
-    raise Exception.Create('Prototype not built yet.');
-  Result := FPrototype;
-end;
-
 constructor TThoriumHostCallableBase.Create(ALibrary: TThoriumLibrary);
 begin
   FLibrary := ALibrary;
@@ -6930,6 +4124,33 @@ destructor TThoriumHostCallableBase.Destroy;
 begin
   FParameters.Free;
   inherited Destroy;
+end;
+
+procedure TThoriumHostCallableBase.SetName(const AValue: String);
+begin
+  if FName = AValue then exit;
+  FName := ThoriumCase(AValue);
+end;
+
+function TThoriumHostCallableBase.GetPrototype: TThoriumType;
+begin
+  if FPrototype = nil then
+    raise EThoriumException.Create('Prototype not built yet.');
+  Result := FPrototype;
+end;
+
+function TThoriumHostCallableBase.GetPrototypeCallable: IThoriumCallable;
+begin
+  if FPrototype = nil then
+    raise EThoriumException.Create('Prototype not built yet.');
+  Result := FPrototypeCallable;
+end;
+
+function TThoriumHostCallableBase.GetPrototypeHostCallable: IThoriumHostCallable;
+begin
+  if FPrototype = nil then
+    raise EThoriumException.Create('Prototype not built yet.');
+  Result := FPrototypeHostCallable;
 end;
 
 procedure TThoriumHostCallableBase.CalcHash;
@@ -7030,7 +4251,7 @@ end;
 
 procedure TThoriumHostFunctionNativeCall.Precompile;
 begin
-  PrecompileNativeCall(FInstructions, FParameters, FPrototype.FParameters, FReturnType, FPrototype.FReturnType, False, FCallingConvention);
+  PrecompileNativeCall(FInstructions, FParameters, TThoriumTypeHostFunction(FPrototype).Parameters, FReturnType, TThoriumTypeHostFunction(FPrototype).ReturnType, False, FCallingConvention);
 end;
 
 { TThoriumHostMethodAsFunctionNativeCall }
@@ -7056,7 +4277,7 @@ end;
 
 procedure TThoriumHostMethodAsFunctionNativeCall.Precompile;
 begin
-  PrecompileNativeCall(FInstructions, FParameters, FPrototype.FParameters, FReturnType, FPrototype.FReturnType, True, FCallingConvention);
+  PrecompileNativeCall(FInstructions, FParameters, TThoriumTypeHostFunction(FPrototype).Parameters, FReturnType, TThoriumTypeHostFunction(FPrototype).ReturnType, True, FCallingConvention);
 end;
 
 { TThoriumHostMethodBase }
@@ -7064,7 +4285,14 @@ end;
 constructor TThoriumHostMethodBase.Create(ALibrary: TThoriumLibrary);
 begin
   inherited Create(ALibrary);
-  FHostObjectType := nil;
+  FType := nil;
+end;
+
+procedure TThoriumHostMethodBase.SetType(const AType: TThoriumType);
+begin
+  if FType <> nil then
+    raise EThoriumConsistencyError.CreateFmt('Type (%s) already assigned to instance of %s (%s). There was an attempt to assign %s as type.', [FType.Name, ClassName, Name, AType.Name]);
+  FType := AType;
 end;
 
 { TThoriumHostMethodNativeCall }
@@ -7103,7 +4331,7 @@ end;
 
 procedure TThoriumHostMethodNativeCall.Precompile;
 begin
-  PrecompileNativeCall(FInstructions, FParameters, FPrototype.FParameters, FReturnType, FPrototype.FReturnType, True, FCallingConvention);
+  PrecompileNativeCall(FInstructions, FParameters, TThoriumTypeHostFunction(FPrototype).Parameters, FReturnType, TThoriumTypeHostFunction(FPrototype).ReturnType, True, FCallingConvention);
 end;
 {%ENDREGION}
 
@@ -7743,10 +4971,6 @@ constructor TThoriumCustomCompiler.Create(ATarget: TThoriumModule);
 begin
   FError:= False;
   FGlobalValueCount := @ATarget.FGlobalValueCount;
-  FHostFuncUsage := ATarget.FHostFuncUsage;
-  FHostFuncRelocations := ATarget.FHostFuncRelocations;
-  FHostTypeUsage := ATarget.FHostTypeUsage;
-  FHostTypeRelocations := ATarget.FHostTypeRelocations;
   FInstructions := ATarget.FInstructions;
   FLastError := '';
   FLibPropUsage := ATarget.FLibPropUsage;
@@ -7784,17 +5008,17 @@ begin
   inherited Destroy;
 end;
 
-function TThoriumCustomCompiler.GetTypeFloat: TThoriumTypeFloat;
+function TThoriumCustomCompiler.GetTypeFloat: TThoriumType;
 begin
   Result := FThorium.FTypeFloat;
 end;
 
-function TThoriumCustomCompiler.GetTypeInteger: TThoriumTypeInteger;
+function TThoriumCustomCompiler.GetTypeInteger: TThoriumType;
 begin
   Result := FThorium.FTypeInteger;
 end;
 
-function TThoriumCustomCompiler.GetTypeString: TThoriumTypeString;
+function TThoriumCustomCompiler.GetTypeString: TThoriumType;
 begin
   Result := FThorium.FTypeString;
 end;
@@ -7818,43 +5042,6 @@ begin
   FRegisterUsage[AID div THORIUM_REGISTER_MASK_BLOCK_SIZE] := Item;
 end;
 
-function TThoriumCustomCompiler.AddLibraryPropertyUsage(
-  const AProp: TThoriumLibraryProperty): Integer;
-begin
-  Result := FLibPropUsage.IndexOf(AProp);
-  if Result < 0 then
-    Result := FLibPropUsage.Add(AProp);
-end;
-
-function TThoriumCustomCompiler.AddLibraryPropertyUsageEx(
-  var TargetArray: TThoriumLibraryPropertyArray; AItem: TThoriumLibraryProperty
-  ): Integer;
-begin
-  Result := Length(TargetArray);
-  SetLength(TargetArray, Result+1);
-  TargetArray[Result] := AItem;
-end;
-
-procedure TThoriumCustomCompiler.AddLibraryPropertyUsages(
-  const AProp: TThoriumLibraryPropertyArray);
-var
-  I: Integer;
-begin
-  for I := 0 to High(AProp) do
-    AddLibraryPropertyUsage(AProp[I]);
-end;
-
-function TThoriumCustomCompiler.AddLibraryPropertyUsageToRelocate(
-  const AProp: TThoriumLibraryProperty; const AOffset: ptruint): Integer;
-var
-  Info: PThoriumRelocation;
-begin
-  Info := GetMem(SizeOf(TThoriumRelocation));
-  Info^.ObjectIndex := AddLibraryPropertyUsage(AProp);
-  Info^.ByteOffset := AOffset;
-  Result := FLibPropRelocations.Add(Info);
-end;
-
 function TThoriumCustomCompiler.AddLibraryString(const AStr: String): Integer;
 // Adds a string to the library, if it is not already in, otherwise return its
 // index.
@@ -7863,62 +5050,6 @@ begin
   if Result > -1 then
     Exit;
   Result := FStringLibrary.Add(AStr);
-end;
-
-function TThoriumCustomCompiler.AddHostTypeUsage(
-  const AType: TThoriumHostObjectType): Integer;
-begin
-  Result := FHostTypeUsage.IndexOf(AType);
-  if Result < 0 then
-    Result := FHostTypeUsage.Add(AType);
-end;
-
-function TThoriumCustomCompiler.AddHostTypeUsageEx(
-  var TargetArray: TThoriumHostObjectTypeArray; AItem: TThoriumHostObjectType
-  ): Integer;
-begin
-  Result := Length(TargetArray);
-  SetLength(TargetArray, Result+1);
-  TargetArray[Result] := AItem;
-end;
-
-procedure TThoriumCustomCompiler.AddHostTypeUsages(
-  const AUsageArray: TThoriumHostObjectTypeArray);
-var
-  I: Integer;
-begin
-  for I := 0 to High(AUsageArray) do
-    AddHostTypeUsage(AUsageArray[I]);
-end;
-
-function TThoriumCustomCompiler.AddHostTypeUsageToRelocate(
-  const AType: TThoriumHostObjectType; const AOffset: ptruint): Integer;
-var
-  Info: PThoriumRelocation;
-begin
-  Info := GetMem(SizeOf(TThoriumRelocation));
-  Info^.ObjectIndex := AddHostTypeUsage(AType);
-  Info^.ByteOffset := AOffset;
-  Result := FHostTypeRelocations.Add(Info);
-end;
-
-function TThoriumCustomCompiler.AddHostFunctionUsage(
-  const AFunc: TThoriumHostCallableBase): Integer;
-begin
-  Result := FHostFuncUsage.IndexOf(AFunc);
-  if Result < 0 then
-    Result := FHostFuncUsage.Add(AFunc);
-end;
-
-function TThoriumCustomCompiler.AddHostFunctionUsageToRelocate(
-  const AFunc: TThoriumHostCallableBase; const AOffset: ptruint): Integer;
-var
-  Info: PThoriumRelocation;
-begin
-  Info := GetMem(SizeOf(TThoriumRelocation));
-  Info^.ObjectIndex := AddHostFunctionUsage(AFunc);
-  Info^.ByteOffset := AOffset;
-  Result := FHostFuncRelocations.Add(Info);
 end;
 
 function TThoriumCustomCompiler.AddPublicVariable(AName: String): TThoriumVariable;
@@ -8464,37 +5595,8 @@ begin
 end;
 
 procedure TThoriumCustomCompiler.FindRelocationTargets;
-var
-  Instruction: PThoriumInstruction;
-  I: Integer;
 begin
-  Instruction := FInstructions.Instruction[0];
-  for I := 0 to FInstructions.Count - 1 do
-  begin
-    case Instruction^.Instruction of
-      tiEXT, tiEXT_S:
-      begin
-        AddHostTypeUsageToRelocate(TThoriumHostObjectType(TThoriumInstructionEXT(Instruction^).ExtendedType), I * SizeOf(TThoriumInstruction) + SizeOf(TThoriumInstructionCode));
-      end;
-      tiXFNC:
-      begin
-        AddHostFunctionUsageToRelocate(TThoriumHostFunctionBase(TThoriumInstructionXFNC(Instruction^).FunctionRef), I * SizeOf(TThoriumInstruction) + SizeOf(TThoriumInstructionCode));
-      end;
-      tiXMETH:
-      begin
-        AddHostFunctionUsageToRelocate(TThoriumHostFunctionBase(TThoriumInstructionXMETH(Instruction^).MethodRef), I * SizeOf(TThoriumInstruction) + SizeOf(TThoriumInstructionCode));
-      end;
-      tiXPGET:
-      begin
-        AddLibraryPropertyUsageToRelocate(TThoriumLibraryProperty(TThoriumInstructionXPGET(Instruction^).Prop), I * SizeOf(TThoriumInstruction) + SizeOf(TThoriumInstructionCode));
-      end;
-      tiXPSET:
-      begin
-        AddLibraryPropertyUsageToRelocate(TThoriumLibraryProperty(TThoriumInstructionXPSET(Instruction^).Prop), I * SizeOf(TThoriumInstruction) + SizeOf(TThoriumInstructionCode));
-      end;
-    end;
-    Inc(Instruction);
-  end;
+  raise Exception.Create('Not reimplented yet.');
 end;
 
 procedure TThoriumCustomCompiler.HandleOffset(Sender: TObject; const Origin,
@@ -8651,10 +5753,6 @@ begin
   FCompress := {$ifdef CompressByDefault}True{$else}False{$endif};
   FillByte(FHash, SizeOf(TThoriumHash), 0);
   FHashGenerated := False;
-  FHostFuncUsage := TFPList.Create;
-  FHostFuncRelocations := TFPList.Create;
-  FHostTypeUsage := TFPList.Create;
-  FHostTypeRelocations := TFPList.Create;
   FInstructions := TThoriumInstructions.Create;
   FLastCompilerError := '';
   FLibPropUsage := TFPList.Create;
@@ -8690,30 +5788,9 @@ begin
   FPublicVariables.Free;
   FInstructions.Free;
   FStringLibrary.Free;
-  FHostTypeUsage.Free;
-  FHostTypeRelocations.Free;
-  FHostFuncUsage.Free;
-  FHostFuncRelocations.Free;
   FLibPropUsage.Free;
   FLibPropRelocations.Free;
   inherited Destroy;
-end;
-
-function TThoriumModule.AddLibraryPropertyUsage(
-  const AProp: TThoriumLibraryProperty): Integer;
-begin
-  raise EThoriumException.Create('TThorumModule.AddLibraryPropetyUsage is not re-implemented yet.');
-end;
-
-function TThoriumModule.AddLibraryPropertyUsageToRelocate(
-  const AProp: TThoriumLibraryProperty; const AOffset: ptruint): Integer;
-var
-  Info: PThoriumRelocation;
-begin
-  Info := GetMem(SizeOf(TThoriumRelocation));
-  Info^.ObjectIndex := AddLibraryPropertyUsage(AProp);
-  Info^.ByteOffset := AOffset;
-  Result := FLibPropRelocations.Add(Info);
 end;
 
 function TThoriumModule.AddLibraryString(const AStr: String): Integer;
@@ -8724,43 +5801,6 @@ begin
   if Result > -1 then
     Exit;
   Result := FStringLibrary.Add(AStr);
-end;
-
-function TThoriumModule.AddHostTypeUsage(const AType: TThoriumHostObjectType
-  ): Integer;
-begin
-  Result := FHostTypeUsage.IndexOf(AType);
-  if Result < 0 then
-    Result := FHostTypeUsage.Add(AType);
-end;
-
-function TThoriumModule.AddHostTypeUsageToRelocate(const AType: TThoriumHostObjectType;
-  const AOffset: ptruint): Integer;
-var
-  Info: PThoriumRelocation;
-begin
-  Info := GetMem(SizeOf(TThoriumRelocation));
-  Info^.ObjectIndex := AddHostTypeUsage(AType);
-  Info^.ByteOffset := AOffset;
-  Result := FHostTypeRelocations.Add(Info);
-end;
-
-function TThoriumModule.AddHostFunctionUsage(const AFunc: TThoriumHostCallableBase): Integer;
-begin
-  Result := FHostFuncUsage.IndexOf(AFunc);
-  if Result < 0 then
-    Result := FHostFuncUsage.Add(AFunc);
-end;
-
-function TThoriumModule.AddHostFunctionUsageToRelocate(const AFunc: TThoriumHostCallableBase;
-  const AOffset: ptruint): Integer;
-var
-  Info: PThoriumRelocation;
-begin
-  Info := GetMem(SizeOf(TThoriumRelocation));
-  Info^.ObjectIndex := AddHostFunctionUsage(AFunc);
-  Info^.ByteOffset := AOffset;
-  Result := FHostFuncRelocations.Add(Info);
 end;
 
 procedure TThoriumModule.ClearAll;
@@ -8780,18 +5820,6 @@ begin
   for I := 0 to FPrivateFunctions.Count - 1 do
     TThoriumFunction(FPrivateFunctions[I]).Free;
   FPrivateFunctions.Clear;
-  FHostTypeUsage.Clear;
-  for I := 0 to FHostTypeRelocations.Count - 1 do
-    FreeMem(FHostTypeRelocations[I]);
-  FHostTypeRelocations.Clear;
-  FHostFuncUsage.Clear;
-  for I := 0 to FHostFuncRelocations.Count - 1 do
-    FreeMem(FHostFuncRelocations[I]);
-  FHostFuncRelocations.Clear;
-  FLibPropUsage.Clear;
-  for I := 0 to FLibPropRelocations.Count - 1 do
-    FreeMem(FLibPropRelocations[I]);
-  FLibPropRelocations.Clear;
   FRequiredModules.Count := 0;
   FRequiredLibraries.Count := 0;
   FCompiled := False;
@@ -8851,12 +5879,6 @@ begin
     FunctionExportCount := FPublicFunctions.Count;
     VariableExportCount := FPublicVariables.Count;
     StringCount := FStringLibrary.Count;
-    HostTypeDependencyCount := FHostTypeUsage.Count;
-    HostTypeRelocationCount := FHostTypeRelocations.Count;
-    HostFuncDependencyCount := FHostFuncUsage.Count;
-    HostFuncRelocationCount := FHostFuncRelocations.Count;
-    LibPropDependencyCount := FLibPropUsage.Count;
-    LibPropRelocationCount := FLibPropRelocations.Count;
     InstructionCount := FInstructions.Count;
     RandomFactor := Random(High(Cardinal));
     InstructionHash := TThoriumHash(MD5Buffer(FInstructions.Instruction[0]^, SizeOf(TThoriumInstruction)*FInstructions.Count));
@@ -8876,12 +5898,6 @@ begin
   Header.FunctionExportCount := FPublicFunctions.Count;
   Header.VariableExportCount := FPublicVariables.Count;
   Header.StringCount := FStringLibrary.Count;
-  Header.HostTypeDependencyCount := FHostTypeUsage.Count;
-  Header.HostTypeRelocationCount := FHostTypeRelocations.Count;
-  Header.HostFuncDependencyCount := FHostFuncUsage.Count;
-  Header.HostFuncRelocationCount := FHostFuncRelocations.Count;
-  Header.LibPropDependencyCount := FLibPropUsage.Count;
-  Header.LibPropRelocationCount := FLibPropRelocations.Count;
   Header.Hash := GetHash;
   Header.SourceHash := FSourceHash;
   Header.SourceLength := FSourceLength;
@@ -8955,19 +5971,19 @@ begin
     begin
       with TThoriumFunction(FPublicFunctions[I]) do
       begin
-        if not Prototype.HasReturnValue then
+        if not PrototypeCallable.HasReturnValue then
           Write(GetColorCode(34), '0x', IntToHex(EntryPoint, 8), GetColorCode(0), '  void ')
         else
         begin
-          TypeSpec := Prototype.ReturnType;
+          TypeSpec := PrototypeCallable.ReturnType;
           Write(GetColorCode(34), '0x', IntToHex(EntryPoint, 8), GetColorCode(0), '  ', TypeSpec.Name, ' ');
         end;
         Write(Name, '(');
-        for J := 0 to Prototype.Parameters.Count - 1 do
+        for J := 0 to PrototypeCallable.Parameters.Count - 1 do
         begin
           if (J <> 0) then
             Write(', ');
-          Prototype.Parameters.GetParameterSpec(J, TypeSpec);
+          PrototypeCallable.Parameters.GetParameterSpec(J, TypeSpec);
           Write(TypeSpec.Name);
         end;
         WriteLn(')');
@@ -9004,6 +6020,7 @@ begin
       WriteLn(GetColorCode(2), '0x', IntToHex(I, 8), GetColorCode(0), '  ', FRequiredLibraries[I].GetName);
     end;
   end;
+  {
   if FHostTypeUsage.Count > 0 then
   begin
     //WriteLn('Extended type usage:');
@@ -9034,10 +6051,10 @@ begin
       Callable := TThoriumHostCallableBase(FHostFuncUsage[I]);
       if Callable is TThoriumHostMethodBase then
       begin
-        if TThoriumHostMethodBase(Callable).FHostObjectType is TThoriumRTTIObjectType then
-          WriteLn(TThoriumRTTIObjectType(TThoriumHostMethodBase(Callable).FHostObjectType).FBaseClass.ClassName, '.', Callable.Name)
+        if TThoriumHostMethodBase(Callable).FType is TThoriumRTTIObjectType then
+          WriteLn(TThoriumRTTIObjectType(TThoriumHostMethodBase(Callable).FType).FBaseClass.ClassName, '.', Callable.Name)
         else
-          WriteLn(TThoriumHostMethodBase(Callable).FHostObjectType.ClassName, '.', Callable.Name);
+          WriteLn(TThoriumHostMethodBase(Callable).FType.ClassName, '.', Callable.Name);
       end
       else
       begin
@@ -9054,6 +6071,7 @@ begin
         end;
     end;
   end;
+  }
   if FRequiredModules.Count > 0 then
   begin
     WriteLn(GetColorCode(1), ' Index       Module name', GetColorCode(0));
@@ -9422,8 +6440,8 @@ constructor TThoriumRuntimeFunction.Create(
 begin
   FEntryPoint := ACompiledFunction.FEntryPoint;
   FPrototype := ACompiledFunction.FPrototype;
-  FHasReturnValue := FPrototype.FReturnType <> nil;
-  FParameterCount := FPrototype.FParameters.Count;
+  FHasReturnValue := (FPrototype as TThoriumTypeHostFunction).ReturnType <> nil;
+  FParameterCount := (FPrototype as TThoriumTypeHostFunction).Parameters.Count;
 end;
 
 procedure TThoriumRuntimeFunction.FillStackFrame(
@@ -11321,9 +8339,9 @@ begin
   for I := 0 to High(AParameters) do
   begin
     if AParameters[0].VType in [vtExtended, vtVariant, vtString] then
-      Values[I] := AFunction.FPrototype.Parameters.TypeSpec[I].CreateValueFromPtr(AParameters[0].VExtended)
+      Values[I] := TThoriumTypeFunction(AFunction.FPrototype).Parameters.TypeSpec[I].CreateValueFromPtr(AParameters[0].VExtended)
     else
-      Values[I] := AFunction.FPrototype.Parameters.TypeSpec[I].CreateValueFromPtr(@AParameters[0].VAnsiString);
+      Values[I] := TThoriumTypeFunction(AFunction.FPrototype).Parameters.TypeSpec[I].CreateValueFromPtr(@AParameters[0].VAnsiString);
   end;
   Result := QuickCall(AFunction, Values);
 end;
@@ -11361,7 +8379,7 @@ begin
   end;
   FCurrentStackFrame := FStack.EntryCount-1;
   Execute(AFunction.FModule, AFunction.FEntryPoint, False);
-  if AFunction.FPrototype.HasReturnValue then
+  if TThoriumTypeFunction(AFunction.FPrototype).HasReturnValue then
   begin
     Move(FStack.GetTop(0)^.Value, Result, SizeOf(TThoriumValue));
     FStack.Pop(1, False);

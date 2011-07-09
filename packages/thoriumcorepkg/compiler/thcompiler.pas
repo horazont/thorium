@@ -11,7 +11,7 @@ interface
 
 uses
   Classes, SysUtils, Thorium, ThGlobals, ThUtils, typinfo,
-  Thorium_OptimizeJumps;
+  ThOptimizeJumps;
 
 {$ifdef DebugTokenLoop}
 const
@@ -298,6 +298,9 @@ type
   end;
 
 implementation
+
+uses
+  ThTypeString, ThTypeFunction, ThTypeInt;
 
 {$ifdef DebugTokenLoop}
 var
@@ -1105,7 +1108,7 @@ begin
   Func := TThoriumFunction.Create(FModule, AValueIdent.FullStr);
   FCurrentFunc := Func;
   FCurrentReturnType := ATypeIdent.FinalType;
-  Func.Prototype.ReturnType := FCurrentReturnType;
+  TThoriumTypeFunction(Func.Prototype).ReturnType := FCurrentReturnType;
   SetupFunction(Func, FInstructions.Count, AValueIdent.FullStr);
   // Add the function to the public table
   FTable.AddFunctionIdentifier(Func.Name, Func);
@@ -1130,7 +1133,7 @@ begin
     SetLength(Params, ParamIndex);
 
     // Add the parameter to the function's parameter list
-    Func.Prototype.Parameters.Add(ParamTypeIdent.FinalType);
+    Func.PrototypeCallable.Parameters.Add(ParamTypeIdent.FinalType);
     Params[ParamIndex-1].ParamName := ParamIdent.FullStr;
     Params[ParamIndex-1].ParamType := ParamTypeIdent.FinalType;
 
@@ -1163,10 +1166,10 @@ begin
   RestoreTable(LocalOffset, False);
 
   // Ensure a return value is created
-  if Func.Prototype.ReturnType <> nil then
+  if Func.PrototypeCallable.ReturnType <> nil then
   begin
-    if not Func.Prototype.ReturnType.CanCreateNone(False, CreationInstruction) then
-      CompilerError('Cannot create `none'' value of type `'+Func.Prototype.ReturnType.Name+'''.');
+    if not Func.PrototypeCallable.ReturnType.CanCreateNone(False, CreationInstruction) then
+      CompilerError('Cannot create `none'' value of type `'+Func.PrototypeCallable.ReturnType.Name+'''.');
     GenCreation(CreationInstruction);
   end;
   GenCode(ret());
@@ -2239,8 +2242,8 @@ begin
   Result.GetJumpMarks := nil;
   Result.SetCode := nil;
   Result.SetJumpMarks := nil;
-  Result.UsedExtendedTypes := nil;
-  Result.UsedLibraryProps := nil;
+  {Result.UsedExtendedTypes := nil;
+  Result.UsedLibraryProps := nil;}
   Result.FullStr := FCurrentStr;
 
   OldCodeHook := FCodeHook;
@@ -2808,9 +2811,9 @@ begin
   GetFreeRegister(trEXP, RegID);
 
   Assignment.Casting := True;
-  ExprType := RelationalExpression(RegID, State, nil, FCurrentFunc.Prototype.ReturnType);
-  if not ExprType.CanAssignTo(Assignment, FCurrentFunc.Prototype.ReturnType) then
-    CompilerError('Incompatible types: `'+ExprType.Name+''' (expression) and `'+FCurrentFunc.Prototype.ReturnType.Name+''' (return type).');
+  ExprType := RelationalExpression(RegID, State, nil, FCurrentFunc.PrototypeCallable.ReturnType);
+  if not ExprType.CanAssignTo(Assignment, FCurrentFunc.PrototypeCallable.ReturnType) then
+    CompilerError('Incompatible types: `'+ExprType.Name+''' (expression) and `'+FCurrentFunc.PrototypeCallable.ReturnType.Name+''' (return type).');
 
   PopAndClearByTable(FTableSizes[FCurrentFunctionTableStack + 1]);
   case State of

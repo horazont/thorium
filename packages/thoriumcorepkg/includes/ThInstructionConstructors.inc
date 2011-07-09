@@ -103,7 +103,7 @@ begin
   end;
 end;
 
-function ext_s(AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+function ext_s(AExtendedType: TThoriumType): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionEXT_S(Result) do
@@ -114,7 +114,7 @@ begin
   end;
 end;
 
-function ext(AExtendedType: TThoriumHostObjectType; ATRI: Word): TThoriumInstruction;
+function ext(AExtendedType: TThoriumType; ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionEXT(Result) do
@@ -445,7 +445,7 @@ begin
   end;
 end;
 
-function castie(ASRI: Word; ATRI: Word; AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+function castie(ASRI: Word; ATRI: Word; AExtendedType: TThoriumType): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionCASTIE(Result) do
@@ -458,7 +458,7 @@ begin
   end;
 end;
 
-function castfe(ASRI: Word; ATRI: Word; AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+function castfe(ASRI: Word; ATRI: Word; AExtendedType: TThoriumType): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionCASTFE(Result) do
@@ -471,7 +471,7 @@ begin
   end;
 end;
 
-function castse(ASRI: Word; ATRI: Word; AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+function castse(ASRI: Word; ATRI: Word; AExtendedType: TThoriumType): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionCASTSE(Result) do
@@ -520,7 +520,7 @@ begin
   end;
 end;
 
-function caste(ASRI: Word; ATRI: Word; AExtendedType: TThoriumHostObjectType): TThoriumInstruction;
+function caste(ASRI: Word; ATRI: Word; AExtendedType: TThoriumType): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionCASTE(Result) do
@@ -1081,7 +1081,7 @@ begin
   end;
 end;
 
-function xsfget(AID: Int64; AExtendedType: TThoriumHostObjectType; ATRI: Word): TThoriumInstruction;
+function xsfget(AID: Int64; AExtendedType: TThoriumType; ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionXSFGET(Result) do
@@ -1094,7 +1094,7 @@ begin
   end;
 end;
 
-function xsfset(AID: Int64; AExtendedType: TThoriumHostObjectType; AVRI: Word): TThoriumInstruction;
+function xsfset(AID: Int64; AExtendedType: TThoriumType; AVRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);
   with TThoriumInstructionXSFSET(Result) do
