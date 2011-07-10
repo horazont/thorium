@@ -126,6 +126,19 @@ begin
   end;
 end;
 
+function stackcreate(ATRI, ACRI: Word; ATypeSpec: TThoriumType): TThoriumInstruction;
+begin
+  FillByte(Result, SizeOf(TThoriumInstruction), 0);
+  with TThoriumInstructionSTACKCREATE(Result) do
+  begin
+    Instruction := tiSTACKCREATE;
+    TRI := ATRI;
+    CRI := ACRI;
+    TypeSpec := ATypeSpec;
+    CodeLine := 0;
+  end;
+end;
+
 function fnc(AFunctionRef: TThoriumFunction; ATRI: Word): TThoriumInstruction;
 begin
   FillByte(Result, SizeOf(TThoriumInstruction), 0);

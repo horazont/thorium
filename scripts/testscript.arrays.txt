@@ -1,6 +1,6 @@
 loadlibrary thorium;
 
 public void main() {
-  int[3] test;
-  test[0] = 100;
+  int[] test;
+  test = [10, 20, 30];
 }

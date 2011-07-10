@@ -341,6 +341,7 @@ type
     tiFLT_S, tiFLT,
     tiSTR_S, tiSTRL_S, tiSTR, tiSTRL,
     tiNONE_S, tiNONE,
+    tiSTACKCREATE,
     tiFNC, tiXFNC, tiXMETH,
     tiMOVER_G, tiCOPYR_G, tiMOVEG, tiCOPYG,
     tiMOVER_FG, tiCOPYR_FG, tiMOVEFG, tiCOPYFG,
@@ -517,6 +518,26 @@ type
     {$endif}
     TRI: Word;
     Reserved: array [0..6] of Word;
+    // Debug infos
+    CodeLine: Cardinal;
+  end;
+
+  TThoriumInstructionSTACKCREATE = record
+    Instruction: TThoriumInstructionCode;
+    TRI: Word;
+    CRI: Word;
+    {$ifdef ENDIAN_BIG}
+    {$ifndef CPU64}
+    TypeSpecPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    TypeSpec: Pointer;
+    {$ifdef ENDIAN_LITTLE}
+    {$ifndef CPU64}
+    TypeSpecPointerOverhead: LongInt;
+    {$endif}
+    {$endif}
+    Reserved: array [0..5] of Word;
     // Debug infos
     CodeLine: Cardinal;
   end;
@@ -2031,6 +2052,7 @@ const
     'flt.s', 'flt',
     'str.s', 'strl.s', 'str', 'strl',
     'none.s', 'none',
+    'stackcreate',
     'fnc', 'xfnc', 'xmeth',
     'mover.g', 'copyr.g', 'moveg', 'copyg',
     'mover.fg', 'copyr.fg', 'movefg', 'copyfg',

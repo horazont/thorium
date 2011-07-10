@@ -42,6 +42,8 @@ type
        const TheObject: TThoriumType = nil; const ExName: String = '';
        const ExType: PTypeInfo = nil): Boolean; override;
     function NeedsClear: Boolean; override;
+    function DuplicateValue(const Input: TThoriumValue): TThoriumValue;
+       override;
 
     procedure DoAppend(const AValue, ToValue: TThoriumValue); override;
     function DoCreateNone: TThoriumValue; override;
@@ -51,6 +53,8 @@ type
     function DoGetLength(const AValue: TThoriumValue): Integer; override;
     procedure DoSetIndexed(const AValue: TThoriumValue;
        const AIndex: TThoriumValue; const NewValue: TThoriumValue); override;
+    function DoStackcreate(const AValues: TThoriumArray): TThoriumValue;
+       override;
     function DoToString(const AValue: TThoriumValue): String; override;
   end;
 
@@ -246,6 +250,15 @@ begin
       Operation.OperationInstruction := OperationInstructionDescription(append(0, 0), 0, -1, 1);
       Exit(True);
     end;
+    opStackcreate:
+    begin
+      if not TheObject.IsEqualTo(FValueType) then
+        Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
+      NewNonCastOperation(Operation);
+      Operation.ResultType := Self;
+      Operation.OperationInstruction := OperationInstructionDescription(stackcreate(0, 0, Self), 1, -1, 0);
+      Exit(True);
+    end;
   else
     Exit(inherited CanPerformOperation(Operation, TheObject, ExName));
   end;
@@ -254,6 +267,26 @@ end;
 function TThoriumTypeDynamicArray.NeedsClear: Boolean;
 begin
   Result := True;
+end;
+
+function TThoriumTypeDynamicArray.DuplicateValue(const Input: TThoriumValue
+  ): TThoriumValue;
+var
+  I, L: Integer;
+  Src, Dst: PThoriumValue;
+begin
+  Result.RTTI := Self;
+  New(Result.DynamicArray);
+  L := High(Input.DynamicArray^);
+  SetLength(Result.DynamicArray^, L+1);
+  Src := @Input.DynamicArray^[0];
+  Dst := @Result.DynamicArray^[0];
+  for I := 0 to L do
+  begin
+    Dst^ := ThoriumDuplicateValue(Src^);
+    Inc(Src);
+    Inc(Dst);
+  end;
 end;
 
 procedure TThoriumTypeDynamicArray.DoAppend(const AValue, ToValue: TThoriumValue
@@ -278,10 +311,12 @@ var
   Arr: TThoriumArray;
 begin
   Arr := AValue.DynamicArray^;
-  for I := 0 to High(Arr) do
+  if FValueType.NeedsClear then
   begin
-    if Arr[I].RTTI <> nil then
+    for I := 0 to High(Arr) do
+    begin
       Arr[I].RTTI.DoFree(Arr[I]);
+    end;
   end;
   Dispose(AValue.DynamicArray);
 end;
@@ -306,6 +341,14 @@ begin
     raise EThoriumRuntimeException.CreateFmt('Dynamic array index %d out of bounds (%d..%d)', [AIndex.Int, 0, High(AValue.DynamicArray^)]);
   ThoriumFreeValue(AValue.DynamicArray^[AIndex.Int]);
   AValue.DynamicArray^[AIndex.Int] := ThoriumDuplicateValue(NewValue);
+end;
+
+function TThoriumTypeDynamicArray.DoStackcreate(const AValues: TThoriumArray
+  ): TThoriumValue;
+begin
+  Result.RTTI := Self;
+  New(Result.DynamicArray);
+  Result.DynamicArray^ := AValues;
 end;
 
 function TThoriumTypeDynamicArray.DoToString(const AValue: TThoriumValue

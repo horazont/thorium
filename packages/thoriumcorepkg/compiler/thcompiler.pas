@@ -884,15 +884,20 @@ var
   InitialData: TThoriumInitialData;
   CreationDescription: TThoriumCreateInstructionDescription;
   OperationDescription: TThoriumOperationDescription;
-  Reg: TThoriumRegisterID;
+  RegID1, RegID2: TThoriumRegisterID;
   Identifier: TThoriumQualifiedIdentifier;
+  ExprType, PrevExprType: TThoriumType;
+  State: TThoriumValueState;
+  VariableType: Boolean;
+  Assignment: TThoriumAssignmentDescription;
+  I: Integer;
 begin
   case FCurrentSym of
     tsMinus: // Negate the value
     begin
-      GetFreeRegister(trEXP, Reg);
+      GetFreeRegister(trEXP, RegID1);
       try
-        Result := Factor(Reg, AState, AStaticValue, ATypeHint);
+        Result := Factor(RegID1, AState, AStaticValue, ATypeHint);
         OperationDescription.Operation := opNegate;
         if not Result.CanPerformOperation(OperationDescription) then
           CompilerError('Cannot negate this kind of value.');
@@ -904,11 +909,11 @@ begin
         end
         else
         begin
-          GenOperation(OperationDescription, ATargetRegister, Reg);
+          GenOperation(OperationDescription, ATargetRegister, RegID1);
           AState := vsDynamic;
         end;
       finally
-        ReleaseRegister(Reg);
+        ReleaseRegister(RegID1);
       end;
     end;
     tsPlus: // Skip
@@ -999,6 +1004,60 @@ begin
       Result := RelationalExpression(ATargetRegister, AState, @AStaticValue, ATypeHint);
       ExpectSymbol([tsCloseBracket]);
       Proceed;
+    end;
+    tsOpenSquareBracket:
+    begin
+      // construct an array
+      Proceed;
+      PrevExprType := nil;
+      VariableType := False;
+      I := 0;
+      while FCurrentSym <> tsCloseSquareBracket do
+      begin
+        ExprType := RelationalExpression(ATargetRegister, State, nil, PrevExprType);
+        if (PrevExprType <> nil) and not VariableType and not (ExprType.Equals(PrevExprType)) then
+        begin
+          Assignment.Casting := True;
+          if ExprType.CanAssignTo(Assignment, ExprType) then
+          begin
+            if Assignment.Cast.Needed then
+            begin
+              GetFreeRegister(trEXP, RegID2);
+              Assignment.Cast.Instruction.SRI := ATargetRegister;
+              Assignment.Cast.Instruction.TRI := RegID2;
+              GenCode(TThoriumInstruction(Assignment.Cast.Instruction));
+            end;
+          end
+          else
+          begin
+            VariableType := True;
+          end;
+        end;
+        if PrevExprType = nil then
+          PrevExprType := ExprType;
+        if State = vsDynamic then
+          GenCode(mover_st(ATargetRegister))
+        else
+          GenCode(copyr_st(ATargetRegister));
+        ExpectSymbol([tsComma, tsCloseSquareBracket]);
+        if FCurrentSym = tsComma then
+          Proceed;
+        Inc(I);
+      end;
+      Proceed;
+
+      if VariableType then
+        CompilerError('Could not detect consistent type in array literal.');
+
+      Result := TThoriumTypeDynamicArray.Create(FThorium, PrevExprType);
+      OperationDescription.Operation := opStackcreate;
+      if not Result.CanPerformOperation(OperationDescription, PrevExprType) then
+        CompilerError('%s cannot be created using an array literal.', [Result.Name]);
+      GetFreeRegister(trEXP, RegID1);
+      PlaceStatic(TThoriumTypeInteger(FThorium.TypeInteger).CreateFromInt(I), RegID1);
+      GenOperation(OperationDescription, ATargetRegister, RegID1);
+      ReleaseRegister(RegID1);
+      AState := vsDynamic;
     end;
   else
     CompilerError('Invalid factor (sym = '+GetEnumName(TypeInfo(TThoriumDefaultSymbol), Ord(FCurrentSym))+')');

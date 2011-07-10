@@ -156,6 +156,7 @@ type
   TThoriumVirtualMachine = class;
   TThoriumDebuggingVirtualMachine = class;
   TThorium = class;
+
 {%ENDREGION}
 
 (*
@@ -685,6 +686,7 @@ type
     procedure DoSetField(const AValue: TThoriumValue; const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
     procedure DoSetIndexed(const AValue: TThoriumValue; const AIndex: TThoriumValue; const NewValue: TThoriumValue); virtual; abstract;
     procedure DoSetStaticField(const AFieldID: QWord; const NewValue: TThoriumValue); virtual; abstract;
+    function DoStackcreate(const AValues: TThoriumArray): TThoriumValue; virtual; abstract;
     function DoSubtraction(const AValue, BValue: TThoriumValue): TThoriumValue; virtual; abstract;
     function DoToDebugString(const AValue: TThoriumValue): String; virtual;
     procedure DoToNative(var AValue: TThoriumValue; const AType: PTypeInfo); virtual; abstract;
@@ -794,7 +796,6 @@ type
 
     );
   end;
-
   (* Pointer to an entry on the Thorium stack. *)
   PThoriumStackEntry = ^TThoriumStackEntry;
 
@@ -2143,6 +2144,8 @@ begin
 
     tiNONE_S: with TThoriumInstructionNONE_S(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x]', [ptrint(TypeSpec)]);
     tiNONE: with TThoriumInstructionNONE(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(TypeSpec), ThoriumRegisterToStr(TRI)]);
+
+    tiSTACKCREATE: with TThoriumInstructionSTACKCREATE(AInstruction) do Result := Result + Format('local(-%%%s) [$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ThoriumRegisterToStr(CRI), ptrint(TypeSpec), ThoriumRegisterToStr(TRI)]);
 
     tiFNC: with TThoriumInstructionFNC(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
     tiXFNC: with TThoriumInstructionXFNC(AInstruction) do Result := Result + Format('[$0x%.'+IntToStr(SizeOf(ptruint)*2)+'x] %%%s', [ptrint(FunctionRef), ThoriumRegisterToStr(TRI)]);
@@ -6460,6 +6463,7 @@ procedure TThoriumVirtualMachine.ExecuteInstruction; inline;
 var
   _NewEntry, _Operand1: PThoriumStackEntry;
   I, J: Integer;
+  Data: TThoriumArray;
 
   procedure int_s; inline;
   begin
@@ -6623,7 +6627,7 @@ var
       _NewEntry := FStack.Push;
       _NewEntry^._Type := stValue;
       _NewEntry^.Value := TThoriumType(TypeSpec).DoCreateNone;
-      {$ifdef Timecheck}EndTimecheck('ext.s');{$endif}
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
     end;
   end;
 
@@ -6633,7 +6637,28 @@ var
     begin
       {$ifdef Timecheck}BeginTimecheck;{$endif}
       FRegisters[TRI] := TThoriumType(TypeSpec).DoCreateNone;
-      {$ifdef Timecheck}EndTimecheck('ext');{$endif}
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
+    end;
+  end;
+
+  procedure stackcreate; inline;
+  var
+    I: Integer;
+  begin
+    with TThoriumInstructionSTACKCREATE(FCurrentInstruction^) do
+    begin
+      {$ifdef Timecheck}BeginTimecheck;{$endif}
+      J := FRegisters[CRI].Int;
+      SetLength(Data, J);
+      _Operand1 := FStack.GetTop(J-1);
+      for I := 0 to J-1  do
+      begin
+        Move(_Operand1^.Value, Data[I], SizeOf(TThoriumValue));
+        Inc(_Operand1);
+      end;
+      FRegisters[TRI] := TThoriumType(TypeSpec).DoStackcreate(Data);
+      FStack.Pop(J, False);
+      {$ifdef Timecheck}EndTimecheck(THORIUM_INSTRUCTION_CODE_NAME[Instruction]);{$endif}
     end;
   end;
 
@@ -7987,6 +8012,7 @@ begin
     tiSTRL: strl;
     tiNONE_S: none_s;
     tiNONE: none;
+    tiSTACKCREATE: stackcreate;
     tiFNC: fnc;
     tiXFNC: xfnc;
     tiXMETH: xmeth;
