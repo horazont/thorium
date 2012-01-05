@@ -48,6 +48,10 @@ unit Thorium;
 {$asmmode att}
 {$C-}
 
+{$ifdef darwin}
+  {$pic off}
+{$endif}
+
 // Used to measure the time needed by each instruction. Produces a lot of
 // overhead and console output. Only for internal purposes. And wont work on
 // linux... So I could kick it out actually.
@@ -527,9 +531,9 @@ type
     FReferences: LongInt;
     FTarget: TObject;
   protected // IUnknown
-    function _AddRef: LongInt; stdcall;
-    function _Release: LongInt; stdcall;
-    function QueryInterface(const IID: TGuid; out Obj): LongInt; stdcall;
+    function _AddRef: LongInt; {$ifndef windows}cdecl{$else}stdcall{$ifend};
+    function _Release: LongInt; {$ifndef windows}cdecl{$else}stdcall{$ifend};
+    function QueryInterface(constref IID: TGUID; out Obj): HResult; {$ifndef windows}cdecl{$else}stdcall{$ifend};
   protected // IThoriumPersistent
     procedure EnableHostControl;
     procedure DisableHostControl;
@@ -5947,20 +5951,19 @@ begin
   FHostControlled := True;
 end;
 
-function TThoriumReferenceImplementation._AddRef: LongInt; stdcall;
+function TThoriumReferenceImplementation._AddRef: LongInt; {$ifndef windows}cdecl{$else}stdcall{$ifend};
 begin
   Result := InterLockedIncrement(FReferences);
 end;
 
-function TThoriumReferenceImplementation._Release: LongInt; stdcall;
+function TThoriumReferenceImplementation._Release: LongInt; {$ifndef windows}cdecl{$else}stdcall{$ifend};
 begin
   Result := InterLockedDecrement(FReferences);
   if (Result = 0) and (not FHostControlled) then
     FTarget.Free;
 end;
 
-function TThoriumReferenceImplementation.QueryInterface(const IID: TGuid; out
-  Obj): LongInt; stdcall;
+function TThoriumReferenceImplementation.QueryInterface(constref IID: TGUID; out Obj): HResult; {$ifndef windows}cdecl{$else}stdcall{$ifend};
 begin
   if GetInterface(IID, Obj) then
     Result := 0
