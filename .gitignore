@@ -3,6 +3,8 @@ scripttest.pas.bak
 backup
 lib
 *.bak
+*.o
+*.ppu
 releases
 other
 tools
