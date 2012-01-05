@@ -5,6 +5,7 @@ lib
 *.bak
 *.o
 *.ppu
+.DS_Store
 releases
 other
 tools
